@@ -219,8 +219,33 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
       });
       
       if (animFrames.length > 0) {
-        // Sort frames to ensure proper order
-        animFrames.sort();
+        // Sort frames to ensure proper order using a custom sort
+        animFrames.sort((frameA, frameB) => {
+          const extractFrameInfo = (frameName) => {
+            // Matches: (Action)_ (MainFrameNumber) _ (SubFrameNumber) (AnythingElse) .png
+            // Or:      (Action)_ (MainFrameNumber) (AnythingElse) .png
+            const match = frameName.match(/^([a-zA-Z]+)_(\d+)(?:_(\d+))?.*?\.png$/i);
+            if (match) {
+              const mainFrame = parseInt(match[2], 10);
+              const subFrame = match[3] ? parseInt(match[3], 10) : 0; // Default subFrame to 0 if not present
+              return { mainFrame, subFrame };
+            }
+            // Fallback: try to find any number if the pattern is different
+            const fallbackMatch = frameName.match(/(\d+)/);
+            if (fallbackMatch) {
+              return { mainFrame: parseInt(fallbackMatch[1], 10), subFrame: 0 };
+            }
+            return { mainFrame: Infinity, subFrame: Infinity }; // Should not happen if frames are named with numbers
+          };
+
+          const infoA = extractFrameInfo(frameA);
+          const infoB = extractFrameInfo(frameB);
+
+          if (infoA.mainFrame === infoB.mainFrame) {
+            return infoA.subFrame - infoB.subFrame;
+          }
+          return infoA.mainFrame - infoB.mainFrame;
+        });
         
         this.scene.anims.create({
           key: animationKey,
