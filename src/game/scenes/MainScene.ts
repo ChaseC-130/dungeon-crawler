@@ -240,6 +240,15 @@ export default class MainScene extends Phaser.Scene {
         const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
         sprite = new UnitSprite(this, worldPos.x, worldPos.y, unit);
         this.unitSprites.set(unit.id, sprite);
+
+        // Listen for death animation completion
+        sprite.on('death_animation_complete', (unitId: string) => {
+          const मृतSprite = this.unitSprites.get(unitId); // "मृतSprite" means "deadSprite" in Hindi
+          if (मृतSprite) {
+            मृतSprite.destroy();
+            this.unitSprites.delete(unitId);
+          }
+        });
       }
       
       // Update sprite state
@@ -335,20 +344,18 @@ export default class MainScene extends Phaser.Scene {
       }
     }
     
-    // Remove sprites for dead units that should be removed
+    // Remove sprites for units that are no longer in the state (e.g. sold)
+    // Dead units' sprites are removed by the 'death_animation_complete' event.
     for (const [id, sprite] of this.unitSprites) {
-      const unitExists = allUnits.find(u => u.id === id);
-      if (!unitExists || (unitExists && unitExists.status === 'dead' && unitExists.health <= 0)) {
-        // Play death animation then remove
-        if (unitExists && unitExists.status === 'dead') {
-          sprite.updateUnit(unitExists);
-          // Remove after death animation
-          this.time.delayedCall(1000, () => {
-            sprite.destroy();
-            this.unitSprites.delete(id);
-          });
-        }
+      const unitIsStillInState = allUnits.find(u => u.id === id);
+      if (!unitIsStillInState) {
+        // Unit is gone for reasons other than ongoing death animation (e.g., sold during prep, or some other removal logic)
+        // Or if it's a unit that was part of a previous state but not in `allUnits` from combat update.
+        sprite.destroy();
+        this.unitSprites.delete(id);
       }
+      // If unitIsStillInState and is dead, its sprite.updateUnit() call from the previous loop
+      // would have started the death animation. The event listener will handle its removal.
     }
   }
 

@@ -108,6 +108,28 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     this.playAnimation('idle');
     
     scene.add.existing(this);
+
+    this.sprite.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (animation: Phaser.Animations.Animation) => {
+      if (animation.key === `${this.unit.name.toLowerCase()}_dead`) {
+        // Option 1: Just make it fully transparent
+        this.setAlpha(0);
+        // Option 2: Start a fade out tween (if a more gradual disappearance is desired)
+        // this.scene.tweens.add({
+        //   targets: this,
+        //   alpha: 0,
+        //   duration: 300, // 300ms fade
+        //   onComplete: () => {
+        //     // The actual destruction will be handled by MainScene for now
+        //     // to avoid race conditions, but we can mark it as ready for removal.
+        //     (this as any).readyForRemoval = true;
+        //   }
+        // });
+
+        // It's important that MainScene knows when to remove this sprite.
+        // We can emit an event from the sprite itself.
+        this.emit('death_animation_complete', this.unitId);
+      }
+    }, this);
   }
 
   updateUnit(unit: Unit) {
@@ -139,7 +161,6 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
         break;
       case 'dead':
         this.playAnimation('dead');
-        this.setAlpha(0.5);
         if (statusChanged) {
           this.playDeathSound();
         }

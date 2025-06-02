@@ -47,7 +47,8 @@ class Match {
       socket: socket,
       gold: GAME_CONFIG.STARTING_GOLD,
       units: [],
-      isReady: false
+      isReady: false,
+      initialUnitPositions: new Map() // unitId -> position
     });
   }
 
@@ -134,6 +135,7 @@ class Match {
     unit.position = position;
     this.grid[position.y][position.x].occupied = true;
     this.grid[position.y][position.x].unitId = unitId;
+    player.initialUnitPositions.set(unit.id, { ...position }); // Store a copy
 
     this.broadcastGameState();
   }
@@ -197,6 +199,7 @@ class Match {
 
     // Remove unit
     player.units.splice(unitIndex, 1);
+    player.initialUnitPositions.delete(unit.id);
 
     this.broadcastGameState();
   }
@@ -250,6 +253,7 @@ class Match {
     // Place on grid
     this.grid[position.y][position.x].occupied = true;
     this.grid[position.y][position.x].unitId = unit.id;
+    player.initialUnitPositions.set(unit.id, { ...unit.position }); // Store a copy
 
     // Play purchase sound
     player.socket.emit('play-sound', 'purchase');
@@ -341,6 +345,42 @@ class Match {
     }
   }
 
+  // TODO: Handle this in startCombat instead, to ensure final positions are captured
+  // setPlayerReady(playerId) {
+  //   console.log(`Player ${playerId} set ready in match ${this.matchId}`);
+  //   const player = this.players.get(playerId);
+  //   if (!player) {
+  //     console.error(`Player ${playerId} not found in match`);
+  //     return;
+  //   }
+  //   if (this.phase !== 'preparation') {
+  //     console.error(`Cannot set ready, current phase: ${this.phase}`);
+  //     return;
+  //   }
+
+  //   player.isReady = true;
+  //   console.log(`Player ${playerId} marked as ready`);
+
+  //   // Store initial positions when player is ready
+  //   // player.units.forEach(unit => {
+  //   //   if (unit.position) {
+  //   //     player.initialUnitPositions.set(unit.id, { ...unit.position });
+  //   //   }
+  //   // });
+
+  //   // Check if all players are ready
+  //   const allReady = Array.from(this.players.values()).every(p => p.isReady);
+  //   console.log(`All players ready: ${allReady}`);
+
+  //   if (allReady) {
+  //     console.log('All players ready, stopping timer and starting combat');
+  //     this.stopPreparationTimer();
+  //     this.startCombat();
+  //   }
+
+  //   this.broadcastGameState();
+  // }
+
   setPlayerReady(playerId) {
     console.log(`Player ${playerId} set ready in match ${this.matchId}`);
     const player = this.players.get(playerId);
@@ -370,6 +410,18 @@ class Match {
   }
 
   startCombat() {
+    // Save initial positions for all player units at the start of combat
+    this.players.forEach(player => {
+      player.units.forEach(unit => {
+        if (unit.position) { // Only save if currently placed
+          player.initialUnitPositions.set(unit.id, { ...unit.position });
+        } else {
+          // If unit is not placed, ensure it's not in initialUnitPositions
+          player.initialUnitPositions.delete(unit.id);
+        }
+      });
+    });
+
     this.phase = 'combat';
     
     // Spawn enemy units
@@ -473,6 +525,43 @@ class Match {
     } else {
       this.phase = 'preparation';
       this.enemyUnits = [];
+
+      // Clear current grid state related to player units from previous combat
+      this.players.forEach(player => {
+        player.units.forEach(unit => {
+          if (unit.position && this.grid[unit.position.y] && this.grid[unit.position.y][unit.position.x]) {
+            this.grid[unit.position.y][unit.position.x].occupied = false;
+            this.grid[unit.position.y][unit.position.x].unitId = null;
+          }
+        });
+      });
+
+      // Reset unit positions to initial and update grid, also reset status
+      this.players.forEach(player => {
+        player.units.forEach(unit => {
+          const initialPos = player.initialUnitPositions.get(unit.id);
+          if (initialPos) {
+            unit.position = { ...initialPos }; // Restore position
+            // Update the grid with the restored position
+            if (this.grid[initialPos.y] && this.grid[initialPos.y][initialPos.x]) {
+              this.grid[initialPos.y][initialPos.x].occupied = true;
+              this.grid[initialPos.y][initialPos.x].unitId = unit.id;
+            }
+          } else {
+            // If a unit doesn't have an initial position (e.g., it was never placed),
+            // ensure its position is null.
+            unit.position = null;
+          }
+          // Reset status to idle for the new preparation phase, unless it's dead
+          if (unit.status !== 'dead') {
+              unit.status = 'idle';
+          }
+          // Reset any combat-specific temporary state
+          unit.targetId = null;
+          unit.attackCooldown = 0;
+        });
+      });
+
       this.updateShopWithStartingUnits(); // Keep original 5 units, don't reroll
       
       // Reset player ready status and timer
