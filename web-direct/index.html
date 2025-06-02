@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Crawler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #1a1a2e;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            color: white;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #menu {
+            text-align: center;
+            padding: 40px;
+            background: rgba(15, 52, 96, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            color: #FFD700;
+            text-shadow: 3px 3px 5px #000;
+            margin-bottom: 20px;
+            font-size: 64px;
+            letter-spacing: 3px;
+        }
+        .subtitle {
+            color: #FFF;
+            margin-bottom: 40px;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px #000;
+        }
+        button {
+            background-color: #2E7D32;
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            margin: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+            min-width: 300px;
+        }
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        input {
+            padding: 16px 24px;
+            font-size: 18px;
+            border-radius: 8px;
+            border: 2px solid #0f3460;
+            background-color: #16213e;
+            color: white;
+            margin: 10px;
+            width: 300px;
+        }
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 30px;
+            display: none;
+            z-index: 100;
+        }
+        .hud-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .gold {
+            color: #FFD700;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px #000;
+        }
+        #phase-info {
+            text-align: center;
+        }
+        #phase-text {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        #shop {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 20px;
+            display: none;
+            z-index: 100;
+            max-height: 280px;
+        }
+        .shop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            max-width: 1400px;
+            margin: 0 auto 15px;
+        }
+        .shop-title {
+            color: #FFD700;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px #000;
+        }
+        .reroll-btn {
+            background-color: #2196F3;
+            padding: 10px 20px;
+            font-size: 16px;
+            min-width: auto;
+        }
+        .unit-cards {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .unit-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 200px;
+            cursor: grab;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .unit-card:hover {
+            border-color: #4CAF50;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        }
+        .unit-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .unit-sprite {
+            width: 100%;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .unit-sprite canvas {
+            max-width: 100%;
+            max-height: 100%;
+            image-rendering: pixelated;
+        }
+        .unit-name {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        .unit-cost {
+            color: #FFD700;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .unit-stats {
+            font-size: 14px;
+            color: #CCC;
+            line-height: 1.6;
+        }
+        .unit-stats .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+        }
+        #phaser-game {
+            display: none;
+            width: 100%;
+            height: 100%;
+        }
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        .connected {
+            background: #4CAF50;
+        }
+        .disconnected {
+            background: #F44336;
+        }
+        #player-list {
+            margin: 20px 0;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .player-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+        #waiting h2 {
+            margin-bottom: 15px;
+        }
+        #dragging-unit {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="menu">
+            <h1>DUNGEON CRAWLER</h1>
+            <p class="subtitle">Autobattler Adventure</p>
+            <div id="main-menu">
+                <button onclick="showNameInput()">PLAY</button><br>
+                <button onclick="alert('Tutorial coming soon!')">TUTORIAL</button><br>
+                <button onclick="alert('Settings coming soon!')">SETTINGS</button>
+            </div>
+            <div id="name-input" style="display: none;">
+                <h2>Enter Your Name</h2>
+                <input type="text" id="player-name" placeholder="Your name" maxlength="20"><br>
+                <button onclick="joinGame()">JOIN GAME</button><br>
+                <button onclick="showMainMenu()">BACK</button>
+            </div>
+            <div id="waiting" style="display: none;">
+                <h2>Waiting for Players...</h2>
+                <p id="player-count">0/4 Players</p>
+                <div id="player-list"></div>
+                <button onclick="leaveGame()">LEAVE</button>
+            </div>
+        </div>
+        
+        <div id="phaser-game"></div>
+        
+        <div id="hud">
+            <div class="hud-content">
+                <div class="gold">💰 <span id="gold-amount">50</span></div>
+                <div id="phase-info">
+                    <div id="phase-text">Preparation Phase</div>
+                    <div>Floor <span id="floor">1</span>/10</div>
+                </div>
+                <button id="ready-btn" onclick="setReady()">READY</button>
+            </div>
+        </div>
+        
+        <div id="shop">
+            <div class="shop-header">
+                <div class="shop-title">SHOP</div>
+                <button class="reroll-btn" onclick="rerollShop()">🎲 Reroll (10g)</button>
+            </div>
+            <div id="unit-cards" class="unit-cards"></div>
+        </div>
+    </div>
+    
+    <div id="connection-status" class="connection-status disconnected">
+        Disconnected
+    </div>
+    
+    <div id="dragging-unit"></div>
+
+    <script src="https://unpkg.com/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

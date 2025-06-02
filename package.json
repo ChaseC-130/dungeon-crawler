@@ -1,0 +1,29 @@
+{
+  "name": "dungeon-crawler",
+  "version": "1.0.0",
+  "description": "2D rogue-style autobattler with dungeon-crawling elements",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "server": "node server/index.js",
+    "web": "node web-server.js",
+    "dev": "concurrently \"npm run server\" \"npm run web\"",
+    "play": "npm run dev"
+  },
+  "keywords": [
+    "game",
+    "phaser",
+    "autobattler"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

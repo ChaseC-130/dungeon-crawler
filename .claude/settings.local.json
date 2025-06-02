@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)",
+      "Bash(touch:*)",
+      "Bash(rm:*)",
+      "Bash(chmod:*)",
+      "Bash(true)",
+      "Bash(npx expo start:*)",
+      "Bash(node:*)",
+      "Bash(ls:*)",
+      "Bash(mv:*)",
+      "Bash(./test-full-flow.bat)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(npm run dev:*)"
+    ],
+    "deny": []
+  }
+}

@@ -1,0 +1,532 @@
+1. High-Level Description
+Genre & Theme
+
+2D rogue-style autobattler with dungeon-crawling elements.
+
+Cooperative multiplayer (1–4 players) vs. NPC/AI enemies.
+
+Procedurally-progressing floors (10 total); clearing Floor 10 wins the match.
+
+Core Objectives
+
+Between floors, players spend gold to place purchasable “Units” on a shared grid.
+
+Combat phase: all placed Units auto-attack, move, and resolve battle without direct player input.
+
+Economy: earn gold from kills; spend gold to buy new Units, reroll upgrade options, or sell existing Units.
+
+Upgrade system: after each floor, players choose from randomized upgrade cards that modify unit behavior.
+
+Win/Lose Conditions
+
+Win: All 10 floors cleared (floor 1 → 10).
+
+Lose: All player-owned Units die on any floor (i.e., no surviving Units at end of combat).
+
+2. Platforms & Technology Stack
+
+Front-End
+
+Framework: React Native
+
+Game Engine: Phaser integrated into React Native (e.g., via react-phaser)
+
+UI Layer: React Native components for menus, lobby, upgrade selection, and game stats.
+
+Back-End
+
+Runtime: Node.js
+
+Multiplayer Networking: WebSocket (e.g., Socket.IO) or PlayFab integration for matchmaking/state sync.
+
+Hosting: Google Cloud Platform with CloudSQL solution for datastore. Come up with best practice and quick method for authentication and account data persistence.
+
+Build & Deployment
+
+Mobile Platforms: Android and iOS via Expo or React Native CLI.
+
+Desktop (optional): Electron wrapper or deploy to Steam via an HTML5 wrapper.
+
+CI/CD Pipeline: GitHub Actions → Build → Deploy backend to GCP → Publish mobile builds to app stores.
+
+3. Core Game Loop
+Lobby & Unit Selection
+
+Upon match start, each player joins a lobby.
+
+All players begin with 50 gold.
+
+No pre-selected Heroes—only Units purchased during gameplay.
+
+Floor Sequence (for Floors 1 through 10)
+
+Preparation Phase
+
+Gold carries over from previous floor.
+
+Players use gold to:
+
+Purchase Units from the shop.
+
+Sell existing Units at 75% refund of their cost.
+
+Reroll upgrade cards (10 gold per reroll).
+
+Shop dynamically offers Units based on floor progression.
+
+Players place purchased Units onto the shared grid (grid size scales per floor).
+
+Combat Phase
+
+Units auto-path toward the enemy side.
+
+Auto-attacks occur when enemies come within a Unit’s range.
+
+Combat resolves until one side is eliminated.
+
+If all player Units die → match ends in defeat.
+
+Surviving Units persist to the next floor; dead Units are removed.
+
+Players earn gold:
+
+When any player’s Unit lands the killing blow on an enemy, all players receive ceil(UnitCost × 0.25) gold.
+
+Post-Combat Phase
+
+Distribute gold bounties from kills.
+
+Present 4 random upgrade cards to the winning team (if they survived):
+
+1 High-Potency upgrade (×3 effectiveness) applies to a random Unit type the players currently own.
+
+3 Normal-Potency upgrades; players choose which Unit type to apply them to.
+
+Players may spend gold (10 each) to reroll these upgrade choices.
+
+Proceed to next floor if any Units remain; otherwise, match over.
+
+Match Completion
+
+If players clear Floor 10, they win.
+
+If all Units die on any floor, they lose immediately.
+
+4. Economy & Progression
+Starting Conditions
+
+All players start with 50 gold on Floor 1.
+
+No pre-owned Units; everything must be purchased.
+
+Gold Income
+
+Kill Bounty: When a player’s Unit kills an enemy, all players gain ceil(UnitCost × 0.25) gold.
+
+Floor Completion: Surviving Units persist—no extra bonus beyond their kill income.
+
+Sell Value: Any Unit can be sold at any time for 75% of its original cost.
+
+Shop & Upgrades
+
+Shop Refresh: Each floor, the shop’s available Units scale with Floor × 25 budget (see AI spawn logic for reference).
+
+Upgrade Cards:
+
+Draw 4 per cleared floor (1 high-potency, 3 normal).
+
+Reroll upgrade pool for 10 gold each.
+
+Upgrades directly buff one Unit type (chosen by player for normals; randomly assigned for high-potency).
+
+5. Unit Design & Attributes
+Core Attributes (for every Unit)
+
+Name
+
+Cost (gold to purchase)
+
+Damage (numeric value per attack)
+
+Attack Speed (attacks/sec)
+
+Attack Type: Physical / Magical
+
+Health: Total hit points
+
+Range: Attack range (pixels, e.g., 1 – 100)
+
+Priority: Targeting weight (lower = targeted first; may go negative with upgrades)
+
+Movement Speed: Pixels/sec
+
+Armor Type: Unarmored / Light / Heavy
+
+Innate Passive(s): Special ability or effect if applicable.
+
+Damage Modifiers by Armor:
+
+Unarmored: takes 150% Physical, 100% Magical
+
+Light: 100% Physical, 100% Magical
+
+Heavy: 50% Physical, 150% Magical
+
+
+
+Some starting units:
+
+Name: Knight
+
+Cost: 20
+
+Damage: 2
+
+Attack Speed: 1.00
+
+Attack Type: Physical
+
+Health: 15
+
+Range: 1
+
+Priority: 1
+
+Movement Speed: 75
+
+Armor Type: Heavy
+
+Innate Passive: Gains ×2 effectiveness from heals
+
+
+Name: Priest
+
+Cost: 12
+
+Damage: 1
+
+Attack Speed: 3.00
+
+Attack Type: Magical
+
+Health: 8
+
+Range: 50
+
+Priority: 4
+
+Movement Speed: 60
+
+Armor Type: Unarmored
+
+Innate Passive: Heals a nearby damaged friendly Unit for 1 HP/sec
+
+
+Name: Bishop
+
+Cost: 15
+
+Damage: 2
+
+Attack Speed: 1.00
+
+Attack Type: Magical
+
+Health: 12
+
+Range: 40
+
+Priority: 3
+
+Movement Speed: 75
+
+Armor Type: Unarmored
+
+Innate Passive: Heals a nearby damaged friendly Unit for 1 HP every 2 seconds
+
+
+Name: Fighter
+
+Cost: 10
+
+Damage: 3
+
+Attack Speed: 1.00
+
+Attack Type: Physical
+
+Health: 12
+
+Range: 1
+
+Priority: 3
+
+Movement Speed: 80
+
+Armor Type: Light
+
+Innate Passive: None
+
+
+Name: Goblin
+
+Cost: 7
+
+Damage: 3
+
+Attack Speed: 1.00
+
+Attack Type: Physical
+
+Health: 8
+
+Range: 1
+
+Priority: 3
+
+Movement Speed: 70
+
+Armor Type: Unarmored
+
+Innate Passive: None
+
+
+Name: Wizard
+
+Cost: 12
+
+Damage: 4
+
+Attack Speed: 1.00
+
+Attack Type: Magical
+
+Health: 7
+
+Range: 50
+
+Priority: 3
+
+Movement Speed: 60
+
+Armor Type: Unarmored
+
+Innate Passive: None
+
+Name: Gladiator
+
+Cost: 12
+
+Damage: 3
+
+Attack Speed: 1.00
+
+Attack Type: Physical
+
+Health: 10
+
+Range: 1
+
+Priority: 2
+
+Movement Speed: 60
+
+Armor Type: Heavy
+
+Innate Passive: Units damaged by this Unit grant +10% extra gold (stacks once per Gladiator)
+
+6. Upgrade System
+Upgrade Tiers
+
+High-Potency (×3 Effect):
+• Assigned automatically to a random Unit type the players own.
+
+Normal-Potency:
+• Players choose which owned Unit type receives the bonus.
+
+Example Upgrades (flat % or flat value)
+
+10% Damage dealt is restored as health
+
+20% Increased Movement Speed
+
+10% Increased Health
+
+10% Increased Damage
+
+10% Increased Attack Speed
+
++1 Priority (less likely to be targeted)
+
+–1 Priority (more likely to be targeted)
+
+Gain Passive: Heal nearby Units for 25% of this Unit’s max health on death
+
+Gain Passive: Explode on death, dealing 20% of this Unit’s max health as damage to nearby enemies
+
+Gain Passive: Poison damaged enemies, causing 1 HP/sec
+
+Gain Passive: Slow nearby enemies, decreasing their attack speed by 10%
+
+Reroll Mechanics
+
+Each reroll costs 10 gold, only available for the upgrades after clearing battle phase floor.
+
+Reroll reshuffles the four current options.
+
+7. AI Spawn Logic & Counterplay
+Weight Aggregation
+
+Each player’s placed Units have weightings for Aggro, Midrange, and Control.
+
+AI sums all players’ weightings for each archetype:
+
+e.g., if Player 1’s Units total (Aggro 200, Midrange 150, Control 50) and Player 2’s Units total (Aggro 100, Midrange 200, Control 100), then combined = (Aggro 300, Midrange 350, Control 150).
+
+The highest combined weighting determines the “dominant archetype” that AI will counter.
+
+Counter-Spawning
+
+AI’s total spawn budget =
+
+targetBudget = (Floor × 25) + (TotalCostOfAllPlayerUnits × 0.60)
+spawnBudget ≈ ±10% of targetBudget
+AI fills spawnBudget by randomly selecting Units of two types until budget is met.
+
+AI Behavior
+
+AI Units behave like player Units: auto‐move, auto‐attack.
+
+AI targeting: follow same Priority logic as player Units (lower priority → targeted first).
+
+8. Grid & Placement System
+Grid Structure
+
+Dimensions: 12 × 12 cells (adjustable by floor if desired).
+
+Shared Grid amongst players, players see where one-another has placed units
+
+Cell Size: Adaptable based on device resolution; ensure Units scale and snap correctly.
+
+Placement Rules
+
+No overlapping: one Unit per cell.
+
+Movement/attack range ignores grid once combat starts (free movement via pathfinding).
+
+UI / UX
+
+Highlight Valid Cells: When dragging a Unit to place, highlight only valid placement cells.
+
+Gold Display: Show each player’s gold total in a shared HUD.
+
+Shop Panel: Lists available Units, cost, and small tooltip showing stats.
+
+Sell Button: Players may sell their own placed Units for 75% of cost (refund immediately).
+
+9. Combat & Targeting Rules
+Target Selection
+
+Each Unit picks the closest enemy within Range, filtered by lowest Priority value first.
+
+If multiple enemies share lowest Priority, pick the physically closest.
+
+Attack Resolution
+
+Cooldown Timer: Each Unit has (1 / AttackSpeed) seconds between attacks.
+
+Damage Calculation:
+
+actualDamage = BaseDamage × ArmorMultiplier
+ArmorMultiplier based on enemy’s Armor Type (see Unit Attributes).
+
+On-Hit Effects: Apply passive procs (e.g., poison, slow).
+
+Death & Bounty
+
+When a Unit kills an enemy, all players gain ceil(UnitCost × 0.25) gold.
+
+Units that die are removed from grid immediately; cannot be resurrected.
+
+10. Networking & Synchronization
+Matchmaking
+
+Create custom matchmaking system with ability to party with 1-4 random players, or with friends
+
+Once all players ready, server broadcasts “Start Match” with randomized floor seed.
+
+State Sync
+
+Turn-Based Prep Phases:
+
+Server tracks each player’s gold, shop state, placed Units.
+
+When all players confirm “Ready,” server transitions to Combat Phase.
+
+Combat Phase:
+
+Server runs a deterministic simulation (or authoritative AI) and broadcasts periodic state updates (positions, HP).
+
+Clients render locally but rely on server ticks for authoritative resolution.
+
+Reconciliation
+
+Clients send only placement/sell/purchase commands during Prep Phase.
+
+Combat is fully simulated server-side; clients receive unit-position updates 10–20×/sec.
+
+At round end, server sends “FloorResult” message with:
+
+Surviving Units list
+
+Gold earned
+
+Next shop offerings (seeded)
+
+11. Progression Balancing & Tuning
+Floor Scaling
+
+Enemy strength and spawn budget increase each floor:
+
+baseBudget = Floor × 25
+playerContribution = TotalCostOfAllPlayerUnits × 0.60
+targetBudget = baseBudget + playerContribution
+spawnBudget ∈ [0.9 × targetBudget, 1.1 × targetBudget]
+Unit costs should scale so early floors only offer low-tier Units; higher floors unlock higher-cost Units.
+
+Gold Curve
+
+Starting Gold: 50
+
+Expected Gold per Floor:
+
+Floor 1: ~20–30 (from shallow enemies)
+
+Floor 10: ~200+ (tougher enemies)
+
+12. Art & Assets (Placeholder)
+Sprites
+
+Unit Sprites: PNG sheets for each Unit (idle, walk, run, attack, death).
+
+Tilemap: Use random generated tileset and objects for each battle phase
+
+UI Icons: Gold, upgrade card thumbnails with reroll, shop panels.
+
+Animations
+
+Unit Animations: Idle → walk → attack → death.
+
+Visual Effects:
+
+Hit spark when damage dealt.
+
+Heal effect for heals.
+
+Buff/debuff indicators.
+
+Audio
+
+Music: 1battletheme for Floors 1-3, 2battletheme for Floors 4-6, 3battletheme for Floors 7-8, 4battletheme for Floors 9-10. The normal themes for build phases.
+
+Use purchaseSound when purchasing units

@@ -1,0 +1,2713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Crawler</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #phaser-game {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .hud {
+            position: absolute;
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            user-select: none;
+        }
+        
+        .top-hud {
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .gold {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid #FFD700;
+            font-weight: bold;
+        }
+        
+        .phase-info {
+            text-align: center;
+        }
+        
+        .shop {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            display: none;
+            max-width: 90vw;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+        
+        .shop.active {
+            display: block;
+        }
+        
+        .shop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .shop-title {
+            color: #FFD700;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        
+        .shop-units {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1000px;
+        }
+        
+        .unit-card {
+            background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 16px;
+            padding: 12px;
+            width: 160px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .shop-unit-sprite-container {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 10px auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .shop-unit-sprite {
+            width: 48px;
+            height: 48px;
+            image-rendering: pixelated;
+            animation: idle-bob 2s ease-in-out infinite;
+        }
+        
+        .unit-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            border-color: #FFD700;
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.2);
+        }
+        
+        .unit-card.dragging {
+            cursor: grabbing;
+            opacity: 0.6;
+            transform: scale(0.95);
+        }
+        
+        .unit-card.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .unit-name {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 12px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            text-transform: capitalize;
+        }
+        
+        .unit-cost {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            background: rgba(255, 215, 0, 0.1);
+            padding: 4px 8px;
+            border-radius: 8px;
+            margin: 8px 0;
+        }
+        
+        .unit-stats {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .unit-stats span {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 6px;
+            border-radius: 6px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        .ready-button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .ready-button:hover {
+            background: #66BB6A;
+        }
+        
+        .ready-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        #connection-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .connected {
+            background: rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+            border: 2px solid #4CAF50;
+        }
+        
+        .disconnected {
+            background: rgba(244, 67, 54, 0.3);
+            color: #F44336;
+            border: 2px solid #F44336;
+        }
+        
+        /* Unit Selection Modal */
+        .unit-selection-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .unit-selection-content {
+            background: #1a1a2e;
+            border: 2px solid #FFD700;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .unit-selection-title {
+            color: #FFD700;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .unit-selection-subtitle {
+            color: white;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .units-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 0 20px;
+        }
+        
+        .unit-selection-card {
+            background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            width: 200px;
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .unit-selection-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            border-color: rgba(255, 215, 0, 0.8);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.2);
+        }
+        
+        .unit-selection-card.selected {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.2);
+        }
+        
+        .unit-selection-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .unit-selection-name {
+            color: #FFD700;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            text-transform: capitalize;
+        }
+        
+        .unit-sprite-container {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px auto;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .unit-sprite-canvas {
+            width: 64px;
+            height: 64px;
+            image-rendering: pixelated;
+        }
+        
+        @keyframes idle-bob {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-2px); }
+        }
+        
+        .unit-selection-stats {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 15px 0;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .unit-selection-stats span {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 8px;
+            border-radius: 8px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        .start-game-btn {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .start-game-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Tooltip Styles */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #FFD700;
+            z-index: 2000;
+            max-width: 300px;
+            font-size: 12px;
+            line-height: 1.4;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        
+        .tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .tooltip-header {
+            color: #FFD700;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        
+        .tooltip-section {
+            margin-bottom: 8px;
+        }
+        
+        .tooltip-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .tooltip-label {
+            color: #ccc;
+            font-weight: bold;
+        }
+        
+        .tooltip-value {
+            color: #fff;
+        }
+        
+        .tooltip-passive {
+            color: #4CAF50;
+            font-style: italic;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 215, 0, 0.3);
+        }
+        
+        /* Upgrade Modal Styles */
+        .upgrade-section {
+            margin-bottom: 30px;
+        }
+        
+        .upgrade-cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .upgrade-card {
+            background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
+            border: 3px solid rgba(255, 215, 0, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            width: 250px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+        
+        .upgrade-card.high-potency {
+            border-color: #FF6B6B;
+            background: linear-gradient(145deg, rgba(80, 45, 45, 0.9), rgba(60, 30, 30, 0.9));
+        }
+        
+        .upgrade-card.high-potency::before {
+            content: "×3 EFFECT";
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: #FF6B6B;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .upgrade-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            border-color: #FFD700;
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
+        }
+        
+        .upgrade-card.selected {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.2);
+        }
+        
+        .upgrade-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .upgrade-name {
+            color: #FFD700;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .upgrade-description {
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .upgrade-target {
+            color: #4CAF50;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .unit-type-selector {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        .unit-type-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .unit-type-btn:hover {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.1);
+        }
+        
+        .unit-type-btn.selected {
+            background: #4CAF50;
+            border-color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="phaser-game"></div>
+        
+        <div class="hud top-hud">
+            <div class="gold">
+                💰 <span id="gold-amount">50</span>
+            </div>
+            <div class="phase-info">
+                <div id="phase-text">Preparation Phase</div>
+                <div id="floor-text">Floor 1/10</div>
+                <div id="timer-text" style="color: #FFD700; font-weight: bold; margin: 5px 0;">⏱️ 60s</div>
+                <button class="ready-button" id="ready-btn" onclick="setReady()">READY</button>
+            </div>
+        </div>
+        
+        <div id="connection-status" class="disconnected">
+            Connecting...
+        </div>
+        
+        
+        <div class="shop" id="shop-panel">
+            <div class="shop-header">
+                <div class="shop-title">YOUR SELECTED UNITS</div>
+            </div>
+            <div class="shop-units" id="shop-units">
+                <!-- Units will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Lobby Modal -->
+    <div id="lobby-modal" class="unit-selection-modal">
+        <div class="unit-selection-content">
+            <h2 class="unit-selection-title">Dungeon Crawler Lobby</h2>
+            <p class="unit-selection-subtitle">Choose how to play</p>
+            
+            <div style="display: flex; gap: 20px; justify-content: center; margin: 30px 0;">
+                <button class="start-game-btn" onclick="findMatch()">
+                    Find Match (1-4 Players)
+                </button>
+                <button class="start-game-btn" onclick="createPrivateMatch()">
+                    Create Private Match
+                </button>
+            </div>
+            
+            <div id="lobby-status" style="text-align: center; color: #ccc; margin: 20px 0;">
+                Choose an option to start playing
+            </div>
+            
+            <div id="player-list" style="display: none;">
+                <h3 style="color: #FFD700; text-align: center;">Players in Match</h3>
+                <div id="players-container"></div>
+                <button class="start-game-btn" id="lobby-ready-btn" onclick="setLobbyReady()" style="margin-top: 20px;">
+                    Ready
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unit Selection Modal -->
+    <div id="unit-selection-modal" class="unit-selection-modal hidden">
+        <div class="unit-selection-content">
+            <h2 class="unit-selection-title">Choose Your Starting Units</h2>
+            <p class="unit-selection-subtitle">Select 5 units (<span id="selected-count">0</span>/5)</p>
+            <div class="units-grid" id="unit-selection-grid">
+                <!-- Units will be populated here -->
+            </div>
+            <button class="start-game-btn" id="start-game-btn" onclick="startGame()" disabled>
+                Start Game
+            </button>
+        </div>
+    </div>
+
+    <!-- Tooltip Container -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Upgrade Selection Modal -->
+    <div id="upgrade-modal" class="unit-selection-modal hidden">
+        <div class="unit-selection-content">
+            <h2 class="unit-selection-title">Choose Your Upgrades</h2>
+            <p class="unit-selection-subtitle">Floor <span id="upgrade-floor">1</span> Complete!</p>
+            
+            <div class="upgrade-section">
+                <h3 style="color: #FFD700; text-align: center; margin-bottom: 20px;">High-Potency Upgrade (×3 Effect)</h3>
+                <div id="high-potency-upgrade" class="upgrade-cards-container">
+                    <!-- High-potency upgrade will be populated here -->
+                </div>
+            </div>
+            
+            <div class="upgrade-section">
+                <h3 style="color: #FFD700; text-align: center; margin-bottom: 20px;">Normal Upgrades (Choose Unit Type)</h3>
+                <div id="normal-upgrades" class="upgrade-cards-container">
+                    <!-- Normal upgrades will be populated here -->
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="start-game-btn" onclick="rerollUpgrades()" id="reroll-btn">
+                    Reroll Upgrades (💰 10)
+                </button>
+                <p style="color: #FFD700; margin-top: 15px; font-style: italic;">
+                    Click any upgrade card to select it and continue to the next floor
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script>
+        // Game configuration
+        const SERVER_URL = 'http://localhost:3001';
+        let socket = null;
+        let game = null;
+        let gameState = null;
+        let playerId = null;
+        let selectedUnits = [];
+        let hasSelectedStartingUnits = false;
+        let playerStartingUnits = [];
+        let isInLobby = false;
+        
+        // Available units for selection (detailed stats per Game Requirements)
+        const AVAILABLE_UNITS = {
+            knight: { 
+                cost: 20, 
+                damage: 2, 
+                health: 38, // Reduced by another 50% for much faster combat
+                attackSpeed: 1.0,
+                movementSpeed: 38, // Reduced by 50% for slower tactical movement 
+                range: 8, // Increased from 3 to 8 to prevent collision circling
+                priority: 1,
+                attackType: 'Physical', 
+                armorType: 'Heavy',
+                innatePassive: 'Gains ×2 effectiveness from heals',
+                description: 'Heavily armored melee unit with high survivability'
+            },
+            priest: { 
+                cost: 12, 
+                damage: 1, 
+                health: 20, // Reduced by another 50% for much faster combat
+                attackSpeed: 3.0,
+                movementSpeed: 30, // Reduced by 50% for slower tactical movement
+                range: 50,
+                priority: 4,
+                attackType: 'Magical', 
+                armorType: 'Unarmored',
+                innatePassive: 'Heals a nearby damaged friendly Unit for 1 HP/sec',
+                description: 'Support unit that heals allies continuously'
+            },
+            fighter: { 
+                cost: 10, 
+                damage: 3, 
+                health: 30, // Reduced by another 50% for much faster combat
+                attackSpeed: 1.0,
+                movementSpeed: 40, // Reduced by 50% for slower tactical movement 
+                range: 8, // Increased from 3 to 8 to prevent collision circling
+                priority: 3,
+                attackType: 'Physical', 
+                armorType: 'Light',
+                innatePassive: 'None',
+                description: 'Balanced melee unit with good damage and speed'
+            },
+            wizard: { 
+                cost: 12, 
+                damage: 4, 
+                health: 18, // Reduced by another 50% for much faster combat
+                attackSpeed: 1.0,
+                movementSpeed: 30, // Reduced by 50% for slower tactical movement
+                range: 50,
+                priority: 3,
+                attackType: 'Magical', 
+                armorType: 'Unarmored',
+                innatePassive: 'None',
+                description: 'High damage ranged caster with low survivability'
+            },
+            goblin: { 
+                cost: 7, 
+                damage: 3, 
+                health: 20, // Reduced by another 50% for much faster combat
+                attackSpeed: 1.0,
+                movementSpeed: 35, // Reduced by 50% for slower tactical movement 
+                range: 8, // Increased from 3 to 8 to prevent collision circling
+                priority: 3,
+                attackType: 'Physical', 
+                armorType: 'Unarmored',
+                innatePassive: 'None',
+                description: 'Cheap, fast melee unit - good for early game'
+            }
+        };
+        
+        // Initialize socket connection
+        function initSocket() {
+            socket = io(SERVER_URL);
+            
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                document.getElementById('connection-status').className = 'connected';
+                document.getElementById('connection-status').textContent = 'Connected';
+                
+                // Don't auto-join match, let player choose
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+                document.getElementById('connection-status').className = 'disconnected';
+                document.getElementById('connection-status').textContent = 'Disconnected';
+            });
+            
+            socket.on('matchFound', (data) => {
+                console.log('Match found:', data);
+                playerId = data.playerId;
+                
+                // Show unit selection if it's floor 1 and haven't selected yet
+                if (data.gameState.currentFloor === 1 && !hasSelectedStartingUnits) {
+                    document.getElementById('lobby-modal').classList.add('hidden');
+                    showUnitSelection();
+                } else {
+                    updateGameState(data.gameState);
+                }
+            });
+            
+            socket.on('lobbyUpdate', (lobbyData) => {
+                console.log('Lobby update:', lobbyData);
+                updateLobby(lobbyData);
+                isInLobby = true;
+                
+                // Set playerId from lobby data
+                if (!playerId && lobbyData.players) {
+                    const currentPlayer = lobbyData.players.find(p => p.id === socket.id);
+                    if (currentPlayer) {
+                        playerId = currentPlayer.id;
+                        console.log('Set playerId from lobby:', playerId);
+                    }
+                }
+            });
+            
+            socket.on('lobbyReady', () => {
+                console.log('All players ready, starting unit selection');
+                document.getElementById('lobby-modal').classList.add('hidden');
+                showUnitSelection();
+            });
+            
+            socket.on('gameStateUpdate', (state) => {
+                updateGameState(state);
+            });
+            
+            socket.on('game-state', (state) => {
+                console.log('Received game state:', state);
+                
+                // Ensure playerId is set if we can find ourselves in the players
+                if (!playerId && state.players) {
+                    const currentPlayer = state.players.find(p => p.id === socket.id);
+                    if (currentPlayer) {
+                        playerId = currentPlayer.id;
+                        console.log('Set playerId from game state:', playerId);
+                    }
+                }
+                
+                console.log('Current player:', state.players?.find(p => p.id === playerId));
+                updateGameState(state);
+            });
+            
+            socket.on('timer-update', (timeLeft) => {
+                updateTimer(timeLeft);
+            });
+            
+            socket.on('combat-update', (playerUnits, enemyUnits) => {
+                if (window.gameScene) {
+                    window.gameScene.updateCombatState(playerUnits, enemyUnits);
+                }
+            });
+            
+            socket.on('matchStarted', (matchId) => {
+                console.log('Match started:', matchId);
+                // Match has been created, game state updates will follow
+                
+                // Ensure playerId is set (fallback to socket.id)
+                if (!playerId) {
+                    playerId = socket.id;
+                    console.log('Set playerId from socket.id:', playerId);
+                }
+            });
+            
+            socket.on('error', (error) => {
+                console.error('Socket error:', error);
+                alert('Error: ' + error.message);
+            });
+        }
+        
+        // Lobby Functions
+        function findMatch() {
+            console.log('findMatch clicked');
+            document.getElementById('lobby-status').textContent = 'Finding match...';
+            if (socket) {
+                const playerName = 'Player' + Math.floor(Math.random() * 1000);
+                console.log('Emitting findMatch with:', { playerName });
+                socket.emit('findMatch', { playerName });
+            } else {
+                console.error('Socket not connected!');
+                document.getElementById('lobby-status').textContent = 'Connection error - refresh page';
+            }
+        }
+        
+        function createPrivateMatch() {
+            console.log('createPrivateMatch clicked');
+            document.getElementById('lobby-status').textContent = 'Creating private match...';
+            if (socket) {
+                const playerName = 'Host' + Math.floor(Math.random() * 1000);
+                console.log('Emitting createPrivateMatch with:', { playerName });
+                socket.emit('createPrivateMatch', { playerName });
+            } else {
+                console.error('Socket not connected!');
+                document.getElementById('lobby-status').textContent = 'Connection error - refresh page';
+            }
+        }
+        
+        function setLobbyReady() {
+            console.log('setLobbyReady clicked');
+            if (socket) {
+                console.log('Emitting setLobbyReady');
+                socket.emit('setLobbyReady');
+            } else {
+                console.error('Socket not connected!');
+            }
+        }
+        
+        function updateLobby(lobbyData) {
+            const playerList = document.getElementById('player-list');
+            const playersContainer = document.getElementById('players-container');
+            const lobbyStatus = document.getElementById('lobby-status');
+            
+            playerList.style.display = 'block';
+            playersContainer.innerHTML = '';
+            
+            lobbyData.players.forEach(player => {
+                const playerDiv = document.createElement('div');
+                playerDiv.style.cssText = 'padding: 10px; margin: 5px; background: rgba(255,255,255,0.1); border-radius: 8px; display: flex; justify-content: space-between;';
+                playerDiv.innerHTML = `
+                    <span style="color: white;">${player.name}</span>
+                    <span style="color: ${player.isReady ? '#4CAF50' : '#ccc'};">${player.isReady ? 'READY' : 'Not Ready'}</span>
+                `;
+                playersContainer.appendChild(playerDiv);
+            });
+            
+            lobbyStatus.textContent = `${lobbyData.players.length}/4 players in lobby`;
+        }
+        
+        // Tooltip Functions
+        function showTooltip(event, unitName, unitData = null) {
+            // If unitData is provided (from shop), use it directly, otherwise lookup in AVAILABLE_UNITS
+            let unit = unitData;
+            
+            if (!unit) {
+                // Normalize unit name to lowercase for lookup
+                const normalizedName = unitName.toLowerCase();
+                unit = AVAILABLE_UNITS[normalizedName];
+                if (!unit) {
+                    console.warn(`Tooltip: Unit ${unitName} (${normalizedName}) not found in AVAILABLE_UNITS`);
+                    return;
+                }
+            }
+            
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <div class="tooltip-header">${unitName.toUpperCase()}</div>
+                <div class="tooltip-section">
+                    <span class="tooltip-label">Cost:</span> <span class="tooltip-value">💰 ${unit.cost}</span>
+                </div>
+                <div class="tooltip-section">
+                    <span class="tooltip-label">Combat Stats:</span><br>
+                    ⚔️ Damage: <span class="tooltip-value">${unit.damage}</span><br>
+                    ❤️ Health: <span class="tooltip-value">${unit.health}</span><br>
+                    ⚡ Attack Speed: <span class="tooltip-value">${unit.attackSpeed}</span><br>
+                    🏃 Movement Speed: <span class="tooltip-value">${unit.movementSpeed}</span><br>
+                    🎯 Range: <span class="tooltip-value">${unit.range}</span><br>
+                    📍 Priority: <span class="tooltip-value">${unit.priority}</span>
+                </div>
+                <div class="tooltip-section">
+                    <span class="tooltip-label">Type:</span> <span class="tooltip-value">${unit.attackType}</span><br>
+                    <span class="tooltip-label">Armor:</span> <span class="tooltip-value">${unit.armorType}</span>
+                </div>
+                <div class="tooltip-section">
+                    <span class="tooltip-label">Description:</span><br>
+                    <span class="tooltip-value">${unit.description || 'Tactical unit for combat'}</span>
+                </div>
+                ${(unit.innatePassive && unit.innatePassive !== 'None' && unit.innatePassive !== null) ? `
+                <div class="tooltip-passive">
+                    <strong>Passive:</strong> ${unit.innatePassive}
+                </div>
+                ` : ''}
+                ${getUpgradeTooltipSection(unit)}
+            `;
+            
+            // Position tooltip
+            const rect = event.currentTarget.getBoundingClientRect();
+            tooltip.style.left = rect.left + rect.width + 10 + 'px';
+            tooltip.style.top = rect.top + 'px';
+            
+            // Show tooltip
+            tooltip.classList.add('show');
+        }
+        
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('show');
+        }
+        
+        function getUpgradeTooltipSection(unit) {
+            // Check if this unit has any applied upgrades (buffs)
+            if (!unit.buffs || unit.buffs.length === 0) {
+                return '';
+            }
+            
+            const upgradeDescriptions = [];
+            unit.buffs.forEach(buff => {
+                let description = '';
+                switch (buff.type) {
+                    case 'lifesteal':
+                        description = `Lifesteal: ${Math.round(buff.value * 100)}%`;
+                        break;
+                    case 'poison':
+                        description = `Poison Blade: ${buff.value} HP/sec`;
+                        break;
+                    case 'deathHeal':
+                        description = `Final Gift: Heal ${Math.round(buff.value * 100)}% on death`;
+                        break;
+                    case 'deathExplosion':
+                        description = `Explosive End: ${Math.round(buff.value * 100)}% explosion damage`;
+                        break;
+                    case 'slowAura':
+                        description = `Slowing Aura: -${Math.round(buff.value * 100)}% enemy attack speed`;
+                        break;
+                    default:
+                        description = `${buff.type}: ${buff.value}`;
+                }
+                if (description) {
+                    upgradeDescriptions.push(description);
+                }
+            });
+            
+            if (upgradeDescriptions.length === 0) {
+                return '';
+            }
+            
+            return `
+                <div class="tooltip-passive" style="border-top: 1px solid rgba(76, 175, 80, 0.3); color: #4CAF50;">
+                    <strong>Applied Upgrades:</strong><br>
+                    ${upgradeDescriptions.map(desc => `• ${desc}`).join('<br>')}
+                </div>
+            `;
+        }
+        
+        // Unit Selection Functions
+        function showUnitSelection() {
+            console.log('Showing unit selection modal');
+            const modal = document.getElementById('unit-selection-modal');
+            const grid = document.getElementById('unit-selection-grid');
+            
+            grid.innerHTML = '';
+            selectedUnits = [];
+            updateSelectedCount();
+            
+            Object.entries(AVAILABLE_UNITS).forEach(([unitName, stats]) => {
+                const card = document.createElement('div');
+                card.className = 'unit-selection-card';
+                card.onclick = () => toggleUnitSelection(unitName, card);
+                
+                card.innerHTML = `
+                    <div class="unit-selection-name">${unitName}</div>
+                    <div class="unit-sprite-container">
+                        <canvas class="unit-sprite-canvas" data-unit="${unitName}" width="64" height="64" style="
+                            image-rendering: pixelated;
+                            animation: idle-bob 2s ease-in-out infinite;
+                        "></canvas>
+                    </div>
+                    <div class="unit-selection-stats">
+                        <span>⚔️ ${stats.damage}</span>
+                        <span>❤️ ${stats.health}</span>
+                        <span>🏃 ${stats.movementSpeed}</span>
+                    </div>
+                    <div style="font-size: 10px; color: #aaa; margin-top: 5px;">
+                        ${stats.attackType} | ${stats.armorType}
+                    </div>
+                `;
+                
+                // Add tooltip event handlers
+                card.addEventListener('mouseenter', (e) => showTooltip(e, unitName));
+                card.addEventListener('mouseleave', hideTooltip);
+                
+                grid.appendChild(card);
+            });
+            
+            modal.classList.remove('hidden');
+            
+            // Force canvas update for unit selection screen with multiple attempts
+            for (let i = 1; i <= 5; i++) {
+                setTimeout(() => {
+                    if (window.gameScene && window.gameScene.updateUnitCanvases) {
+                        window.gameScene.updateUnitCanvases();
+                        console.log(`Updated unit selection canvases (attempt ${i})`);
+                    }
+                }, i * 200);
+            }
+        }
+        
+        function toggleUnitSelection(unitName, cardElement) {
+            console.log('Toggling unit selection for:', unitName);
+            const index = selectedUnits.indexOf(unitName);
+            
+            if (index > -1) {
+                // Deselect
+                selectedUnits.splice(index, 1);
+                cardElement.classList.remove('selected');
+                console.log('Deselected:', unitName);
+            } else {
+                // Select (if under limit)
+                if (selectedUnits.length < 5) {
+                    selectedUnits.push(unitName);
+                    cardElement.classList.add('selected');
+                    console.log('Selected:', unitName);
+                } else {
+                    console.log('Cannot select more units, limit reached');
+                }
+            }
+            
+            console.log('Currently selected units:', selectedUnits);
+            updateSelectedCount();
+            updateStartButton();
+        }
+        
+        function updateSelectedCount() {
+            document.getElementById('selected-count').textContent = selectedUnits.length;
+        }
+        
+        function updateStartButton() {
+            const startBtn = document.getElementById('start-game-btn');
+            startBtn.disabled = selectedUnits.length !== 5;
+        }
+        
+        function startGame() {
+            if (selectedUnits.length === 5) {
+                hasSelectedStartingUnits = true;
+                playerStartingUnits = [...selectedUnits]; // Store selected units
+                document.getElementById('unit-selection-modal').classList.add('hidden');
+                
+                console.log('Player selected starting units:', playerStartingUnits);
+                
+                // Send selected units to server
+                if (socket && socket.connected) {
+                    socket.emit('selectStartingUnits', selectedUnits);
+                }
+                
+                // Show the game with shop containing selected units
+                showGameWithStartingUnits();
+            }
+        }
+        
+        function showGameWithStartingUnits() {
+            // Only create mock game state if we don't have a real server connection
+            // or if we haven't received a real game state yet
+            if (!socket || !socket.connected || !gameState) {
+                console.log('Creating mock game state for unit selection preview');
+                
+                // Create mock game state to show shop with starting units
+                const mockGameState = {
+                    matchId: 'preview-match',
+                    phase: 'preparation',
+                    currentFloor: 1,
+                    preparationTimeLeft: 60,
+                    shopUnits: playerStartingUnits.map(unitName => ({
+                        name: unitName,
+                        ...AVAILABLE_UNITS[unitName]
+                    })),
+                    players: [{
+                        id: playerId || 'preview-player',
+                        name: 'Player',
+                        gold: 50,
+                        units: [],
+                        isReady: false
+                    }],
+                    enemyUnits: [],
+                    grid: createEmptyGrid(12, 12)
+                };
+                
+                // Store as the current game state
+                gameState = mockGameState;
+                
+                const mockPlayer = {
+                    id: playerId || 'preview-player',
+                    gold: 50,
+                    units: [],
+                    isReady: false
+                };
+                
+                // Manually show the game UI
+                updateGameStateUI(mockGameState, mockPlayer);
+            } else {
+                console.log('Server connected, waiting for real game state...');
+            }
+        }
+        
+        function createEmptyGrid(width, height) {
+            const grid = [];
+            for (let y = 0; y < height; y++) {
+                grid[y] = [];
+                for (let x = 0; x < width; x++) {
+                    grid[y][x] = {
+                        x,
+                        y,
+                        occupied: false,
+                        unitId: null
+                    };
+                }
+            }
+            return grid;
+        }
+        
+        // Update game state
+        function updateGameState(state) {
+            console.log('=== updateGameState called ===');
+            console.log('New state received:', state);
+            console.log('Current playerId:', playerId);
+            console.log('Phase:', state.phase);
+            console.log('Players in state:', state.players);
+            
+            gameState = state;
+            
+            // Update HUD
+            const player = state.players.find(p => p.id === playerId);
+            console.log('Found current player:', player);
+            updateGameStateUI(state, player);
+            
+            // Force Phaser scene update
+            if (window.gameScene && window.gameScene.updateGameState) {
+                console.log('Calling Phaser scene updateGameState...');
+                window.gameScene.updateGameState(state);
+            } else {
+                console.error('Phaser scene or updateGameState method not available!');
+            }
+        }
+        
+        function updateGameStateUI(state, player) {
+            if (player) {
+                document.getElementById('gold-amount').textContent = player.gold;
+                
+                // Update ready button
+                const readyBtn = document.getElementById('ready-btn');
+                if (player.isReady) {
+                    readyBtn.textContent = 'READY!';
+                    readyBtn.disabled = true;
+                } else {
+                    readyBtn.textContent = 'READY';
+                    readyBtn.disabled = false;
+                }
+            }
+            
+            // Update phase info
+            document.getElementById('phase-text').textContent = 
+                state.phase === 'preparation' ? 'Preparation Phase' :
+                state.phase === 'combat' ? 'Combat Phase' : 
+                state.phase === 'post-combat' ? 'Victory! Choose Upgrades' :
+                'Game Over';
+            document.getElementById('floor-text').textContent = `Floor ${state.currentFloor}/10`;
+            
+            // Update timer (show during preparation phase)
+            if (state.phase === 'preparation' && state.preparationTimeLeft !== undefined) {
+                updateTimer(state.preparationTimeLeft);
+                document.getElementById('timer-text').style.display = 'block';
+            } else {
+                // Hide timer during combat
+                document.getElementById('timer-text').style.display = 'none';
+            }
+            
+            // Show/hide shop
+            const shopPanel = document.getElementById('shop-panel');
+            if (state.phase === 'preparation') {
+                shopPanel.classList.add('active');
+                // Use shopUnits from state, or fallback to default units for testing
+                const shopUnits = state.shopUnits || Object.entries(AVAILABLE_UNITS).slice(0, 4).map(([name, stats]) => ({
+                    name,
+                    ...stats
+                }));
+                updateShop(shopUnits, player?.gold || 50);
+            } else {
+                shopPanel.classList.remove('active');
+            }
+            
+            // Show/hide upgrade modal
+            const upgradeModal = document.getElementById('upgrade-modal');
+            if (state.phase === 'post-combat' && state.upgradeCards && state.upgradeCards.length > 0) {
+                upgradeModal.classList.remove('hidden');
+                showUpgradeSelection(state.upgradeCards, state.currentFloor, player?.gold || 0);
+            } else {
+                upgradeModal.classList.add('hidden');
+            }
+            
+            // Update Phaser game - try multiple ways to get the scene
+            if (window.gameScene && window.gameScene.updateGameState) {
+                console.log('Updating Phaser scene via window.gameScene');
+                window.gameScene.updateGameState(state);
+            } else if (game && game.scene.getScene('MainScene')) {
+                console.log('Updating Phaser scene via game.scene.getScene');
+                game.scene.getScene('MainScene').updateGameState(state);
+            } else {
+                console.error('No Phaser scene available for update!');
+                console.log('window.gameScene:', !!window.gameScene);
+                console.log('game:', !!game);
+                console.log('game.scene:', game?.scene);
+            }
+        }
+        
+        // Update timer display
+        function updateTimer(timeLeft) {
+            const timerElement = document.getElementById('timer-text');
+            if (timerElement) {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                timerElement.textContent = `⏱️ ${timeString}`;
+                
+                // Change color based on time remaining
+                if (timeLeft <= 10) {
+                    timerElement.style.color = '#FF4444'; // Red for urgency
+                } else if (timeLeft <= 30) {
+                    timerElement.style.color = '#FFA500'; // Orange for warning
+                } else {
+                    timerElement.style.color = '#FFD700'; // Gold for normal
+                }
+            }
+        }
+
+        // Update shop display
+        function updateShop(units, playerGold) {
+            console.log('Updating shop with units:', units, 'Gold:', playerGold);
+            const shopUnitsDiv = document.getElementById('shop-units');
+            shopUnitsDiv.innerHTML = '';
+            
+            units.forEach(unit => {
+                const canAfford = playerGold >= unit.cost;
+                const unitCard = document.createElement('div');
+                unitCard.className = `unit-card ${!canAfford ? 'disabled' : ''}`;
+                
+                unitCard.innerHTML = `
+                    <div class="unit-name">${unit.name}</div>
+                    <div class="shop-unit-sprite-container">
+                        <canvas class="shop-unit-sprite" data-unit="${unit.name.toLowerCase()}" width="48" height="48" style="
+                            image-rendering: pixelated;
+                            animation: idle-bob 2s ease-in-out infinite;
+                        "></canvas>
+                    </div>
+                    <div class="unit-cost">💰 ${unit.cost}</div>
+                    <div class="unit-stats">
+                        <span>⚔️ ${unit.damage}</span>
+                        <span>❤️ ${unit.health}</span>
+                        <span>🏃 ${unit.movementSpeed}</span>
+                    </div>
+                `;
+                
+                // Add tooltip event handlers with unit data
+                unitCard.addEventListener('mouseenter', (e) => {
+                    console.log('Tooltip hover on unit:', unit.name, 'Full unit object:', unit);
+                    showTooltip(e, unit.name, unit);
+                });
+                unitCard.addEventListener('mouseleave', hideTooltip);
+                
+                if (canAfford) {
+                    // Universal drag system for desktop and mobile
+                    setupUniversalDrag(unitCard, unit.name.toLowerCase());
+                }
+                
+                shopUnitsDiv.appendChild(unitCard);
+            });
+            
+            // Force canvas update after creating shop cards
+            setTimeout(() => {
+                if (window.gameScene && window.gameScene.updateUnitCanvases) {
+                    window.gameScene.updateUnitCanvases();
+                }
+            }, 100);
+        }
+        
+        // Universal drag system for desktop and mobile
+        function setupUniversalDrag(element, unitName) {
+            let isDragging = false;
+            let dragClone = null;
+            let startX, startY;
+            
+            // Mouse events for desktop
+            element.addEventListener('mousedown', startDrag);
+            
+            // Touch events for mobile
+            element.addEventListener('touchstart', startDrag, { passive: false });
+            
+            function startDrag(e) {
+                e.preventDefault();
+                isDragging = true;
+                
+                const touch = e.touches ? e.touches[0] : e;
+                startX = touch.clientX;
+                startY = touch.clientY;
+                
+                // Create a sprite-only visual for dragging
+                dragClone = document.createElement('div');
+                dragClone.style.position = 'fixed';
+                dragClone.style.pointerEvents = 'none';
+                dragClone.style.zIndex = '9999';
+                dragClone.style.opacity = '0.8';
+                dragClone.style.width = '48px';
+                dragClone.style.height = '48px';
+                dragClone.style.borderRadius = '8px';
+                dragClone.style.left = (startX - 24) + 'px';
+                dragClone.style.top = (startY - 24) + 'px';
+                
+                // Create canvas for the drag sprite
+                const dragCanvas = document.createElement('canvas');
+                dragCanvas.width = 48;
+                dragCanvas.height = 48;
+                dragCanvas.setAttribute('data-unit', unitName.toLowerCase());
+                dragCanvas.style.width = '100%';
+                dragCanvas.style.height = '100%';
+                dragCanvas.style.imageRendering = 'pixelated';
+                
+                dragClone.appendChild(dragCanvas);
+                document.body.appendChild(dragClone);
+                
+                // Update the drag canvas immediately
+                if (window.gameScene && window.gameScene.updateUnitCanvases) {
+                    setTimeout(() => window.gameScene.updateUnitCanvases(), 10);
+                }
+                
+                element.classList.add('dragging');
+                
+                // Add move and end listeners
+                document.addEventListener('mousemove', handleDrag);
+                document.addEventListener('mouseup', endDrag);
+                document.addEventListener('touchmove', handleDrag, { passive: false });
+                document.addEventListener('touchend', endDrag);
+            }
+            
+            function handleDrag(e) {
+                if (!isDragging || !dragClone) return;
+                e.preventDefault();
+                
+                const touch = e.touches ? e.touches[0] : e;
+                
+                dragClone.style.left = (touch.clientX - 24) + 'px';
+                dragClone.style.top = (touch.clientY - 24) + 'px';
+            }
+            
+            function endDrag(e) {
+                if (!isDragging) return;
+                
+                const touch = e.changedTouches ? e.changedTouches[0] : e;
+                const dropX = touch.clientX;
+                const dropY = touch.clientY;
+                
+                
+                // Check if dropped on the Phaser game canvas
+                const gameCanvas = document.querySelector('#phaser-game canvas');
+                if (gameCanvas) {
+                    const rect = gameCanvas.getBoundingClientRect();
+                    console.log(`Drop coordinates: (${dropX}, ${dropY}), Canvas rect:`, rect);
+                    
+                    if (dropX >= rect.left && dropX <= rect.right && 
+                        dropY >= rect.top && dropY <= rect.bottom) {
+                        
+                        // Calculate grid position
+                        const localX = dropX - rect.left;
+                        const localY = dropY - rect.top;
+                        console.log(`Local coordinates: (${localX}, ${localY})`);
+                        
+                        if (window.gameScene && window.gameScene.worldToGrid) {
+                            const gridPos = window.gameScene.worldToGrid(localX, localY);
+                            const gridWidth = window.gameScene.gridWidth || 12;
+                            const gridHeight = window.gameScene.gridHeight || 12;
+                            
+                            console.log(`Grid position: (${gridPos.x}, ${gridPos.y}), Grid size: ${gridWidth}x${gridHeight}`);
+                            
+                            if (gridPos.x >= 0 && gridPos.x < gridWidth && 
+                                gridPos.y >= 0 && gridPos.y < gridHeight) {
+                                console.log(`Valid position! Placing ${unitName} at grid position:`, gridPos);
+                                purchaseAndPlaceUnit(unitName, gridPos);
+                            } else {
+                                console.log(`Invalid grid position: (${gridPos.x}, ${gridPos.y})`);
+                            }
+                        } else {
+                            console.error('gameScene or worldToGrid not available');
+                        }
+                    } else {
+                        console.log('Drop outside canvas bounds');
+                    }
+                } else {
+                    console.error('Game canvas not found!');
+                }
+                
+                // Cleanup
+                if (dragClone) {
+                    document.body.removeChild(dragClone);
+                    dragClone = null;
+                }
+                
+                element.classList.remove('dragging');
+                isDragging = false;
+                
+                // Remove event listeners
+                document.removeEventListener('mousemove', handleDrag);
+                document.removeEventListener('mouseup', endDrag);
+                document.removeEventListener('touchmove', handleDrag);
+                document.removeEventListener('touchend', endDrag);
+            }
+        }
+        
+        // Game actions
+        function setReady() {
+            console.log('setReady clicked, socket:', !!socket);
+            if (socket && socket.connected) {
+                socket.emit('setReady');
+                console.log('Emitted setReady event');
+            } else {
+                console.error('No socket connection!');
+            }
+        }
+        
+        
+        function purchaseAndPlaceUnit(unitType, position) {
+            console.log(`Purchasing and placing ${unitType} at`, position);
+            console.log('Current playerId:', playerId);
+            console.log('Current socket.id:', socket?.id);
+            
+            // Ensure unitType is lowercase
+            unitType = unitType.toLowerCase();
+            
+            // Check if we have a valid playerId
+            if (!playerId) {
+                console.error('No player ID! Not in a match yet.');
+                // Try to set it from socket.id as fallback
+                if (socket && socket.id) {
+                    playerId = socket.id;
+                    console.log('Emergency fallback: set playerId to socket.id:', playerId);
+                } else {
+                    alert('You must join a match first!');
+                    return;
+                }
+            }
+            
+            // Check if socket is connected
+            if (!socket || !socket.connected) {
+                console.error('Socket not connected! Cannot purchase unit.');
+                alert('Connection lost! Please refresh the page.');
+                return;
+            }
+            
+            // Try to find unit data from game state first (has server costs), then fall back to local data
+            let unitData = null;
+            let unitCost = 0;
+            
+            if (gameState && gameState.shopUnits) {
+                const shopUnit = gameState.shopUnits.find(u => u.name.toLowerCase() === unitType);
+                if (shopUnit) {
+                    unitData = shopUnit;
+                    unitCost = shopUnit.cost;
+                    console.log(`Found unit in shop with cost ${unitCost}`);
+                }
+            }
+            
+            // Fallback to local unit data
+            if (!unitData) {
+                unitData = AVAILABLE_UNITS[unitType];
+                if (unitData) {
+                    unitCost = unitData.cost;
+                    console.log(`Using local unit data with cost ${unitCost}`);
+                }
+            }
+            
+            if (!unitData) {
+                console.error(`Unit data not found for ${unitType}`);
+                return;
+            }
+            
+            const currentGold = parseInt(document.getElementById('gold-amount').textContent);
+            if (currentGold < unitCost) {
+                console.warn(`Not enough gold! Need ${unitCost}, have ${currentGold}`);
+                return;
+            }
+            
+            // Send to server - the server will handle validation, gold deduction, and unit placement
+            console.log('Sending to server: purchaseAndPlaceUnit', { unitType, position });
+            socket.emit('purchaseAndPlaceUnit', { unitType, position });
+            console.log('Purchase request sent to server, waiting for game state update...');
+        }
+        
+        // Initialize Phaser game
+        function initPhaser() {
+            const config = {
+                type: Phaser.AUTO,
+                parent: 'phaser-game',
+                width: window.innerWidth,
+                height: window.innerHeight,
+                scale: {
+                    mode: Phaser.Scale.RESIZE,
+                    autoCenter: Phaser.Scale.CENTER_BOTH,
+                },
+                backgroundColor: '#1a1a2e',
+                scene: {
+                    preload: preload,
+                    create: create,
+                    update: update
+                }
+            };
+            
+            game = new Phaser.Game(config);
+        }
+        
+        // Store animations for each unit
+        const animationsStore = {};
+
+        // Unit list from our game
+        const unitList = ["knight", "priest", "fighter", "wizard", "goblin"];
+
+        function preload() {
+            console.log('Preloading assets...');
+            
+            // Load assets
+            this.load.setBaseURL('/assets/');
+            
+            // Load backgrounds
+            this.load.image('battle1', 'backgrounds/battle1.png');
+            this.load.image('battle2', 'backgrounds/battle2.png');
+            this.load.image('battle3', 'backgrounds/battle3.png');
+            this.load.image('battle4', 'backgrounds/battle4.png');
+            
+            // Load unit atlases with simplified approach
+            unitList.forEach(unit => {
+                console.log(`Loading atlas for ${unit}`);
+                this.load.atlas(
+                    unit,
+                    `units/${unit}/${unit}.png`,
+                    `units/${unit}/${unit}.json`
+                );
+                
+                // Load sound (optional)
+                this.load.audio(`${unit}Sound`, `units/${unit}/${unit}Sound.mp3`);
+            });
+        }
+        
+        function create() {
+            console.log('Create function called');
+            
+            // Store scene reference for resize handling
+            window.gameScene = this;
+            
+            // Set up the game scene
+            this.cameras.main.setBackgroundColor('#1a1a2e');
+            
+            // Create grid first - 12x12 grid as per requirements
+            this.gridGraphics = this.add.graphics();
+            this.gridWidth = 12;
+            this.gridHeight = 12;
+            this.gridSize = 12; // Keep for backwards compatibility
+            this.drawGrid();
+            this.gridGraphics.setVisible(true);
+            
+            // Initialize containers for tracking sprites
+            this.unitSprites = [];
+            this.combatUnits = {};
+            this.unitPreviews = {};
+            this.battleBackground = null;
+            
+            // Fix TexturePacker atlases before creating animations
+            console.log('Fixing texture atlases...');
+            unitList.forEach(unit => {
+                fixTextureAtlas(this, unit);
+            });
+            
+            // Create animations for all loaded units
+            console.log('Creating animations for all units...');
+            unitList.forEach(unit => {
+                if (this.textures.exists(unit)) {
+                    console.log(`Creating animations for ${unit}`);
+                    createAnimationsForUnit(this, unit);
+                } else {
+                    console.error(`Texture ${unit} not found!`);
+                }
+            });
+            
+            // Debug: Test creating a unit sprite to verify assets are working
+            this.testUnitRendering();
+            
+            // Create unit previews after animations are set up
+            setTimeout(() => {
+                console.log('Creating unit previews...');
+                this.createUnitPreviews();
+            }, 500);
+        }
+        
+        Phaser.Scene.prototype.testUnitRendering = function() {
+            console.log('Testing unit rendering...');
+            
+            // Try to create a test sprite for debugging
+            if (this.textures.exists('knight')) {
+                console.log('Knight texture exists, creating test sprite');
+                const testSprite = this.add.sprite(200, 200, 'knight');
+                testSprite.setScale(0.5);
+                
+                // Try to play animation
+                const idleAnimKey = 'knight_idle';
+                if (this.anims.exists(idleAnimKey)) {
+                    testSprite.play(idleAnimKey);
+                    console.log('Playing knight idle animation');
+                } else {
+                    console.log('Knight idle animation not found, using first frame');
+                    const frames = this.textures.get('knight').getFrameNames();
+                    console.log('Available knight frames:', frames.slice(0, 5));
+                    if (frames.length > 0) {
+                        testSprite.setFrame(frames[0]);
+                    }
+                }
+                
+                // Remove test sprite after 3 seconds
+                setTimeout(() => {
+                    if (testSprite && testSprite.scene) {
+                        testSprite.destroy();
+                        console.log('Test sprite removed');
+                    }
+                }, 3000);
+            } else {
+                console.error('Knight texture not found! Available textures:', Object.keys(this.textures.list));
+            }
+        };
+        
+        /**
+         * Fix TexturePacker format atlases
+         */
+        function fixTextureAtlas(scene, atlasKey) {
+            const texture = scene.textures.get(atlasKey);
+            if (!texture) return;
+            
+            // Check if we need to fix the frame names
+            const frames = texture.getFrameNames();
+            console.log(`Checking ${atlasKey} atlas, found ${frames.length} frames`);
+            
+            // If we have frames with .png extension, we might need to fix them
+            if (frames.length > 0 && frames[0].includes('.png')) {
+                console.log(`Fixing frame names for ${atlasKey}`);
+                
+                // Get the atlas data
+                const atlasData = texture.customData;
+                if (atlasData && atlasData.textures) {
+                    // This is TexturePacker format, already handled by Phaser
+                    console.log(`${atlasKey} is already in correct format`);
+                }
+            }
+        }
+        
+        /**
+         * Helper function to create animations for a specific unit.
+         * @param {Phaser.Scene} scene - The Phaser scene.
+         * @param {string} atlasKey - The unit's atlas key.
+         */
+        function createAnimationsForUnit(scene, atlasKey) {
+            try {
+                const textureFrames = scene.textures.get(atlasKey).getFrameNames();
+                console.log(`Creating animations for ${atlasKey}, found ${textureFrames.length} frames:`, textureFrames.slice(0, 5));
+
+                // Find different animation frames
+                const idleFrames = textureFrames.filter(frame => {
+                    return frame.startsWith("Idle_") || frame.toLowerCase().includes("idle");
+                });
+                
+                const walkFrames = textureFrames.filter(frame => {
+                    return frame.startsWith("Walk_") || frame.startsWith("Run_") || 
+                           frame.toLowerCase().includes("walk") || frame.toLowerCase().includes("run");
+                });
+                
+                const attackFrames = textureFrames.filter(frame => {
+                    return frame.startsWith("Attack_") || frame.toLowerCase().includes("attack");
+                });
+                
+                const deathFrames = textureFrames.filter(frame => {
+                    return frame.startsWith("Death_") || frame.startsWith("Die_") || 
+                           frame.toLowerCase().includes("death") || frame.toLowerCase().includes("die");
+                });
+                
+                console.log(`Found frames for ${atlasKey}: ${idleFrames.length} idle, ${walkFrames.length} walk, ${attackFrames.length} attack, ${deathFrames.length} death`);
+
+                // Create idle animation
+                if (idleFrames.length > 0) {
+                    const animKey = `${atlasKey}_idle`;
+                    if (!scene.anims.exists(animKey)) {
+                        scene.anims.create({
+                            key: animKey,
+                            frames: idleFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 4, // Reduced from 6 to 4 for slower animations
+                            repeat: -1,
+                        });
+                        console.log(`✓ Created idle animation: ${animKey}`);
+                    }
+                }
+                
+                // Create walk animation
+                if (walkFrames.length > 0) {
+                    const animKey = `${atlasKey}_walk`;
+                    if (!scene.anims.exists(animKey)) {
+                        scene.anims.create({
+                            key: animKey,
+                            frames: walkFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 7.5, // Increased from 6 to 7.5 (25% faster)
+                            repeat: -1,
+                        });
+                        console.log(`✓ Created walk animation: ${animKey}`);
+                    }
+                } else if (idleFrames.length > 0) {
+                    // Fallback: use idle frames for walking if no walk frames
+                    const animKey = `${atlasKey}_walk`;
+                    if (!scene.anims.exists(animKey)) {
+                        scene.anims.create({
+                            key: animKey,
+                            frames: idleFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 7.5, // Increased from 6 to 7.5 (25% faster)
+                            repeat: -1,
+                        });
+                        console.log(`✓ Created walk animation (using idle frames): ${animKey}`);
+                    }
+                }
+                
+                // Create attack animation
+                if (attackFrames.length > 0) {
+                    const animKey = `${atlasKey}_attack`;
+                    if (!scene.anims.exists(animKey)) {
+                        scene.anims.create({
+                            key: animKey,
+                            frames: attackFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 8, // Reduced from 10 to 8 for slower animations
+                            repeat: 0, // Play once
+                        });
+                        console.log(`✓ Created attack animation: ${animKey}`);
+                    }
+                } else if (idleFrames.length > 0) {
+                    // Fallback: use idle frames for attacking if no attack frames
+                    const animKey = `${atlasKey}_attack`;
+                    if (!scene.anims.exists(animKey)) {
+                        scene.anims.create({
+                            key: animKey,
+                            frames: idleFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 8, // Reduced from 12 to 8 for slower animations
+                            repeat: 0,
+                        });
+                        console.log(`✓ Created attack animation (using idle frames): ${animKey}`);
+                    }
+                }
+                
+                // Create death animation
+                if (deathFrames.length > 0) {
+                    const animKey = `${atlasKey}_death`;
+                    if (!scene.anims.exists(animKey)) {
+                        scene.anims.create({
+                            key: animKey,
+                            frames: deathFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 6, // Reduced from 8 to 6 for slower animations
+                            repeat: 0, // Play once and stop on last frame
+                        });
+                        console.log(`✓ Created death animation: ${animKey}`);
+                    }
+                } else if (idleFrames.length > 0) {
+                    // Fallback: use idle frames for death if no death frames
+                    const animKey = `${atlasKey}_death`;
+                    if (!scene.anims.exists(animKey)) {
+                        scene.anims.create({
+                            key: animKey,
+                            frames: [idleFrames[idleFrames.length - 1]].map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 1,
+                            repeat: 0,
+                        });
+                        console.log(`✓ Created death animation (using last idle frame): ${animKey}`);
+                    }
+                }
+
+                // Store the animation references
+                animationsStore[atlasKey] = {
+                    idle: `${atlasKey}_idle`,
+                    walk: `${atlasKey}_walk`,
+                    attack: `${atlasKey}_attack`,
+                    death: `${atlasKey}_death`
+                };
+
+                console.log(`Stored animations for ${atlasKey}:`, animationsStore[atlasKey]);
+                
+            } catch (error) {
+                console.error(`Error creating animations for ${atlasKey}:`, error);
+            }
+        }
+
+        /**
+         * Helper function to add a unit to the scene.
+         * @param {Phaser.Scene} scene - The Phaser scene.
+         * @param {string} unitName - The unit's name (atlas key).
+         * @param {number} x - X position.
+         * @param {number} y - Y position.
+         */
+        function addUnitToScene(scene, unitName, x, y) {
+            console.log(`Adding ${unitName} to scene at (${x}, ${y})`);
+            
+            try {
+                // Check if texture exists
+                if (!scene.textures.exists(unitName)) {
+                    console.error(`Texture ${unitName} does not exist!`);
+                    // Create a colored placeholder sprite
+                    const graphics = scene.add.graphics();
+                    const colors = {
+                        knight: 0x4CAF50, priest: 0x2196F3, fighter: 0xFF5722, 
+                        wizard: 0x9C27B0, goblin: 0x8BC34A
+                    };
+                    graphics.fillStyle(colors[unitName] || 0xFF0000);
+                    graphics.fillRect(-20, -20, 40, 40);
+                    graphics.setPosition(x, y);
+                    console.log(`Created placeholder for ${unitName}`);
+                    return graphics;
+                }
+                
+                const sprite = scene.add.sprite(x, y, unitName);
+                sprite.setScale(0.75);
+                
+                // Try to play idle animation
+                const idleAnimKey = `${unitName}_idle`;
+                if (scene.anims.exists(idleAnimKey)) {
+                    sprite.play(idleAnimKey);
+                    console.log(`✓ Playing ${idleAnimKey} animation`);
+                } else {
+                    console.warn(`Animation ${idleAnimKey} not found, trying first frame`);
+                    const texture = scene.textures.get(unitName);
+                    const frames = texture.getFrameNames();
+                    console.log(`Available frames for ${unitName}:`, frames.slice(0, 3));
+                    
+                    if (frames.length > 0) {
+                        sprite.setFrame(frames[0]);
+                        console.log(`Set ${unitName} to frame: ${frames[0]}`);
+                    }
+                }
+                
+                // Make sprite more visible for debugging
+                sprite.setDepth(10);
+                console.log(`✓ Successfully created sprite for ${unitName} at (${x}, ${y})`);
+                
+                return sprite;
+                
+            } catch (error) {
+                console.error(`Error adding ${unitName} to scene:`, error);
+                
+                // Create emergency fallback sprite
+                const graphics = scene.add.graphics();
+                graphics.fillStyle(0xFF0000);
+                graphics.fillRect(-15, -15, 30, 30);
+                graphics.setPosition(x, y);
+                console.log(`Created emergency fallback for ${unitName}`);
+                return graphics;
+            }
+        }
+        
+        Phaser.Scene.prototype.createUnitPreviews = function() {
+            console.log('Creating unit previews...');
+            
+            // Store sprites globally for HTML access
+            window.unitPreviewSprites = window.unitPreviewSprites || {};
+            
+            unitList.forEach((unit, index) => {
+                if (this.textures.exists(unit)) {
+                    console.log(`Creating preview sprite for ${unit}`);
+                    
+                    // Create sprite off-screen for canvas rendering only
+                    const sprite = addUnitToScene(this, unit, -1000, -1000); // Position off-screen
+                    if (sprite) {
+                        sprite.setScale(0.75); // Normal scale
+                        sprite.setVisible(false); // Keep invisible - only for canvas rendering
+                        
+                        // Store sprite globally for HTML canvas rendering
+                        window.unitPreviewSprites[unit] = sprite;
+                        this.unitPreviews[unit] = sprite;
+                        
+                        console.log(`✓ Created off-screen preview for ${unit}`);
+                    }
+                } else {
+                    console.error(`❌ Texture ${unit} does not exist!`);
+                }
+            });
+            
+            // Force canvas updates with multiple attempts
+            for (let i = 1; i <= 3; i++) {
+                setTimeout(() => {
+                    this.updateUnitCanvases();
+                    console.log(`Canvas update attempt ${i}`);
+                }, i * 200);
+            }
+        };
+        
+        Phaser.Scene.prototype.updateUnitCanvases = function() {
+            if (!window.unitPreviewSprites) return;
+            
+            Object.entries(window.unitPreviewSprites).forEach(([unitName, sprite]) => {
+                // Find all canvas elements for this unit
+                const canvases = document.querySelectorAll(`[data-unit="${unitName}"]`);
+                canvases.forEach(canvas => {
+                    if (canvas.tagName === 'CANVAS') {
+                        const ctx = canvas.getContext('2d');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Get current frame from Phaser sprite
+                        if (sprite && sprite.texture && sprite.frame) {
+                            const frame = sprite.frame;
+                            const texture = sprite.texture.getSourceImage();
+                            
+                            try {
+                                // Draw the current frame with proper scaling
+                                const sourceX = frame.cutX || frame.x || 0;
+                                const sourceY = frame.cutY || frame.y || 0;
+                                const sourceWidth = frame.cutWidth || frame.width || frame.realWidth || 50;
+                                const sourceHeight = frame.cutHeight || frame.height || frame.realHeight || 50;
+                                
+                                ctx.drawImage(
+                                    texture,
+                                    sourceX, sourceY, sourceWidth, sourceHeight,
+                                    0, 0, canvas.width, canvas.height
+                                );
+                                
+                                // Debug: add a border to show canvas is working
+                                ctx.strokeStyle = '#00ff00';
+                                ctx.lineWidth = 1;
+                                ctx.strokeRect(0, 0, canvas.width, canvas.height);
+                                
+                            } catch (e) {
+                                console.warn(`Failed to draw ${unitName}:`, e);
+                                // Fallback: draw colored rectangle with unit name
+                                const colors = {
+                                    knight: '#4CAF50', priest: '#2196F3', fighter: '#FF5722', 
+                                    wizard: '#9C27B0', goblin: '#8BC34A'
+                                };
+                                ctx.fillStyle = colors[unitName] || '#666';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                ctx.fillStyle = '#fff';
+                                ctx.font = '10px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(unitName.toUpperCase(), canvas.width/2, canvas.height/2);
+                            }
+                        } else {
+                            // No sprite/frame available, draw colored placeholder
+                            const colors = {
+                                knight: '#4CAF50', priest: '#2196F3', fighter: '#FF5722', 
+                                wizard: '#9C27B0', goblin: '#8BC34A'
+                            };
+                            ctx.fillStyle = colors[unitName] || '#444';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.fillStyle = '#fff';
+                            ctx.font = '10px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(unitName.toUpperCase(), canvas.width/2, canvas.height/2);
+                        }
+                    }
+                });
+            });
+        };
+        
+        Phaser.Scene.prototype.drawGrid = function() {
+            if (!this.gridGraphics) return;
+            
+            this.gridGraphics.clear();
+            this.gridGraphics.lineStyle(2, 0x888888, 0.8); // Make grid more visible
+            
+            // Use actual grid dimensions
+            const gridWidth = this.gridWidth || 20;
+            const gridHeight = this.gridHeight || 10;
+            
+            // Calculate responsive grid size with better spacing for UI
+            const availableWidth = this.cameras.main.width * 0.9;
+            const availableHeight = this.cameras.main.height * 0.6; // More room for UI panels
+            
+            this.cellSize = Math.min(
+                availableWidth / gridWidth,
+                availableHeight / gridHeight
+            );
+            
+            this.gridX = this.cameras.main.centerX - (gridWidth * this.cellSize) / 2;
+            // Position grid higher up to avoid shop panel overlap
+            this.gridY = this.cameras.main.centerY - (gridHeight * this.cellSize) / 2 - 30;
+            
+            // Draw grid lines
+            for (let i = 0; i <= gridWidth; i++) {
+                // Vertical lines
+                this.gridGraphics.moveTo(this.gridX + i * this.cellSize, this.gridY);
+                this.gridGraphics.lineTo(this.gridX + i * this.cellSize, this.gridY + gridHeight * this.cellSize);
+            }
+            for (let i = 0; i <= gridHeight; i++) {
+                // Horizontal lines
+                this.gridGraphics.moveTo(this.gridX, this.gridY + i * this.cellSize);
+                this.gridGraphics.lineTo(this.gridX + gridWidth * this.cellSize, this.gridY + i * this.cellSize);
+            }
+            this.gridGraphics.strokePath();
+        };
+        
+        Phaser.Scene.prototype.worldToGrid = function(x, y) {
+            const gridWidth = this.gridWidth || 20;
+            const gridHeight = this.gridHeight || 10;
+            
+            const gridX = Math.floor((x - this.gridX) / this.cellSize);
+            const gridY = Math.floor((y - this.gridY) / this.cellSize);
+            
+            return {
+                x: Math.max(0, Math.min(gridX, gridWidth - 1)),
+                y: Math.max(0, Math.min(gridY, gridHeight - 1))
+            };
+        };
+        
+        Phaser.Scene.prototype.updateGameState = function(state) {
+            // Handle game state updates in Phaser
+            if (state.phase === 'combat') {
+                this.startCombatPhase(state);
+            } else {
+                this.startPreparationPhase(state);
+            }
+        };
+        
+        Phaser.Scene.prototype.startPreparationPhase = function(state) {
+            console.log('=== Starting Preparation Phase ===');
+            console.log('Game state:', state);
+            console.log('Player ID:', playerId);
+            
+            // Hide and destroy background during preparation
+            if (this.battleBackground) {
+                this.battleBackground.destroy();
+                this.battleBackground = null;
+                console.log('Destroyed battle background');
+            }
+            
+            // Show grid during preparation
+            this.gridGraphics.setVisible(true);
+            console.log('Grid made visible');
+            
+            // Clear existing unit sprites
+            if (this.unitSprites) {
+                console.log(`Destroying ${this.unitSprites.length} existing unit sprites`);
+                this.unitSprites.forEach(sprite => {
+                    if (sprite && sprite.destroy) sprite.destroy();
+                });
+                this.unitSprites = [];
+            }
+            
+            if (this.combatUnits) {
+                const combatCount = Object.keys(this.combatUnits).length;
+                console.log(`Destroying ${combatCount} existing combat units`);
+                Object.values(this.combatUnits).forEach(unitData => {
+                    if (unitData.sprite && unitData.sprite.destroy) {
+                        unitData.sprite.destroy();
+                    }
+                    if (unitData.healthBar && unitData.healthBar.container && unitData.healthBar.container.destroy) {
+                        unitData.healthBar.container.destroy();
+                    }
+                });
+                this.combatUnits = {};
+            }
+            
+            // Additional cleanup: destroy any remaining sprites that might be lingering
+            if (this.children) {
+                this.children.list.forEach(child => {
+                    // Don't destroy the grid graphics or permanent UI elements
+                    if (child !== this.gridGraphics && child.texture && 
+                        (child.texture.key.includes('knight') || child.texture.key.includes('priest') || 
+                         child.texture.key.includes('fighter') || child.texture.key.includes('wizard') || 
+                         child.texture.key.includes('goblin'))) {
+                        console.log('Destroying lingering sprite:', child.texture.key);
+                        child.destroy();
+                    }
+                });
+            }
+            
+            // Add player units to the grid during preparation
+            if (state.players && state.phase === 'preparation') {
+                console.log('Looking for player units...');
+                const currentPlayer = state.players.find(p => p.id === playerId);
+                console.log('Current player found:', currentPlayer);
+                
+                if (currentPlayer && currentPlayer.units && currentPlayer.units.length > 0) {
+                    console.log(`Rendering ${currentPlayer.units.length} player units:`, currentPlayer.units);
+                    
+                    currentPlayer.units.forEach((unit, index) => {
+                        console.log(`Processing unit ${index + 1}/${currentPlayer.units.length}:`, unit);
+                        
+                        if (unit.position) {
+                            const worldX = this.gridX + (unit.position.x * this.cellSize) + (this.cellSize / 2);
+                            const worldY = this.gridY + (unit.position.y * this.cellSize) + (this.cellSize / 2);
+                            
+                            console.log(`Calculated world position: (${worldX}, ${worldY}) from grid (${unit.position.x}, ${unit.position.y})`);
+                            console.log(`Grid bounds: X=${this.gridX}, Y=${this.gridY}, CellSize=${this.cellSize}`);
+                            
+                            const unitName = unit.name.toLowerCase();
+                            const sprite = addUnitToScene(this, unitName, worldX, worldY);
+                            
+                            if (sprite) {
+                                const scale = Math.min(this.cellSize / 80, 0.8);
+                                sprite.setScale(scale);
+                                this.unitSprites.push(sprite);
+                                console.log(`✓ SUCCESS: Placed ${unitName} at grid (${unit.position.x}, ${unit.position.y}) world (${worldX}, ${worldY})`);
+                            } else {
+                                console.error(`❌ FAILED: Could not create sprite for ${unitName}`);
+                            }
+                        } else {
+                            console.warn(`Unit ${unit.name} has no position:`, unit);
+                        }
+                    });
+                    
+                    console.log(`Preparation phase complete. Total sprites created: ${this.unitSprites.length}`);
+                } else {
+                    console.log('No units to render - player has no units or units array is empty');
+                }
+            } else {
+                console.log('No players found in state or not in preparation phase');
+            }
+        };
+        
+        Phaser.Scene.prototype.startCombatPhase = function(state) {
+            console.log('=== Starting Combat Phase ===');
+            console.log('Game state:', state);
+            console.log('Current floor:', state.currentFloor);
+            
+            // Hide grid during combat
+            this.gridGraphics.setVisible(false);
+            console.log('Grid hidden for combat');
+            
+            // Show battle background based on floor
+            this.setBattleBackground(state.currentFloor);
+            
+            // Clear existing unit sprites from preparation
+            if (this.unitSprites && this.unitSprites.length > 0) {
+                console.log(`Clearing ${this.unitSprites.length} preparation sprites`);
+                this.unitSprites.forEach(sprite => sprite.destroy());
+                this.unitSprites = [];
+            }
+            
+            // Initialize combat units container
+            if (!this.combatUnits) {
+                this.combatUnits = {};
+            }
+            
+            let totalPlayerUnits = 0;
+            let totalEnemyUnits = 0;
+            
+            // Add all player units to combat scene
+            if (state.players) {
+                console.log(`Processing ${state.players.length} players for combat`);
+                state.players.forEach((player, playerIndex) => {
+                    console.log(`Player ${playerIndex + 1}:`, player);
+                    if (player.units && player.units.length > 0) {
+                        console.log(`Adding ${player.units.length} units for player ${player.name}`);
+                        player.units.forEach((unit, unitIndex) => {
+                            console.log(`  Unit ${unitIndex + 1}: ${unit.name} at position`, unit.position, 'status:', unit.status);
+                            if (unit.position) { // Add all units with position, including dead ones
+                                this.addUnitToCombat(unit, false); // false = not enemy
+                                if (unit.status !== 'dead') totalPlayerUnits++;
+                            }
+                        });
+                    }
+                });
+            }
+            
+            // Add enemy units to combat scene
+            if (state.enemyUnits && state.enemyUnits.length > 0) {
+                console.log(`Adding ${state.enemyUnits.length} enemy units to combat`);
+                state.enemyUnits.forEach((unit, index) => {
+                    console.log(`  Enemy ${index + 1}: ${unit.name} at position`, unit.position, 'status:', unit.status);
+                    if (unit.position) { // Add all units with position, including dead ones
+                        this.addUnitToCombat(unit, true); // true = enemy
+                        if (unit.status !== 'dead') totalEnemyUnits++;
+                    }
+                });
+            } else {
+                console.log('No enemy units found in game state');
+            }
+            
+            console.log(`Combat phase setup complete: ${totalPlayerUnits} player units, ${totalEnemyUnits} enemy units`);
+            console.log('Total combat sprites:', Object.keys(this.combatUnits).length);
+        };
+        
+        Phaser.Scene.prototype.setBattleBackground = function(floor) {
+            // Determine which background to use based on floor
+            let backgroundKey;
+            if (floor <= 3) {
+                backgroundKey = 'battle1';
+            } else if (floor <= 6) {
+                backgroundKey = 'battle2';
+            } else if (floor <= 8) {
+                backgroundKey = 'battle3';
+            } else {
+                backgroundKey = 'battle4';
+            }
+            
+            // Remove existing background
+            if (this.battleBackground) {
+                this.battleBackground.destroy();
+            }
+            
+            // Add new background
+            this.battleBackground = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, backgroundKey);
+            this.battleBackground.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+            this.battleBackground.setDepth(-1); // Behind everything else
+            console.log(`Set battle background: ${backgroundKey} for floor ${floor}`);
+        };
+        
+        Phaser.Scene.prototype.addUnitToCombat = function(unit, isEnemy) {
+            if (this.combatUnits[unit.id]) {
+                // Unit already exists, just update position and health bar
+                const unitData = this.combatUnits[unit.id];
+                const worldPos = this.getBattlePosition(unit.position);
+                unitData.sprite.setPosition(worldPos.x, worldPos.y);
+                this.updateHealthBar(unitData, unit);
+                return;
+            }
+            
+            // Create new unit sprite
+            const worldPos = this.getBattlePosition(unit.position);
+            
+            const unitName = unit.name.toLowerCase();
+            const sprite = addUnitToScene(this, unitName, worldPos.x, worldPos.y);
+            
+            if (sprite) {
+                const scale = Math.min(this.cellSize / 80, 0.8); // Slightly larger in combat
+                sprite.setScale(scale);
+                
+                // Tint enemies red
+                if (isEnemy) {
+                    sprite.setTint(0xff8888);
+                }
+                
+                // Create health bar with enemy/friendly distinction
+                const healthBar = this.createHealthBar(worldPos.x, worldPos.y - 25, isEnemy);
+                
+                // Store unit data
+                this.combatUnits[unit.id] = {
+                    sprite: sprite,
+                    healthBar: healthBar,
+                    maxHealth: unit.maxHealth
+                };
+                
+                // Update health bar
+                this.updateHealthBar(this.combatUnits[unit.id], unit);
+                
+                console.log(`Added ${isEnemy ? 'enemy' : 'player'} unit ${unitName} to combat at (${unit.position.x}, ${unit.position.y})`);
+            } else {
+                console.error(`Failed to create combat sprite for ${unitName}`);
+            }
+        };
+        
+        Phaser.Scene.prototype.getBattlePosition = function(gridPosition) {
+            // Shift the battle area down so the bottom row aligns with screen bottom
+            const gridBottom = this.cameras.main.height - 50; // Leave 50px margin
+            const battleGridHeight = this.gridHeight * this.cellSize;
+            const battleGridY = gridBottom - battleGridHeight;
+            
+            const worldX = this.gridX + (gridPosition.x * this.cellSize) + (this.cellSize / 2);
+            const worldY = battleGridY + (gridPosition.y * this.cellSize) + (this.cellSize / 2);
+            
+            return { x: worldX, y: worldY };
+        };
+        
+        Phaser.Scene.prototype.createHealthBar = function(x, y, isEnemy = false) {
+            const barWidth = 50;
+            const barHeight = 8;
+            
+            // Create container for the health bar
+            const container = this.add.container(x, y);
+            
+            // Semi-transparent black background for visibility
+            const background = this.add.graphics();
+            background.fillStyle(0x000000, 0.6); // Semi-transparent black
+            background.fillRoundedRect(-barWidth/2 - 2, -barHeight/2 - 2, barWidth + 4, barHeight + 4, 2);
+            container.add(background);
+            
+            // Health bar border
+            const border = this.add.graphics();
+            border.lineStyle(1, 0xffffff, 0.8);
+            border.strokeRoundedRect(-barWidth/2, -barHeight/2, barWidth, barHeight, 2);
+            container.add(border);
+            
+            // Health bar fill
+            const fill = this.add.graphics();
+            container.add(fill);
+            
+            return {
+                container: container,
+                background: background,
+                border: border,
+                fill: fill,
+                width: barWidth,
+                height: barHeight,
+                isEnemy: isEnemy
+            };
+        };
+        
+        Phaser.Scene.prototype.updateHealthBar = function(unitData, unit) {
+            if (!unitData.healthBar || unit.health == null || !unit.maxHealth) return;
+            
+            const healthPercent = Math.max(0, Math.min(1, unit.health / unit.maxHealth));
+            const fillWidth = unitData.healthBar.width * healthPercent;
+            
+            // Update health bar position to follow sprite
+            const spritePos = { x: unitData.sprite.x, y: unitData.sprite.y - 30 };
+            unitData.healthBar.container.setPosition(spritePos.x, spritePos.y);
+            
+            // Clear and redraw health bar fill with gradient effect
+            unitData.healthBar.fill.clear();
+            
+            if (healthPercent > 0) {
+                // Choose colors based on enemy/friendly and health percentage
+                let fillColor;
+                if (unitData.healthBar.isEnemy) {
+                    // Red gradient for enemies
+                    if (healthPercent > 0.6) {
+                        fillColor = 0xff6666; // Light red
+                    } else if (healthPercent > 0.3) {
+                        fillColor = 0xff3333; // Medium red
+                    } else {
+                        fillColor = 0xff0000; // Dark red
+                    }
+                } else {
+                    // Green gradient for friendlies
+                    if (healthPercent > 0.6) {
+                        fillColor = 0x00ff00; // Bright green
+                    } else if (healthPercent > 0.3) {
+                        fillColor = 0x66ff66; // Medium green
+                    } else {
+                        fillColor = 0x33ff33; // Light green (still alive)
+                    }
+                }
+                
+                // Draw the health bar fill with rounded corners
+                unitData.healthBar.fill.fillStyle(fillColor);
+                unitData.healthBar.fill.fillRoundedRect(
+                    -unitData.healthBar.width/2, 
+                    -unitData.healthBar.height/2, 
+                    fillWidth, 
+                    unitData.healthBar.height, 
+                    2
+                );
+            }
+        };
+        
+        Phaser.Scene.prototype.updateCombatState = function(playerUnits, enemyUnits) {
+            // Update unit positions during combat
+            [...playerUnits, ...enemyUnits].forEach(unit => {
+                if (unit.position && this.combatUnits && this.combatUnits[unit.id]) {
+                    const unitData = this.combatUnits[unit.id];
+                    
+                    // Convert grid position to battle world position
+                    const worldPos = this.getBattlePosition(unit.position);
+                    unitData.sprite.setPosition(worldPos.x, worldPos.y);
+                    
+                    // Update health bar
+                    this.updateHealthBar(unitData, unit);
+                    
+                    // Update sprite based on unit status
+                    if (unit.status === 'dead') {
+                        unitData.sprite.setTint(0x666666);
+                        unitData.sprite.setAlpha(0.5);
+                        // Hide health bar for dead units
+                        unitData.healthBar.container.setVisible(false);
+                        
+                        // Play death animation for dead units
+                        const unitName = unit.name.toLowerCase();
+                        const deathAnimKey = `${unitName}_death`;
+                        
+                        if (!unitData.hasPlayedDeath) {
+                            // Mark that we've started the death animation
+                            unitData.hasPlayedDeath = true;
+                            
+                            if (this.anims.exists(deathAnimKey)) {
+                                console.log(`Playing death animation: ${deathAnimKey} for unit ${unit.id}`);
+                                unitData.sprite.play(deathAnimKey);
+                                
+                                // After death animation completes, stay on last frame
+                                unitData.sprite.once('animationcomplete', () => {
+                                    console.log(`Death animation complete for unit ${unit.id}`);
+                                    // Stay on the last frame of death animation
+                                });
+                            } else {
+                                // Fallback to idle if no death animation
+                                const idleAnimKey = `${unitName}_idle`;
+                                if (this.anims.exists(idleAnimKey)) {
+                                    unitData.sprite.play(idleAnimKey, true);
+                                }
+                            }
+                        }
+                    } else {
+                        // Show health bar for living units
+                        unitData.healthBar.container.setVisible(true);
+                        
+                        // Determine if enemy or player for coloring
+                        const isEnemy = unit.id.startsWith('enemy-');
+                        const unitName = unit.name.toLowerCase();
+                        
+                        // Handle facing direction based on movement
+                        if (unit.movementDirection && (unit.movementDirection.x !== 0 || unit.movementDirection.y !== 0)) {
+                            // Face the direction of movement
+                            if (unit.movementDirection.x > 0) {
+                                unitData.sprite.setFlipX(false); // Face right
+                            } else if (unit.movementDirection.x < 0) {
+                                unitData.sprite.setFlipX(true); // Face left
+                            }
+                        }
+                        
+                        // Handle animations and tinting based on status
+                        if (unit.status === 'attacking') {
+                            // Remove tints from all units - health bar colors are sufficient
+                            unitData.sprite.setTint(0xffffff);
+                            
+                            // Handle facing direction for attacks
+                            if (unit.targetId) {
+                                // Find the target unit to determine facing direction
+                                const allUnits = [...playerUnits, ...enemyUnits];
+                                const target = allUnits.find(u => u.id === unit.targetId);
+                                if (target && target.position) {
+                                    // Calculate direction to target
+                                    const dx = target.position.x - unit.position.x;
+                                    // Face the target: flip sprite if target is to the left
+                                    if (dx < 0) {
+                                        unitData.sprite.setFlipX(true); // Face left
+                                    } else if (dx > 0) {
+                                        unitData.sprite.setFlipX(false); // Face right
+                                    }
+                                    // If dx === 0 (same x position), keep current facing
+                                }
+                            }
+                            
+                            // Play attack animation
+                            const attackAnimKey = `${unitName}_attack`;
+                            if (this.anims.exists(attackAnimKey)) {
+                                if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== attackAnimKey) {
+                                    console.log(`Playing attack animation: ${attackAnimKey} for unit ${unit.id}`);
+                                    unitData.sprite.play(attackAnimKey);
+                                    
+                                    // Chain back to idle after attack
+                                    unitData.sprite.once('animationcomplete', () => {
+                                        const idleAnimKey = `${unitName}_idle`;
+                                        if (this.anims.exists(idleAnimKey)) {
+                                            console.log(`Attack complete, playing idle: ${idleAnimKey} for unit ${unit.id}`);
+                                            unitData.sprite.play(idleAnimKey);
+                                        }
+                                    });
+                                }
+                            } else {
+                                console.log(`No attack animation found for ${unitName}, using idle`);
+                                // Fallback to idle if no attack animation
+                                const idleAnimKey = `${unitName}_idle`;
+                                if (this.anims.exists(idleAnimKey)) {
+                                    if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== idleAnimKey) {
+                                        unitData.sprite.play(idleAnimKey, true);
+                                    }
+                                }
+                            }
+                        } else if (unit.status === 'moving') {
+                            unitData.sprite.setTint(0xffffff); // Remove red tint from enemies
+                            
+                            // Play walk animation
+                            const walkAnimKey = `${unitName}_walk`;
+                            if (this.anims.exists(walkAnimKey)) {
+                                if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== walkAnimKey) {
+                                    unitData.sprite.play(walkAnimKey, true);
+                                }
+                            } else {
+                                // Fallback to idle if no walk animation
+                                const idleAnimKey = `${unitName}_idle`;
+                                if (this.anims.exists(idleAnimKey)) {
+                                    if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== idleAnimKey) {
+                                        unitData.sprite.play(idleAnimKey, true);
+                                    }
+                                }
+                            }
+                        } else {
+                            unitData.sprite.setTint(0xffffff); // Remove red tint from enemies
+                            
+                            // Play idle animation
+                            const idleAnimKey = `${unitName}_idle`;
+                            if (this.anims.exists(idleAnimKey)) {
+                                if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== idleAnimKey) {
+                                    unitData.sprite.play(idleAnimKey, true);
+                                }
+                            }
+                        }
+                        
+                        unitData.sprite.setAlpha(1);
+                    }
+                }
+            });
+        };
+        
+        
+        function update() {
+            // Update game logic and unit canvas rendering
+            if (window.gameScene && window.gameScene.updateUnitCanvases) {
+                // Only update every 10 frames to reduce performance impact
+                if (!this.canvasUpdateCounter) this.canvasUpdateCounter = 0;
+                this.canvasUpdateCounter++;
+                if (this.canvasUpdateCounter % 10 === 0) {
+                    window.gameScene.updateUnitCanvases();
+                }
+            }
+        }
+        
+        // Upgrade system functions
+        let selectedUpgrades = new Map(); // Map of upgradeId -> targetUnitType
+        
+        function showUpgradeSelection(upgradeCards, currentFloor, playerGold) {
+            console.log('Showing upgrade selection:', upgradeCards);
+            
+            // Update floor display
+            document.getElementById('upgrade-floor').textContent = currentFloor;
+            
+            // Clear previous selections
+            selectedUpgrades.clear();
+            
+            // Separate high-potency and normal upgrades
+            const highPotencyUpgrades = upgradeCards.filter(u => u.isHighPotency);
+            const normalUpgrades = upgradeCards.filter(u => !u.isHighPotency);
+            
+            // Display high-potency upgrade
+            const highPotencyContainer = document.getElementById('high-potency-upgrade');
+            highPotencyContainer.innerHTML = '';
+            
+            if (highPotencyUpgrades.length > 0) {
+                const upgrade = highPotencyUpgrades[0];
+                const upgradeCard = createUpgradeCard(upgrade, true);
+                highPotencyContainer.appendChild(upgradeCard);
+            }
+            
+            // Display normal upgrades
+            const normalContainer = document.getElementById('normal-upgrades');
+            normalContainer.innerHTML = '';
+            
+            normalUpgrades.forEach(upgrade => {
+                const upgradeCard = createUpgradeCard(upgrade, false);
+                normalContainer.appendChild(upgradeCard);
+            });
+            
+            // Update reroll button
+            const rerollBtn = document.getElementById('reroll-btn');
+            rerollBtn.disabled = playerGold < 10;
+            rerollBtn.textContent = `Reroll Upgrades (💰 10)${playerGold < 10 ? ' - Not enough gold' : ''}`;
+        }
+        
+        function createUpgradeCard(upgrade, isHighPotency) {
+            const card = document.createElement('div');
+            card.className = `upgrade-card ${isHighPotency ? 'high-potency' : ''}`;
+            card.setAttribute('data-upgrade-id', upgrade.id);
+            
+            const effectValue = isHighPotency ? (upgrade.value * 3) : upgrade.value;
+            const displayValue = upgrade.effect === 'priority' ? 
+                (effectValue > 0 ? `+${effectValue}` : effectValue.toString()) :
+                `${Math.round(effectValue * 100)}%`;
+            
+            let description = upgrade.description;
+            if (isHighPotency) {
+                // Replace percentages with 3x values
+                description = description.replace(/(\d+)%/g, (match, num) => `${parseInt(num) * 3}%`);
+                // Replace flat values (like HP/sec) with 3x values  
+                description = description.replace(/(\d+)\s*(HP\/sec|damage)/g, (match, num, unit) => `${parseInt(num) * 3} ${unit}`);
+                // Replace +/- priority values
+                description = description.replace(/([+-])(\d+)\s*Priority/g, (match, sign, num) => `${sign}${parseInt(num) * 3} Priority`);
+            }
+            
+            card.innerHTML = `
+                <div class="upgrade-name">${upgrade.name}</div>
+                <div class="upgrade-description">${description}</div>
+                ${isHighPotency ? 
+                    `<div class="upgrade-target">Applied to: ${upgrade.targetUnitType}</div>` :
+                    '<div class="upgrade-target">Choose unit type below:</div>'
+                }
+                ${!isHighPotency ? createUnitTypeSelector(upgrade.id) : ''}
+            `;
+            
+            if (isHighPotency) {
+                // High-potency upgrades can be clicked to apply immediately
+                card.onclick = () => {
+                    if (socket && socket.connected) {
+                        socket.emit('selectUpgrade', upgrade.id, upgrade.targetUnitType);
+                    }
+                };
+            } else {
+                // Normal upgrades need unit type selection first
+                card.onclick = () => {
+                    // Show unit type selector
+                    const selector = card.querySelector('.unit-type-selector');
+                    if (selector) {
+                        selector.style.display = 'flex';
+                    }
+                };
+            }
+            
+            return card;
+        }
+        
+        function createUnitTypeSelector(upgradeId) {
+            // Get owned unit types from current game state
+            const ownedUnitTypes = new Set();
+            if (gameState && gameState.players) {
+                const currentPlayer = gameState.players.find(p => p.id === playerId);
+                if (currentPlayer && currentPlayer.units) {
+                    currentPlayer.units.forEach(unit => {
+                        if (unit.status !== 'dead') {
+                            ownedUnitTypes.add(unit.name);
+                        }
+                    });
+                }
+            }
+            
+            // Fallback to common unit types if no game state
+            if (ownedUnitTypes.size === 0) {
+                ['Knight', 'Priest', 'Fighter', 'Wizard', 'Goblin'].forEach(type => ownedUnitTypes.add(type));
+            }
+            
+            const unitTypes = Array.from(ownedUnitTypes);
+            const buttons = unitTypes.map(unitType => 
+                `<button class="unit-type-btn" onclick="selectUnitType('${upgradeId}', '${unitType}')">${unitType}</button>`
+            ).join('');
+            
+            return `<div class="unit-type-selector" style="display: none;">${buttons}</div>`;
+        }
+        
+        function selectUnitType(upgradeId, unitType) {
+            console.log(`Selected unit type ${unitType} for upgrade ${upgradeId}`);
+            
+            // Immediately send upgrade to server
+            if (socket && socket.connected) {
+                socket.emit('selectUpgrade', upgradeId, unitType);
+            }
+        }
+        
+        function rerollUpgrades() {
+            console.log('Rerolling upgrades');
+            if (socket && socket.connected) {
+                socket.emit('rerollUpgrades');
+            }
+        }
+        
+        // Initialize everything when page loads
+        window.addEventListener('load', () => {
+            initSocket();
+            initPhaser();
+            
+            // Show lobby on start
+            document.getElementById('lobby-modal').classList.remove('hidden');
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (game) {
+                game.scale.resize(window.innerWidth, window.innerHeight);
+                
+                // Redraw grid after resize
+                setTimeout(() => {
+                    if (window.gameScene && window.gameScene.drawGrid) {
+                        window.gameScene.drawGrid();
+                    }
+                }, 100);
+            }
+        });
+    </script>
+</body>
+</html>
