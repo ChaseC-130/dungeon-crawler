@@ -7,7 +7,7 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
   private healthBar: Phaser.GameObjects.Graphics;
   private healthBarBg: Phaser.GameObjects.Rectangle;
   private nameText: Phaser.GameObjects.Text;
-  private unit: Unit;
+  public unit: Unit;  // Made public so MainScene can access it
   private isPlayerUnit: boolean;
   private lastStatus: string = 'idle';
   private lastSoundTime: number = 0;
@@ -108,6 +108,27 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     this.playAnimation('idle');
     
     scene.add.existing(this);
+
+    this.sprite.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (animation: Phaser.Animations.Animation) => {
+      if (animation.key === `${this.unit.name.toLowerCase()}_dead`) {
+        // Keep the last frame of death animation visible
+        // but darken it and reduce opacity slightly
+        // Clear any existing tint first before applying death tint
+        this.sprite.clearTint();
+        this.sprite.setTint(0x444444);
+        this.setAlpha(0.5);
+        
+        // Hide health bar and name for dead units
+        this.healthBarBg.setVisible(false);
+        this.healthBar.setVisible(false);
+        this.nameText.setVisible(false);
+        
+        // Emit event after a delay to show the death state
+        this.scene.time.delayedCall(1000, () => {
+          this.emit('death_animation_complete', this.unitId);
+        });
+      }
+    }, this);
   }
 
   updateUnit(unit: Unit) {
@@ -139,7 +160,6 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
         break;
       case 'dead':
         this.playAnimation('dead');
-        this.setAlpha(0.5);
         if (statusChanged) {
           this.playDeathSound();
         }
@@ -198,15 +218,40 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
       });
       
       if (animFrames.length > 0) {
-        // Sort frames to ensure proper order
-        animFrames.sort();
+        // Sort frames to ensure proper order using a custom sort
+        animFrames.sort((frameA, frameB) => {
+          const extractFrameInfo = (frameName) => {
+            // Matches: (Action)_ (MainFrameNumber) _ (SubFrameNumber) (AnythingElse) .png
+            // Or:      (Action)_ (MainFrameNumber) (AnythingElse) .png
+            const match = frameName.match(/^([a-zA-Z]+)_(\d+)(?:_(\d+))?.*?\.png$/i);
+            if (match) {
+              const mainFrame = parseInt(match[2], 10);
+              const subFrame = match[3] ? parseInt(match[3], 10) : 0; // Default subFrame to 0 if not present
+              return { mainFrame, subFrame };
+            }
+            // Fallback: try to find any number if the pattern is different
+            const fallbackMatch = frameName.match(/(\d+)/);
+            if (fallbackMatch) {
+              return { mainFrame: parseInt(fallbackMatch[1], 10), subFrame: 0 };
+            }
+            return { mainFrame: Infinity, subFrame: Infinity }; // Should not happen if frames are named with numbers
+          };
+
+          const infoA = extractFrameInfo(frameA);
+          const infoB = extractFrameInfo(frameB);
+
+          if (infoA.mainFrame === infoB.mainFrame) {
+            return infoA.subFrame - infoB.subFrame;
+          }
+          return infoA.mainFrame - infoB.mainFrame;
+        });
         
         this.scene.anims.create({
           key: animationKey,
           frames: this.scene.anims.generateFrameNames(textureKey, {
             frames: animFrames
           }),
-          frameRate: 8,
+          frameRate: animKey === 'dead' ? 6 : 10,
           repeat: animKey === 'dead' ? 0 : -1
         });
       } else if (animKey === 'idle' && frameNames.length > 0) {
@@ -216,7 +261,7 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
           frames: this.scene.anims.generateFrameNames(textureKey, {
             frames: frameNames.slice(0, Math.min(4, frameNames.length))
           }),
-          frameRate: 8,
+          frameRate: 10,
           repeat: -1
         });
       }
@@ -240,7 +285,8 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
   }
 
   update(time: number, delta: number) {
-    // Smooth movement interpolation could be added here
+    // Update depth based on current Y position for proper layering
+    this.setDepth(this.y);
   }
 
   private playAttackSound() {

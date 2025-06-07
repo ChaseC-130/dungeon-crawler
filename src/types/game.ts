@@ -12,6 +12,7 @@ export interface GridCell {
   y: number;
   occupied: boolean;
   unitId?: string;
+  playerId?: string;
 }
 
 export interface UnitStats {

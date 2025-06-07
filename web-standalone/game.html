@@ -11,6 +11,10 @@
             background-color: #000;
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
         
         #game-container {
@@ -33,8 +37,43 @@
             user-select: none;
         }
         
-        .top-hud {
+        .player-banners {
+            position: absolute;
             top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 50;
+            flex-wrap: wrap;
+        }
+        
+        .player-banner {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 2px solid;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+        }
+        
+        .player-color-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .player-banner.current-player {
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        .top-hud {
+            top: 60px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -60,10 +99,11 @@
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.95);
-            padding: 15px;
-            border-radius: 12px;
+            padding: 10px;
+            border-radius: 8px;
             display: none;
-            max-width: 90vw;
+            max-width: 85vw;
+            max-height: 25vh;
             z-index: 100;
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 215, 0, 0.3);
@@ -90,17 +130,41 @@
         .shop-units {
             display: flex;
             gap: 8px;
-            flex-wrap: wrap;
-            justify-content: center;
-            max-width: 1000px;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 5px 0;
+        }
+        
+        /* Custom scrollbar for shop units */
+        .shop-units::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .shop-units::-webkit-scrollbar-track {
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 3px;
+        }
+        
+        .shop-units::-webkit-scrollbar-thumb {
+            background: rgba(255, 215, 0, 0.3);
+            border-radius: 3px;
+        }
+        
+        .shop-units::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 215, 0, 0.5);
         }
         
         .unit-card {
             background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
             border: 2px solid rgba(255, 215, 0, 0.3);
-            border-radius: 16px;
-            padding: 12px;
-            width: 160px;
+            border-radius: 12px;
+            padding: 8px;
+            width: 120px;
+            min-width: 120px;
+            flex-shrink: 0;
             cursor: grab;
             transition: all 0.3s ease;
             text-align: center;
@@ -118,6 +182,13 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            position: relative;
+        }
+        
+        .shop-unit-sprite-container canvas {
+            display: block;
+            margin: 0;
+            padding: 0;
         }
         
         .shop-unit-sprite {
@@ -240,10 +311,20 @@
             background: #1a1a2e;
             border: 2px solid #FFD700;
             border-radius: 20px;
-            padding: 30px;
-            max-width: 90vw;
-            max-height: 90vh;
-            overflow-y: auto;
+            padding: 20px;
+            width: 90vw;
+            height: 90vh;
+            max-width: 1400px;
+            max-height: 900px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Ensure upgrade modal never scrolls */
+        #upgrade-modal .unit-selection-content {
+            height: calc(90vh - 100px); /* Account for fixed buttons */
+            padding: 15px;
         }
         
         .unit-selection-title {
@@ -434,31 +515,155 @@
             border-top: 1px solid rgba(255, 215, 0, 0.3);
         }
         
+        /* In-game tooltip for units on grid */
+        .game-tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 2px solid #FFD700;
+            z-index: 2500;
+            max-width: 250px;
+            font-size: 11px;
+            line-height: 1.4;
+            pointer-events: auto;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .game-tooltip.show {
+            display: block;
+        }
+        
+        .game-tooltip-header {
+            color: #FFD700;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+        
+        .game-tooltip-owner {
+            color: #4CAF50;
+            font-size: 11px;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+        
+        .game-tooltip-stats {
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        
+        .game-tooltip-upgrades {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 215, 0, 0.3);
+        }
+        
+        .game-tooltip-upgrade-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 4px 0;
+        }
+        
+        .game-tooltip-upgrade-item img {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+        
         /* Upgrade Modal Styles */
         .upgrade-section {
-            margin-bottom: 30px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            margin-bottom: 15px;
+        }
+        
+        .upgrade-section h3 {
+            flex-shrink: 0;
+            color: #FFD700;
+            text-align: center;
+            margin: 0 0 10px 0;
+            font-size: clamp(16px, 2vw, 20px);
         }
         
         .upgrade-cards-container {
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 15px;
             flex-wrap: wrap;
-            margin-bottom: 20px;
+            flex: 1;
+            overflow: hidden; /* No scrolling allowed */
+            padding: 5px;
+            align-items: flex-start;
+            align-content: flex-start;
         }
+        
+        /* Scrollbar styles removed - no scrolling allowed in upgrade panel */
         
         .upgrade-card {
             background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
             border: 3px solid rgba(255, 215, 0, 0.3);
             border-radius: 16px;
-            padding: 20px;
-            width: 250px;
+            padding: clamp(8px, 1.5vh, 15px); /* Responsive padding */
+            width: clamp(180px, 22vw, 240px); /* Responsive width */
+            max-width: calc(50% - 15px);
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             position: relative;
+            display: flex;
+            flex-direction: column;
+            max-height: clamp(200px, 35vh, 400px); /* Ensure cards fit on screen */
+            overflow: hidden; /* Prevent card content overflow */
+        }
+        
+        /* Responsive card size for different screen heights */
+        @media (max-height: 700px) {
+            .upgrade-card {
+                padding: clamp(6px, 1vh, 10px);
+                width: clamp(180px, 20vw, 220px);
+                max-height: clamp(150px, 28vh, 280px);
+            }
+            
+            .unit-selection-content {
+                padding: clamp(10px, 2vh, 15px);
+            }
+            
+            .unit-selection-title {
+                font-size: clamp(18px, 3vh, 22px);
+                margin-bottom: clamp(8px, 1.5vh, 10px);
+            }
+            
+            .unit-selection-subtitle {
+                font-size: clamp(14px, 2.5vh, 16px);
+                margin-bottom: clamp(10px, 2vh, 15px);
+            }
+            
+            .upgrade-card.high-potency::before {
+                top: clamp(-6px, -0.5vh, -4px);
+                font-size: clamp(7px, 0.8vw, 9px);
+                padding: clamp(1px, 0.3vh, 3px) clamp(3px, 0.8vw, 6px);
+            }
+        }
+        
+        @media (max-height: 500px) {
+            .upgrade-card {
+                max-height: clamp(120px, 22vh, 200px);
+                padding: clamp(4px, 0.8vh, 8px);
+            }
+            
+            #upgrade-modal .unit-selection-content {
+                height: calc(95vh - 60px); /* More space on very small screens */
+                padding: clamp(8px, 1.5vh, 12px);
+            }
         }
         
         .upgrade-card.high-potency {
@@ -469,14 +674,16 @@
         .upgrade-card.high-potency::before {
             content: "×3 EFFECT";
             position: absolute;
-            top: -10px;
-            right: 10px;
+            top: clamp(-8px, -1vh, -4px); /* Responsive positioning to prevent cutoff */
+            right: clamp(5px, 1vw, 10px);
             background: #FF6B6B;
             color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 10px;
+            padding: clamp(2px, 0.5vh, 4px) clamp(4px, 1vw, 8px);
+            border-radius: clamp(6px, 1.5vw, 12px);
+            font-size: clamp(8px, 1vw, 10px);
             font-weight: bold;
+            z-index: 1;
+            white-space: nowrap;
         }
         
         .upgrade-card:hover {
@@ -486,8 +693,10 @@
         }
         
         .upgrade-card.selected {
-            border-color: #4CAF50;
-            background: rgba(76, 175, 80, 0.2);
+            border: 3px solid #FFD700;
+            background: rgba(255, 215, 0, 0.15);
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
         }
         
         .upgrade-card.disabled {
@@ -495,26 +704,48 @@
             cursor: not-allowed;
         }
         
+        .upgrade-icon {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 8px auto;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            flex-shrink: 0;
+        }
+        
+        .upgrade-icon img {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+        }
+        
         .upgrade-name {
             color: #FFD700;
-            font-size: 18px;
+            font-size: clamp(14px, 1.5vw, 18px);
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            line-height: 1.2;
         }
         
         .upgrade-description {
             color: #fff;
-            font-size: 14px;
-            margin-bottom: 15px;
-            line-height: 1.4;
+            font-size: clamp(11px, 1.2vw, 14px);
+            margin-bottom: 10px;
+            line-height: 1.3;
+            flex: 1;
         }
         
         .upgrade-target {
             color: #4CAF50;
-            font-size: 12px;
+            font-size: clamp(10px, 1vw, 12px);
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
         }
         
         .unit-type-selector {
@@ -545,11 +776,259 @@
             background: #4CAF50;
             border-color: #4CAF50;
         }
+        
+        .unit-type-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .unit-type-option:hover {
+            background: rgba(255, 215, 0, 0.1);
+        }
+        
+        .unit-type-option input[type="radio"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .unit-type-option span {
+            color: #FFD700;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .unit-sprite-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 8px 0;
+        }
+        
+        .unit-selection-sprite {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .unit-selection-sprite:hover {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+        
+        .unit-selection-sprite.selected {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        .unit-sprite-container {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2px;
+        }
+        
+        .unit-selection-name {
+            color: #FFD700;
+            font-size: clamp(10px, 1vw, 12px);
+            font-weight: bold;
+            text-align: center;
+            line-height: 1;
+        }
+        
+        .upgrade-actions {
+            margin-top: 10px;
+            border-top: 1px solid rgba(255, 215, 0, 0.2);
+            padding-top: 10px;
+            flex-shrink: 0;
+        }
+        
+        .confirm-upgrade-btn {
+            background: linear-gradient(145deg, #4CAF50, #45a049);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: clamp(12px, 1.2vw, 14px);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+            width: 100%;
+        }
+        
+        .confirm-upgrade-btn:hover:not(:disabled) {
+            background: linear-gradient(145deg, #5CBF60, #4CAF50);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .confirm-upgrade-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* Fixed position upgrade interface buttons */
+        .reroll-upgrades-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(145deg, #FF6B35, #FF5722);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 0 4px 15px rgba(255, 87, 34, 0.3);
+            transition: all 0.2s ease;
+        }
+        
+        .reroll-upgrades-btn:hover:not(:disabled) {
+            background: linear-gradient(145deg, #FF7043, #FF6B35);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 87, 34, 0.4);
+        }
+        
+        .reroll-upgrades-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .select-upgrade-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(145deg, #4CAF50, #388E3C);
+            border: none;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+            transition: all 0.2s ease;
+        }
+        
+        .select-upgrade-btn:hover:not(:disabled) {
+            background: linear-gradient(145deg, #5CBF60, #4CAF50);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .select-upgrade-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* Additional responsive styles for mobile and Electron */
+        @media (max-width: 768px) {
+            .shop-panel {
+                font-size: 12px;
+            }
+            
+            .unit-card {
+                padding: 6px;
+                width: 100px;
+                min-width: 100px;
+            }
+            
+            .shop-units {
+                gap: 6px;
+            }
+            
+            .unit-name {
+                font-size: 12px;
+            }
+            
+            .unit-stats {
+                font-size: 10px;
+            }
+            
+            .hud {
+                padding: 8px;
+            }
+            
+            .player-banner {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
+        
+        /* Portrait mode adjustments */
+        @media (orientation: portrait) and (max-height: 1000px) {
+            .shop-panel {
+                max-height: 30vh;
+            }
+            
+            .unit-panel {
+                max-height: 100px;
+            }
+            
+            .unit-selection-content {
+                height: 95vh;
+                width: 95vw;
+            }
+        }
+        
+        /* High DPI screens (React Native) */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .game-tooltip {
+                font-size: 13px;
+            }
+            
+            .tooltip {
+                font-size: 14px;
+            }
+        }
+        
+        /* Electron app window size detection */
+        @media (min-width: 1200px) and (min-height: 800px) {
+            #game-container {
+                max-width: 1920px;
+                max-height: 1080px;
+                margin: 0 auto;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="phaser-game"></div>
+        
+        <!-- Player Banners -->
+        <div id="player-banners" class="player-banners">
+            <!-- Player banners will be dynamically added here -->
+        </div>
         
         <div class="hud top-hud">
             <div class="gold">
@@ -623,35 +1102,43 @@
 
     <!-- Tooltip Container -->
     <div id="tooltip" class="tooltip"></div>
+    
+    <!-- In-game tooltip for hovering units on grid -->
+    <div id="game-tooltip" class="game-tooltip"></div>
 
     <!-- Upgrade Selection Modal -->
     <div id="upgrade-modal" class="unit-selection-modal hidden">
+        <!-- Fixed position reroll button - top right -->
+        <button class="reroll-upgrades-btn" onclick="rerollUpgrades()" id="reroll-btn">
+            🎲 Reroll Upgrades (💰 10)
+        </button>
+        
+        <!-- Fixed position select upgrade button - bottom right -->
+        <button class="select-upgrade-btn hidden" id="select-upgrade-btn" onclick="confirmSelectedUpgrade()">
+            ✅ Select This Upgrade
+        </button>
+        
         <div class="unit-selection-content">
             <h2 class="unit-selection-title">Choose Your Upgrades</h2>
             <p class="unit-selection-subtitle">Floor <span id="upgrade-floor">1</span> Complete!</p>
             
             <div class="upgrade-section">
-                <h3 style="color: #FFD700; text-align: center; margin-bottom: 20px;">High-Potency Upgrade (×3 Effect)</h3>
+                <h3>High-Potency Upgrade (×3 Effect)</h3>
                 <div id="high-potency-upgrade" class="upgrade-cards-container">
                     <!-- High-potency upgrade will be populated here -->
                 </div>
             </div>
             
             <div class="upgrade-section">
-                <h3 style="color: #FFD700; text-align: center; margin-bottom: 20px;">Normal Upgrades (Choose Unit Type)</h3>
+                <h3>Normal Upgrades (Choose Unit Type)</h3>
                 <div id="normal-upgrades" class="upgrade-cards-container">
                     <!-- Normal upgrades will be populated here -->
                 </div>
             </div>
             
-            <div style="text-align: center; margin-top: 30px;">
-                <button class="start-game-btn" onclick="rerollUpgrades()" id="reroll-btn">
-                    Reroll Upgrades (💰 10)
-                </button>
-                <p style="color: #FFD700; margin-top: 15px; font-style: italic;">
-                    Click any upgrade card to select it and continue to the next floor
-                </p>
-            </div>
+            <p style="color: #FFD700; margin-top: 20px; font-style: italic; font-size: 14px; text-align: center;">
+                Click any upgrade card to select it and continue to the next floor
+            </p>
         </div>
     </div>
 
@@ -790,9 +1277,6 @@
                 showUnitSelection();
             });
             
-            socket.on('gameStateUpdate', (state) => {
-                updateGameState(state);
-            });
             
             socket.on('game-state', (state) => {
                 console.log('Received game state:', state);
@@ -913,6 +1397,9 @@
             const tooltip = document.getElementById('tooltip');
             tooltip.innerHTML = `
                 <div class="tooltip-header">${unitName.toUpperCase()}</div>
+                ${unit.owner ? `<div class="tooltip-section">
+                    <span class="tooltip-label">Owner:</span> <span class="tooltip-value">👤 ${unit.owner}</span>
+                </div>` : ''}
                 <div class="tooltip-section">
                     <span class="tooltip-label">Cost:</span> <span class="tooltip-value">💰 ${unit.cost}</span>
                 </div>
@@ -941,18 +1428,186 @@
                 ${getUpgradeTooltipSection(unit)}
             `;
             
-            // Position tooltip
+            // Position tooltip with smart positioning
             const rect = event.currentTarget.getBoundingClientRect();
-            tooltip.style.left = rect.left + rect.width + 10 + 'px';
-            tooltip.style.top = rect.top + 'px';
+            const tooltipMargin = 10;
             
-            // Show tooltip
+            // Temporarily show tooltip to get dimensions
+            tooltip.style.visibility = 'hidden';
             tooltip.classList.add('show');
+            
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            // Calculate positions
+            let left = rect.left + rect.width + tooltipMargin;
+            let top = rect.top;
+            
+            // Check if tooltip would go off the right edge
+            if (left + tooltipRect.width > windowWidth) {
+                // Position to the left of the element
+                left = rect.left - tooltipRect.width - tooltipMargin;
+            }
+            
+            // Check if tooltip would go off the left edge
+            if (left < 0) {
+                // Center horizontally if no good position
+                left = Math.max(tooltipMargin, (windowWidth - tooltipRect.width) / 2);
+            }
+            
+            // Check if tooltip would go off the bottom
+            if (top + tooltipRect.height > windowHeight - tooltipMargin) {
+                // Position above the cursor/element
+                top = Math.max(tooltipMargin, rect.bottom - tooltipRect.height - rect.height - tooltipMargin);
+            }
+            
+            // Check if tooltip would go off the top
+            if (top < tooltipMargin) {
+                top = tooltipMargin;
+            }
+            
+            // Apply final position
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            tooltip.style.visibility = 'visible';
         }
         
         function hideTooltip() {
             const tooltip = document.getElementById('tooltip');
             tooltip.classList.remove('show');
+        }
+        
+        // Game tooltip functions for in-game unit hovering
+        function showGameTooltip(unit, ownerName, mouseX, mouseY) {
+            const tooltip = document.getElementById('game-tooltip');
+            
+            // Build tooltip HTML
+            let tooltipHTML = `
+                <div class="game-tooltip-header">${unit.name.toUpperCase()}</div>
+                <div class="game-tooltip-owner">👤 ${ownerName}</div>
+                <div class="game-tooltip-stats">
+                    ❤️ ${unit.health}/${unit.maxHealth} | ⚔️ ${unit.damage} | ⚡ ${unit.attackSpeed}
+                </div>
+            `;
+            
+            // Add upgrades if any
+            if (unit.buffs && unit.buffs.length > 0) {
+                tooltipHTML += '<div class="game-tooltip-upgrades">';
+                unit.buffs.forEach(buff => {
+                    let upgradeName = '';
+                    let description = '';
+                    
+                    switch (buff.type) {
+                        case 'lifesteal':
+                            upgradeName = 'vampiric_strike';
+                            description = `${Math.round(buff.value * 100)}% lifesteal`;
+                            break;
+                        case 'poison':
+                            upgradeName = 'poison_blade';
+                            description = `${buff.value} poison DPS`;
+                            break;
+                        case 'deathHeal':
+                            upgradeName = 'final_gift';
+                            description = `Heals ${Math.round(buff.value * 100)}% on death`;
+                            break;
+                        case 'deathExplosion':
+                            upgradeName = 'explosive_end';
+                            description = `Explodes for ${Math.round(buff.value * 100)}%`;
+                            break;
+                        case 'slowAura':
+                            upgradeName = 'slowing_aura';
+                            description = `-${Math.round(buff.value * 100)}% enemy AS`;
+                            break;
+                        default:
+                            upgradeName = buff.type.toLowerCase().replace(/\s+/g, '_');
+                            description = `${buff.type}: ${buff.value}`;
+                    }
+                    
+                    tooltipHTML += `
+                        <div class="game-tooltip-upgrade-item">
+                            <img src="assets/upgradeicons/${upgradeName}.png" 
+                                 onerror="this.style.display='none'"
+                                 alt="${upgradeName}">
+                            <span>${description}</span>
+                        </div>
+                    `;
+                });
+                tooltipHTML += '</div>';
+            }
+            
+            tooltip.innerHTML = tooltipHTML;
+            tooltip.classList.add('show');
+            
+            // Position tooltip
+            updateGameTooltipPosition(mouseX, mouseY);
+            
+            // Add hover support for the tooltip itself
+            tooltip.onmouseenter = () => {
+                cancelGameTooltipHide();
+            };
+            
+            tooltip.onmouseleave = () => {
+                hideGameTooltipDelayed();
+            };
+        }
+        
+        function updateGameTooltipPosition(mouseX, mouseY) {
+            const tooltip = document.getElementById('game-tooltip');
+            if (!tooltip.classList.contains('show')) return;
+            
+            const margin = 15;
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            // Default position: to the right and slightly above cursor
+            let left = mouseX + margin;
+            let top = mouseY - tooltipRect.height / 2;
+            
+            // Adjust if tooltip goes off right edge
+            if (left + tooltipRect.width > windowWidth - margin) {
+                left = mouseX - tooltipRect.width - margin;
+            }
+            
+            // Adjust if tooltip goes off top edge
+            if (top < margin) {
+                top = margin;
+            }
+            
+            // Adjust if tooltip goes off bottom edge
+            if (top + tooltipRect.height > windowHeight - margin) {
+                top = windowHeight - tooltipRect.height - margin;
+            }
+            
+            // Ensure tooltip doesn't go off left edge
+            if (left < margin) {
+                left = margin;
+            }
+            
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        }
+        
+        let gameTooltipHideTimeout;
+        
+        function hideGameTooltip() {
+            const tooltip = document.getElementById('game-tooltip');
+            tooltip.classList.remove('show');
+        }
+        
+        function hideGameTooltipDelayed() {
+            // Clear any existing timeout
+            clearTimeout(gameTooltipHideTimeout);
+            
+            // Set a delay before hiding to allow mouse movement between units
+            gameTooltipHideTimeout = setTimeout(() => {
+                hideGameTooltip();
+            }, 100); // 100ms delay for better desktop responsiveness
+        }
+        
+        function cancelGameTooltipHide() {
+            clearTimeout(gameTooltipHideTimeout);
         }
         
         function getUpgradeTooltipSection(unit) {
@@ -961,41 +1616,56 @@
                 return '';
             }
             
-            const upgradeDescriptions = [];
+            const upgradeItems = [];
             unit.buffs.forEach(buff => {
                 let description = '';
+                let upgradeName = '';
+                
                 switch (buff.type) {
                     case 'lifesteal':
-                        description = `Lifesteal: ${Math.round(buff.value * 100)}%`;
+                        description = `${Math.round(buff.value * 100)}% damage becomes health`;
+                        upgradeName = 'vampiric_strike';
                         break;
                     case 'poison':
-                        description = `Poison Blade: ${buff.value} HP/sec`;
+                        description = `${buff.value} poison damage per second`;
+                        upgradeName = 'poison_blade';
                         break;
                     case 'deathHeal':
-                        description = `Final Gift: Heal ${Math.round(buff.value * 100)}% on death`;
+                        description = `Heal nearby units ${Math.round(buff.value * 100)}% on death`;
+                        upgradeName = 'final_gift';
                         break;
                     case 'deathExplosion':
-                        description = `Explosive End: ${Math.round(buff.value * 100)}% explosion damage`;
+                        description = `Explode for ${Math.round(buff.value * 100)}% damage on death`;
+                        upgradeName = 'explosive_end';
                         break;
                     case 'slowAura':
-                        description = `Slowing Aura: -${Math.round(buff.value * 100)}% enemy attack speed`;
+                        description = `Reduce enemy attack speed by ${Math.round(buff.value * 100)}%`;
+                        upgradeName = 'slowing_aura';
                         break;
                     default:
                         description = `${buff.type}: ${buff.value}`;
+                        upgradeName = buff.type.toLowerCase().replace(/\s+/g, '_');
                 }
+                
                 if (description) {
-                    upgradeDescriptions.push(description);
+                    const iconPath = `assets/upgradeicons/${upgradeName}.png`;
+                    upgradeItems.push(`
+                        <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0;">
+                            <img src="${iconPath}" alt="${upgradeName}" style="width: 20px; height: 20px; border-radius: 4px;" onerror="this.style.display='none'">
+                            <span>${description}</span>
+                        </div>
+                    `);
                 }
             });
             
-            if (upgradeDescriptions.length === 0) {
+            if (upgradeItems.length === 0) {
                 return '';
             }
             
             return `
-                <div class="tooltip-passive" style="border-top: 1px solid rgba(76, 175, 80, 0.3); color: #4CAF50;">
+                <div class="tooltip-passive" style="border-top: 1px solid rgba(76, 175, 80, 0.3); color: #4CAF50; padding-top: 8px;">
                     <strong>Applied Upgrades:</strong><br>
-                    ${upgradeDescriptions.map(desc => `• ${desc}`).join('<br>')}
+                    ${upgradeItems.join('')}
                 </div>
             `;
         }
@@ -1017,14 +1687,11 @@
                 
                 card.innerHTML = `
                     <div class="unit-selection-name">${unitName}</div>
-                    <div class="unit-sprite-container">
-                        <canvas class="unit-sprite-canvas" data-unit="${unitName}" width="64" height="64" style="
-                            image-rendering: pixelated;
-                            animation: idle-bob 2s ease-in-out infinite;
-                        "></canvas>
+                    <div class="unit-sprite-container" id="unit-select-${unitName}">
+                        <!-- Animated sprite will be added here -->
                     </div>
                     <div class="unit-selection-stats">
-                        <span>⚔️ ${stats.damage}</span>
+                        <span>⚔️ ${Math.round(stats.damage * stats.attackSpeed * 10) / 10 % 1 === 0 ? Math.round(stats.damage * stats.attackSpeed) : (stats.damage * stats.attackSpeed).toFixed(1)} DPS</span>
                         <span>❤️ ${stats.health}</span>
                         <span>🏃 ${stats.movementSpeed}</span>
                     </div>
@@ -1032,6 +1699,14 @@
                         ${stats.attackType} | ${stats.armorType}
                     </div>
                 `;
+                
+                // Add animated sprite using our universal function
+                setTimeout(() => {
+                    const container = document.getElementById(`unit-select-${unitName}`);
+                    if (container) {
+                        createAnimatedUnitSprite(container, unitName, 64, 64, 400);
+                    }
+                }, 100);
                 
                 // Add tooltip event handlers
                 card.addEventListener('mouseenter', (e) => showTooltip(e, unitName));
@@ -1041,16 +1716,6 @@
             });
             
             modal.classList.remove('hidden');
-            
-            // Force canvas update for unit selection screen with multiple attempts
-            for (let i = 1; i <= 5; i++) {
-                setTimeout(() => {
-                    if (window.gameScene && window.gameScene.updateUnitCanvases) {
-                        window.gameScene.updateUnitCanvases();
-                        console.log(`Updated unit selection canvases (attempt ${i})`);
-                    }
-                }, i * 200);
-            }
         }
         
         function toggleUnitSelection(unitName, cardElement) {
@@ -1174,6 +1839,7 @@
             console.log('Players in state:', state.players);
             
             gameState = state;
+            window.gameState = state; // Make accessible to Phaser scene
             
             // Update HUD
             const player = state.players.find(p => p.id === playerId);
@@ -1212,6 +1878,11 @@
                 'Game Over';
             document.getElementById('floor-text').textContent = `Floor ${state.currentFloor}/10`;
             
+            // Update player banners
+            if (state.players) {
+                updatePlayerBanners(state.players);
+            }
+            
             // Update timer (show during preparation phase)
             if (state.phase === 'preparation' && state.preparationTimeLeft !== undefined) {
                 updateTimer(state.preparationTimeLeft);
@@ -1237,11 +1908,22 @@
             
             // Show/hide upgrade modal
             const upgradeModal = document.getElementById('upgrade-modal');
-            if (state.phase === 'post-combat' && state.upgradeCards && state.upgradeCards.length > 0) {
+            const currentPlayer = state.players.find(p => p.id === playerId);
+            
+            if (state.phase === 'post-combat' && currentPlayer && currentPlayer.upgradeCards && currentPlayer.upgradeCards.length > 0 && !currentPlayer.hasSelectedUpgrade) {
                 upgradeModal.classList.remove('hidden');
-                showUpgradeSelection(state.upgradeCards, state.currentFloor, player?.gold || 0);
+                showUpgradeSelection(currentPlayer.upgradeCards, state.currentFloor, currentPlayer.gold);
             } else {
                 upgradeModal.classList.add('hidden');
+                
+                // Show waiting message if player has selected but others haven't
+                if (state.phase === 'post-combat' && currentPlayer && currentPlayer.hasSelectedUpgrade) {
+                    const waitingCount = state.players.filter(p => !p.hasSelectedUpgrade).length;
+                    if (waitingCount > 0) {
+                        console.log(`Waiting for ${waitingCount} other player(s) to select upgrades...`);
+                        // Could show a waiting overlay here
+                    }
+                }
             }
             
             // Update Phaser game - try multiple ways to get the scene
@@ -1257,6 +1939,91 @@
                 console.log('game:', !!game);
                 console.log('game.scene:', game?.scene);
             }
+        }
+        
+        // Player color management
+        const PLAYER_COLORS = [
+            { primary: '#4CAF50', rgb: [76, 175, 80] },   // Green
+            { primary: '#2196F3', rgb: [33, 150, 243] },  // Blue  
+            { primary: '#FF9800', rgb: [255, 152, 0] },   // Orange
+            { primary: '#9C27B0', rgb: [156, 39, 176] }   // Purple
+        ];
+        
+        let playerColorMap = new Map(); // playerId -> colorIndex
+        let usedColors = new Set(); // Track which colors are in use
+        
+        function getPlayerColor(playerId, allPlayers) {
+            if (!playerColorMap.has(playerId)) {
+                // Deterministic color assignment: sort all players by ID and assign colors in order
+                // This ensures all clients assign the same colors to the same players
+                const sortedPlayerIds = allPlayers.map(p => p.id).sort();
+                const playerIndex = sortedPlayerIds.indexOf(playerId);
+                const colorIndex = playerIndex % PLAYER_COLORS.length;
+                
+                playerColorMap.set(playerId, colorIndex);
+                usedColors.add(colorIndex);
+            }
+            return PLAYER_COLORS[playerColorMap.get(playerId)];
+        }
+        
+        function cleanupPlayerColors(currentPlayers) {
+            // For deterministic color assignment, we need to rebuild the color mappings
+            // to ensure consistency when players leave and rejoin
+            const currentPlayerIds = new Set(currentPlayers.map(p => p.id));
+            
+            // Clean up mappings for departed players
+            for (const [playerId, colorIndex] of playerColorMap) {
+                if (!currentPlayerIds.has(playerId)) {
+                    playerColorMap.delete(playerId);
+                    usedColors.delete(colorIndex);
+                }
+            }
+            
+            // Rebuild mappings for consistency
+            const sortedPlayerIds = currentPlayers.map(p => p.id).sort();
+            playerColorMap.clear();
+            usedColors.clear();
+            
+            sortedPlayerIds.forEach((playerId, index) => {
+                const colorIndex = index % PLAYER_COLORS.length;
+                playerColorMap.set(playerId, colorIndex);
+                usedColors.add(colorIndex);
+            });
+        }
+        
+        function updatePlayerBanners(players) {
+            const bannerContainer = document.getElementById('player-banners');
+            if (!bannerContainer) return;
+            
+            // Clean up departed players and maintain unique colors
+            cleanupPlayerColors(players);
+            
+            bannerContainer.innerHTML = '';
+            
+            // Sort players to show current player first
+            const sortedPlayers = [...players].sort((a, b) => {
+                if (a.id === playerId) return -1;
+                if (b.id === playerId) return 1;
+                return 0;
+            });
+            
+            sortedPlayers.forEach((player, index) => {
+                const color = getPlayerColor(player.id, players);
+                const isCurrentPlayer = player.id === playerId;
+                
+                const banner = document.createElement('div');
+                banner.className = `player-banner ${isCurrentPlayer ? 'current-player' : ''}`;
+                banner.style.borderColor = color.primary;
+                
+                banner.innerHTML = `
+                    <div class="player-color-indicator" style="background-color: ${color.primary}"></div>
+                    <span>${player.name}</span>
+                    <span style="color: #FFD700;">💰${player.gold}</span>
+                    ${player.isReady ? '<span style="color: #4CAF50;">✓</span>' : ''}
+                `;
+                
+                bannerContainer.appendChild(banner);
+            });
         }
         
         // Update timer display
@@ -1285,22 +2052,22 @@
             const shopUnitsDiv = document.getElementById('shop-units');
             shopUnitsDiv.innerHTML = '';
             
-            units.forEach(unit => {
-                const canAfford = playerGold >= unit.cost;
+            units.forEach((unit, index) => {
+                // Ensure proper number comparison for 0 gold edge case
+                const playerGoldNum = Number(playerGold) || 0;
+                const unitCostNum = Number(unit.cost) || 0;
+                const canAfford = playerGoldNum >= unitCostNum;
                 const unitCard = document.createElement('div');
                 unitCard.className = `unit-card ${!canAfford ? 'disabled' : ''}`;
                 
                 unitCard.innerHTML = `
                     <div class="unit-name">${unit.name}</div>
-                    <div class="shop-unit-sprite-container">
-                        <canvas class="shop-unit-sprite" data-unit="${unit.name.toLowerCase()}" width="48" height="48" style="
-                            image-rendering: pixelated;
-                            animation: idle-bob 2s ease-in-out infinite;
-                        "></canvas>
+                    <div class="shop-unit-sprite-container" id="shop-sprite-${unit.name.toLowerCase()}-${index}">
+                        <!-- Animated sprite will be added here -->
                     </div>
                     <div class="unit-cost">💰 ${unit.cost}</div>
                     <div class="unit-stats">
-                        <span>⚔️ ${unit.damage}</span>
+                        <span>⚔️ ${Math.round(unit.damage * unit.attackSpeed * 10) / 10 % 1 === 0 ? Math.round(unit.damage * unit.attackSpeed) : (unit.damage * unit.attackSpeed).toFixed(1)} DPS</span>
                         <span>❤️ ${unit.health}</span>
                         <span>🏃 ${unit.movementSpeed}</span>
                     </div>
@@ -1321,12 +2088,18 @@
                 shopUnitsDiv.appendChild(unitCard);
             });
             
-            // Force canvas update after creating shop cards
+            // Create animated sprites for shop units with proper delay for Phaser to be ready
             setTimeout(() => {
-                if (window.gameScene && window.gameScene.updateUnitCanvases) {
-                    window.gameScene.updateUnitCanvases();
-                }
-            }, 100);
+                units.forEach((unit, index) => {
+                    // Use index to prevent ID conflicts for duplicate units
+                    const containerId = `shop-sprite-${unit.name.toLowerCase()}-${index}`;
+                    const container = document.getElementById(containerId);
+                    if (container) {
+                        // Match the container size for proper centering
+                        createAnimatedUnitSprite(container, unit.name.toLowerCase(), 60, 60, 400);
+                    }
+                });
+            }, 200); // Increased delay to ensure Phaser is ready
         }
         
         // Universal drag system for desktop and mobile
@@ -1421,8 +2194,8 @@
                         
                         if (window.gameScene && window.gameScene.worldToGrid) {
                             const gridPos = window.gameScene.worldToGrid(localX, localY);
-                            const gridWidth = window.gameScene.gridWidth || 12;
-                            const gridHeight = window.gameScene.gridHeight || 12;
+                            const gridWidth = window.gameScene.gridWidth || 20;
+                            const gridHeight = window.gameScene.gridHeight || 8;
                             
                             console.log(`Grid position: (${gridPos.x}, ${gridPos.y}), Grid size: ${gridWidth}x${gridHeight}`);
                             
@@ -1602,10 +2375,10 @@
             // Set up the game scene
             this.cameras.main.setBackgroundColor('#1a1a2e');
             
-            // Create grid first - 12x12 grid as per requirements
+            // Create grid first - wider and shorter to avoid UI overlap
             this.gridGraphics = this.add.graphics();
-            this.gridWidth = 12;
-            this.gridHeight = 12;
+            this.gridWidth = 20;
+            this.gridHeight = 8;
             this.gridSize = 12; // Keep for backwards compatibility
             this.drawGrid();
             this.gridGraphics.setVisible(true);
@@ -1718,8 +2491,8 @@
                 });
                 
                 const walkFrames = textureFrames.filter(frame => {
-                    return frame.startsWith("Walk_") || frame.startsWith("Run_") || 
-                           frame.toLowerCase().includes("walk") || frame.toLowerCase().includes("run");
+                    return frame.startsWith("Walk_") || //frame.startsWith("Run_") || 
+                           frame.toLowerCase().includes("walk") //|| frame.toLowerCase().includes("run");
                 });
                 
                 const attackFrames = textureFrames.filter(frame => {
@@ -2008,30 +2781,164 @@
             });
         };
         
+        Phaser.Scene.prototype.setupGridUnitDrag = function(sprite, unit) {
+            // Make sprite draggable
+            sprite.setInteractive({ draggable: true });
+            
+            let dragData = {
+                startGridPos: { x: unit.position.x, y: unit.position.y },
+                startWorldPos: { x: sprite.x, y: sprite.y },
+                isDragging: false
+            };
+            
+            // Drag start
+            sprite.on('dragstart', (pointer, dragX, dragY) => {
+                console.log(`Started dragging unit ${unit.name} from grid (${unit.position.x}, ${unit.position.y})`);
+                dragData.isDragging = true;
+                sprite.setTint(0xffff00); // Yellow tint when dragging
+                sprite.setDepth(1000); // Bring to front
+                hideGameTooltipDelayed(); // Hide tooltip when dragging
+            });
+            
+            // Drag
+            sprite.on('drag', (pointer, dragX, dragY) => {
+                sprite.x = dragX;
+                sprite.y = dragY;
+                
+                // Update ownership indicators to follow
+                if (sprite.ownershipIndicators) {
+                    sprite.ownershipIndicators.forEach(indicator => {
+                        if (indicator && indicator.setPosition) {
+                            indicator.setPosition(dragX, dragY);
+                        }
+                    });
+                }
+            });
+            
+            // Drag end
+            sprite.on('dragend', (pointer) => {
+                console.log(`Dropped unit ${unit.name} at world (${sprite.x}, ${sprite.y})`);
+                dragData.isDragging = false;
+                sprite.clearTint(); // Remove drag tint
+                sprite.setDepth(10); // Reset depth
+                
+                // Calculate grid position from world position
+                const gridX = Math.floor((sprite.x - this.gridX) / this.cellSize);
+                const gridY = Math.floor((sprite.y - this.gridY) / this.cellSize);
+                
+                console.log(`Calculated grid position: (${gridX}, ${gridY})`);
+                
+                // Check if drop position is valid
+                if (gridX >= 0 && gridX < this.gridWidth && gridY >= 0 && gridY < this.gridHeight) {
+                    // Check if position is free or occupied by same player
+                    const targetCell = gameState?.grid?.[gridY]?.[gridX];
+                    const isValidDrop = !targetCell?.occupied || targetCell?.playerId === playerId;
+                    
+                    if (isValidDrop) {
+                        // Valid drop - send move request to server
+                        console.log(`Valid drop at grid (${gridX}, ${gridY}), sending move request`);
+                        if (socket && socket.connected) {
+                            socket.emit('moveUnit', unit.id, { x: gridX, y: gridY });
+                        }
+                    } else {
+                        // Invalid drop - snap back to original position
+                        console.log(`Invalid drop at grid (${gridX}, ${gridY}), snapping back`);
+                        this.snapUnitBack(sprite, unit, dragData);
+                    }
+                } else {
+                    // Out of bounds - snap back
+                    console.log(`Out of bounds drop, snapping back`);
+                    this.snapUnitBack(sprite, unit, dragData);
+                }
+            });
+        };
+        
+        Phaser.Scene.prototype.snapUnitBack = function(sprite, unit, dragData) {
+            // Snap back to original position
+            const originalWorldX = this.gridX + (dragData.startGridPos.x * this.cellSize) + (this.cellSize / 2);
+            const originalWorldY = this.gridY + (dragData.startGridPos.y * this.cellSize) + (this.cellSize / 2);
+            
+            sprite.x = originalWorldX;
+            sprite.y = originalWorldY;
+            
+            // Update ownership indicators
+            if (sprite.ownershipIndicators) {
+                sprite.ownershipIndicators.forEach(indicator => {
+                    if (indicator && indicator.setPosition) {
+                        indicator.setPosition(originalWorldX, originalWorldY);
+                    }
+                });
+            }
+        };
+        
         Phaser.Scene.prototype.drawGrid = function() {
             if (!this.gridGraphics) return;
             
             this.gridGraphics.clear();
+            
+            // Draw grid cell highlights first (behind grid lines)
+            this.drawGridHighlights();
+            
             this.gridGraphics.lineStyle(2, 0x888888, 0.8); // Make grid more visible
             
             // Use actual grid dimensions
             const gridWidth = this.gridWidth || 20;
-            const gridHeight = this.gridHeight || 10;
+            const gridHeight = this.gridHeight || 8;
+            
+            // Get screen dimensions
+            const screenWidth = this.cameras.main.width;
+            const screenHeight = this.cameras.main.height;
+            
+            // Detect if we're in a small screen (mobile/small electron window)
+            const isSmallScreen = screenWidth < 768 || screenHeight < 600;
+            const isPortrait = screenHeight > screenWidth;
             
             // Calculate responsive grid size with better spacing for UI
-            const availableWidth = this.cameras.main.width * 0.9;
-            const availableHeight = this.cameras.main.height * 0.6; // More room for UI panels
+            let widthMultiplier = 0.95;
+            let heightMultiplier = 0.65;
+            let gridOffsetY = 80;
+            
+            if (isSmallScreen) {
+                widthMultiplier = 0.98;
+                heightMultiplier = 0.55;
+                gridOffsetY = 60;
+            }
+            
+            if (isPortrait) {
+                widthMultiplier = 0.98;
+                heightMultiplier = 0.45;
+                gridOffsetY = 40;
+            }
+            
+            const availableWidth = screenWidth * widthMultiplier;
+            const availableHeight = screenHeight * heightMultiplier;
             
             this.cellSize = Math.min(
                 availableWidth / gridWidth,
-                availableHeight / gridHeight
+                availableHeight / gridHeight,
+                60 // Maximum cell size to prevent grid from being too large
             );
+            
+            // Minimum cell size for usability
+            this.cellSize = Math.max(this.cellSize, 20);
             
             this.gridX = this.cameras.main.centerX - (gridWidth * this.cellSize) / 2;
             // Position grid higher up to avoid shop panel overlap
-            this.gridY = this.cameras.main.centerY - (gridHeight * this.cellSize) / 2 - 30;
+            this.gridY = this.cameras.main.centerY - (gridHeight * this.cellSize) / 2 - gridOffsetY;
             
-            // Draw grid lines
+            // Ensure grid doesn't go off screen
+            const minMargin = 10;
+            if (this.gridX < minMargin) {
+                this.gridX = minMargin;
+            }
+            if (this.gridY < minMargin) {
+                this.gridY = minMargin;
+            }
+            
+            // Draw grid lines with adaptive thickness
+            const lineThickness = isSmallScreen ? 1 : 2;
+            this.gridGraphics.lineStyle(lineThickness, 0x888888, 0.8);
+            
             for (let i = 0; i <= gridWidth; i++) {
                 // Vertical lines
                 this.gridGraphics.moveTo(this.gridX + i * this.cellSize, this.gridY);
@@ -2043,11 +2950,85 @@
                 this.gridGraphics.lineTo(this.gridX + gridWidth * this.cellSize, this.gridY + i * this.cellSize);
             }
             this.gridGraphics.strokePath();
+            
+            // Setup grid cell interaction for highlighting
+            this.setupGridCellInteraction();
+        };
+        
+        // Track highlighted cells
+        let highlightedCells = new Map(); // playerId -> {x, y}
+        
+        Phaser.Scene.prototype.drawGridHighlights = function() {
+            // Draw highlights for each player's hovered cell
+            highlightedCells.forEach((cellPos, playerId) => {
+                if (cellPos && cellPos.x >= 0 && cellPos.y >= 0) {
+                    const playerColor = this.getPlayerColor(playerId);
+                    this.gridGraphics.fillStyle(playerColor, 0.3); // Semi-transparent
+                    this.gridGraphics.fillRect(
+                        this.gridX + (cellPos.x * this.cellSize),
+                        this.gridY + (cellPos.y * this.cellSize),
+                        this.cellSize,
+                        this.cellSize
+                    );
+                }
+            });
+        };
+        
+        Phaser.Scene.prototype.getPlayerColor = function(playerId) {
+            // Find player index based on game state
+            if (gameState && gameState.players) {
+                const playerIndex = gameState.players.findIndex(p => p.id === playerId);
+                const colorValues = [0x00ff00, 0xff0000, 0x0000ff, 0xffff00]; // Green, Red, Blue, Yellow
+                return colorValues[playerIndex] || 0x00ff00;
+            }
+            
+            return 0x00ff00; // Default green
+        };
+        
+        Phaser.Scene.prototype.setupGridCellInteraction = function() {
+            // Remove existing interaction zones
+            if (this.gridInteractionZones) {
+                this.gridInteractionZones.forEach(zone => zone.destroy());
+            }
+            this.gridInteractionZones = [];
+            
+            const gridWidth = this.gridWidth || 20;
+            const gridHeight = this.gridHeight || 8;
+            
+            // Create invisible interaction zones for each grid cell
+            for (let x = 0; x < gridWidth; x++) {
+                for (let y = 0; y < gridHeight; y++) {
+                    const zone = this.add.zone(
+                        this.gridX + (x * this.cellSize) + (this.cellSize / 2),
+                        this.gridY + (y * this.cellSize) + (this.cellSize / 2),
+                        this.cellSize,
+                        this.cellSize
+                    );
+                    
+                    zone.setInteractive();
+                    zone.gridX = x;
+                    zone.gridY = y;
+                    
+                    // Mouse enter - highlight cell
+                    zone.on('pointerover', () => {
+                        highlightedCells.set(playerId, { x: x, y: y });
+                        this.drawGrid(); // Redraw to show highlight
+                    });
+                    
+                    // Mouse leave - remove highlight
+                    zone.on('pointerout', () => {
+                        highlightedCells.delete(playerId);
+                        this.drawGrid(); // Redraw to remove highlight
+                    });
+                    
+                    this.gridInteractionZones.push(zone);
+                }
+            }
         };
         
         Phaser.Scene.prototype.worldToGrid = function(x, y) {
             const gridWidth = this.gridWidth || 20;
-            const gridHeight = this.gridHeight || 10;
+            const gridHeight = this.gridHeight || 8;
             
             const gridX = Math.floor((x - this.gridX) / this.cellSize);
             const gridY = Math.floor((y - this.gridY) / this.cellSize);
@@ -2087,7 +3068,15 @@
             if (this.unitSprites) {
                 console.log(`Destroying ${this.unitSprites.length} existing unit sprites`);
                 this.unitSprites.forEach(sprite => {
-                    if (sprite && sprite.destroy) sprite.destroy();
+                    if (sprite) {
+                        // Clean up ownership indicators
+                        if (sprite.ownershipIndicators) {
+                            sprite.ownershipIndicators.forEach(indicator => {
+                                if (indicator && indicator.destroy) indicator.destroy();
+                            });
+                        }
+                        if (sprite.destroy) sprite.destroy();
+                    }
                 });
                 this.unitSprites = [];
             }
@@ -2096,8 +3085,14 @@
                 const combatCount = Object.keys(this.combatUnits).length;
                 console.log(`Destroying ${combatCount} existing combat units`);
                 Object.values(this.combatUnits).forEach(unitData => {
-                    if (unitData.sprite && unitData.sprite.destroy) {
-                        unitData.sprite.destroy();
+                    if (unitData.sprite) {
+                        // Clean up ownership indicators
+                        if (unitData.sprite.ownershipIndicators) {
+                            unitData.sprite.ownershipIndicators.forEach(indicator => {
+                                if (indicator && indicator.destroy) indicator.destroy();
+                            });
+                        }
+                        if (unitData.sprite.destroy) unitData.sprite.destroy();
                     }
                     if (unitData.healthBar && unitData.healthBar.container && unitData.healthBar.container.destroy) {
                         unitData.healthBar.container.destroy();
@@ -2120,17 +3115,31 @@
                 });
             }
             
-            // Add player units to the grid during preparation
-            if (state.players && state.phase === 'preparation') {
-                console.log('Looking for player units...');
-                const currentPlayer = state.players.find(p => p.id === playerId);
-                console.log('Current player found:', currentPlayer);
+            // Add ALL player units to the grid during preparation and post-combat
+            if (state.players && (state.phase === 'preparation' || state.phase === 'post-combat')) {
+                console.log('Looking for ALL player units...');
                 
-                if (currentPlayer && currentPlayer.units && currentPlayer.units.length > 0) {
-                    console.log(`Rendering ${currentPlayer.units.length} player units:`, currentPlayer.units);
+                // Render units from ALL players, not just current player
+                const allPlayerUnits = [];
+                state.players.forEach(player => {
+                    if (player.units && player.units.length > 0) {
+                        allPlayerUnits.push(...player.units);
+                    }
+                });
+                
+                console.log(`Found ${allPlayerUnits.length} total units from all players`);
+                
+                if (allPlayerUnits.length > 0) {
+                    console.log(`Rendering ${allPlayerUnits.length} units from all players:`, allPlayerUnits);
                     
-                    currentPlayer.units.forEach((unit, index) => {
-                        console.log(`Processing unit ${index + 1}/${currentPlayer.units.length}:`, unit);
+                    // Ensure grid is properly drawn before positioning units
+                    if (!this.gridX || !this.gridY || !this.cellSize) {
+                        console.log('Grid not properly initialized, redrawing...');
+                        this.drawGrid();
+                    }
+                    
+                    allPlayerUnits.forEach((unit, index) => {
+                        console.log(`Processing unit ${index + 1}/${allPlayerUnits.length}:`, unit);
                         
                         if (unit.position) {
                             const worldX = this.gridX + (unit.position.x * this.cellSize) + (this.cellSize / 2);
@@ -2145,6 +3154,89 @@
                             if (sprite) {
                                 const scale = Math.min(this.cellSize / 80, 0.8);
                                 sprite.setScale(scale);
+                                
+                                // Add colored border to indicate ownership
+                                const color = getPlayerColor(unit.playerId, state.players);
+                                
+                                // Create border circle around unit
+                                const borderGraphics = this.add.graphics();
+                                borderGraphics.lineStyle(3, parseInt(color.primary.replace('#', '0x')), 1);
+                                borderGraphics.strokeCircle(worldX, worldY, this.cellSize * 0.4);
+                                borderGraphics.setDepth(worldY - 1); // Behind unit but visible
+                                
+                                // Store unit data for tooltip
+                                sprite.unitData = unit;
+                                sprite.ownerData = state.players.find(p => p.id === unit.playerId);
+                                
+                                // Make sprite interactive for tooltips with a slightly larger hit area for better responsiveness
+                                sprite.setInteractive({ 
+                                    useHandCursor: true,
+                                    hitArea: new Phaser.Geom.Rectangle(-this.cellSize * 0.6, -this.cellSize * 0.6, this.cellSize * 1.2, this.cellSize * 1.2),
+                                    hitAreaCallback: Phaser.Geom.Rectangle.Contains
+                                });
+                                
+                                // Add tooltip handling - use full tooltip during preparation, game tooltip during combat
+                                if (state.phase === 'preparation' || state.phase === 'post-combat') {
+                                    // Use full detailed tooltip during preparation/post-combat
+                                    sprite.on('pointerover', (pointer) => {
+                                        const ownerName = sprite.ownerData?.name || 'Unknown';
+                                        const tooltipData = {
+                                            ...unit,
+                                            owner: isOwnUnit ? 'You' : ownerName
+                                        };
+                                        
+                                        // Create fake event for tooltip positioning
+                                        const fakeEvent = {
+                                            currentTarget: { getBoundingClientRect: () => ({ 
+                                                left: worldX, 
+                                                top: worldY, 
+                                                width: this.cellSize, 
+                                                height: this.cellSize,
+                                                right: worldX + this.cellSize,
+                                                bottom: worldY + this.cellSize
+                                            }) },
+                                            clientX: this.input.x,
+                                            clientY: this.input.y
+                                        };
+                                        
+                                        showTooltip(fakeEvent, unit.name, tooltipData);
+                                    });
+                                    
+                                    sprite.on('pointerout', () => {
+                                        hideTooltip();
+                                    });
+                                } else {
+                                    // Use simplified game tooltip during combat
+                                    sprite.on('pointerover', () => {
+                                        cancelGameTooltipHide(); // Cancel any pending hide
+                                        showGameTooltip(unit, sprite.ownerData?.name || 'Unknown', this.input.x, this.input.y);
+                                    });
+                                    
+                                    sprite.on('pointermove', () => {
+                                        updateGameTooltipPosition(this.input.x, this.input.y);
+                                    });
+                                    
+                                    sprite.on('pointerout', () => {
+                                        hideGameTooltipDelayed(); // Use delayed hide
+                                    });
+                                }
+                                
+                                // Store border reference for cleanup
+                                if (!sprite.ownershipIndicators) {
+                                    sprite.ownershipIndicators = [];
+                                }
+                                sprite.ownershipIndicators.push(borderGraphics);
+                                
+                                const isOwnUnit = unit.playerId === playerId;
+                                console.log(`${isOwnUnit ? '👤 OWN' : '👥 OTHER'} UNIT: ${unitName} (Player: ${unit.playerId}, Color: ${color.primary})`);
+                                
+                                // Add drag functionality for own units only
+                                if (isOwnUnit && (state.phase === 'preparation' || state.phase === 'post-combat')) {
+                                    this.setupGridUnitDrag(sprite, unit);
+                                }
+                                
+                                // Tooltip functionality is already handled above
+                                
                                 this.unitSprites.push(sprite);
                                 console.log(`✓ SUCCESS: Placed ${unitName} at grid (${unit.position.x}, ${unit.position.y}) world (${worldX}, ${worldY})`);
                             } else {
@@ -2179,7 +3271,17 @@
             // Clear existing unit sprites from preparation
             if (this.unitSprites && this.unitSprites.length > 0) {
                 console.log(`Clearing ${this.unitSprites.length} preparation sprites`);
-                this.unitSprites.forEach(sprite => sprite.destroy());
+                this.unitSprites.forEach(sprite => {
+                    if (sprite) {
+                        // Clean up ownership indicators before destroying sprite
+                        if (sprite.ownershipIndicators) {
+                            sprite.ownershipIndicators.forEach(indicator => {
+                                if (indicator && indicator.destroy) indicator.destroy();
+                            });
+                        }
+                        if (sprite.destroy) sprite.destroy();
+                    }
+                });
                 this.unitSprites = [];
             }
             
@@ -2258,6 +3360,9 @@
                 const unitData = this.combatUnits[unit.id];
                 const worldPos = this.getBattlePosition(unit.position);
                 unitData.sprite.setPosition(worldPos.x, worldPos.y);
+                
+                // No ownership circles in combat - using health bar colors instead
+                
                 this.updateHealthBar(unitData, unit);
                 return;
             }
@@ -2272,13 +3377,17 @@
                 const scale = Math.min(this.cellSize / 80, 0.8); // Slightly larger in combat
                 sprite.setScale(scale);
                 
-                // Tint enemies red
+                // Handle coloring for enemies vs players
                 if (isEnemy) {
+                    // Tint enemies red
                     sprite.setTint(0xff8888);
+                } else {
+                    // During combat, we don't show ownership circles
+                    // Player ownership will be indicated by health bar colors instead
                 }
                 
-                // Create health bar with enemy/friendly distinction
-                const healthBar = this.createHealthBar(worldPos.x, worldPos.y - 25, isEnemy);
+                // Create health bar with enemy/friendly distinction and player color
+                const healthBar = this.createHealthBar(worldPos.x, worldPos.y - 25, isEnemy, unit.playerId);
                 
                 // Store unit data
                 this.combatUnits[unit.id] = {
@@ -2308,7 +3417,7 @@
             return { x: worldX, y: worldY };
         };
         
-        Phaser.Scene.prototype.createHealthBar = function(x, y, isEnemy = false) {
+        Phaser.Scene.prototype.createHealthBar = function(x, y, isEnemy = false, playerId = null) {
             const barWidth = 50;
             const barHeight = 8;
             
@@ -2338,7 +3447,8 @@
                 fill: fill,
                 width: barWidth,
                 height: barHeight,
-                isEnemy: isEnemy
+                isEnemy: isEnemy,
+                playerId: playerId
             };
         };
         
@@ -2368,13 +3478,29 @@
                         fillColor = 0xff0000; // Dark red
                     }
                 } else {
-                    // Green gradient for friendlies
+                    // Use player color for friendlies
+                    let players = [];
+                    if (window.gameState && window.gameState.players) {
+                        players = window.gameState.players;
+                    }
+                    const playerColor = getPlayerColor(unitData.healthBar.playerId, players);
+                    const baseColor = parseInt(playerColor.primary.replace('#', '0x'));
+                    
+                    // Create health-based variations of the player color
                     if (healthPercent > 0.6) {
-                        fillColor = 0x00ff00; // Bright green
+                        fillColor = baseColor; // Full player color
                     } else if (healthPercent > 0.3) {
-                        fillColor = 0x66ff66; // Medium green
+                        // Darker version for medium health
+                        const r = Math.floor(((baseColor >> 16) & 0xFF) * 0.7);
+                        const g = Math.floor(((baseColor >> 8) & 0xFF) * 0.7);
+                        const b = Math.floor((baseColor & 0xFF) * 0.7);
+                        fillColor = (r << 16) | (g << 8) | b;
                     } else {
-                        fillColor = 0x33ff33; // Light green (still alive)
+                        // Even darker for low health
+                        const r = Math.floor(((baseColor >> 16) & 0xFF) * 0.5);
+                        const g = Math.floor(((baseColor >> 8) & 0xFF) * 0.5);
+                        const b = Math.floor((baseColor & 0xFF) * 0.5);
+                        fillColor = (r << 16) | (g << 8) | b;
                     }
                 }
                 
@@ -2422,17 +3548,37 @@
                                 console.log(`Playing death animation: ${deathAnimKey} for unit ${unit.id}`);
                                 unitData.sprite.play(deathAnimKey);
                                 
-                                // After death animation completes, stay on last frame
+                                // After death animation completes, remove unit from battlefield  
                                 unitData.sprite.once('animationcomplete', () => {
-                                    console.log(`Death animation complete for unit ${unit.id}`);
-                                    // Stay on the last frame of death animation
+                                    console.log(`Death animation complete for unit ${unit.id}, removing from battlefield`);
+                                    // Remove the sprite completely after death animation
+                                    this.time.delayedCall(500, () => {
+                                        if (unitData.sprite && unitData.sprite.scene) {
+                                            unitData.sprite.setVisible(false);
+                                            unitData.sprite.destroy();
+                                        }
+                                        if (unitData.healthBar && unitData.healthBar.container && unitData.healthBar.container.scene) {
+                                            unitData.healthBar.container.destroy();
+                                        }
+                                        // Remove from tracking
+                                        this.unitSprites = this.unitSprites.filter(s => s !== unitData.sprite);
+                                        delete this.unitSpriteMap[unit.id];
+                                    });
                                 });
                             } else {
-                                // Fallback to idle if no death animation
-                                const idleAnimKey = `${unitName}_idle`;
-                                if (this.anims.exists(idleAnimKey)) {
-                                    unitData.sprite.play(idleAnimKey, true);
-                                }
+                                // Fallback: immediately remove if no death animation
+                                console.log(`No death animation for ${unitName}, removing immediately`);
+                                this.time.delayedCall(1000, () => {
+                                    if (unitData.sprite && unitData.sprite.scene) {
+                                        unitData.sprite.setVisible(false);
+                                        unitData.sprite.destroy();
+                                    }
+                                    if (unitData.healthBar && unitData.healthBar.container && unitData.healthBar.container.scene) {
+                                        unitData.healthBar.container.destroy();
+                                    }
+                                    this.unitSprites = this.unitSprites.filter(s => s !== unitData.sprite);
+                                    delete this.unitSpriteMap[unit.id];
+                                });
                             }
                         }
                     } else {
@@ -2540,15 +3686,8 @@
         
         
         function update() {
-            // Update game logic and unit canvas rendering
-            if (window.gameScene && window.gameScene.updateUnitCanvases) {
-                // Only update every 10 frames to reduce performance impact
-                if (!this.canvasUpdateCounter) this.canvasUpdateCounter = 0;
-                this.canvasUpdateCounter++;
-                if (this.canvasUpdateCounter % 10 === 0) {
-                    window.gameScene.updateUnitCanvases();
-                }
-            }
+            // Update game logic - canvas rendering now handled by individual animated sprites
+            // No longer need to update canvas manually since each sprite manages its own animation
         }
         
         // Upgrade system functions
@@ -2556,6 +3695,15 @@
         
         function showUpgradeSelection(upgradeCards, currentFloor, playerGold) {
             console.log('Showing upgrade selection:', upgradeCards);
+            
+            // Clear upgrade selections when showing new upgrades
+            upgradeSelections.clear();
+            selectedUpgrade = null;
+            
+            // Hide the global select button initially
+            const selectBtn = document.getElementById('select-upgrade-btn');
+            selectBtn.classList.add('hidden');
+            selectBtn.disabled = true;
             
             // Update floor display
             document.getElementById('upgrade-floor').textContent = currentFloor;
@@ -2586,6 +3734,11 @@
                 normalContainer.appendChild(upgradeCard);
             });
             
+            // Initialize unit sprites for all upgrade cards
+            setTimeout(() => {
+                initializeUpgradeSprites();
+            }, 100);
+            
             // Update reroll button
             const rerollBtn = document.getElementById('reroll-btn');
             rerollBtn.disabled = playerGold < 10;
@@ -2612,38 +3765,35 @@
                 description = description.replace(/([+-])(\d+)\s*Priority/g, (match, sign, num) => `${sign}${parseInt(num) * 3} Priority`);
             }
             
+            // Create icon filename from upgrade name
+            const iconName = upgrade.name.toLowerCase().replace(/\s+/g, '_');
+            const iconPath = `assets/upgradeicons/${iconName}.png`;
+            
             card.innerHTML = `
+                <div class="upgrade-icon">
+                    <img src="${iconPath}" alt="${upgrade.name}" onerror="this.style.display='none'">
+                </div>
                 <div class="upgrade-name">${upgrade.name}</div>
                 <div class="upgrade-description">${description}</div>
                 ${isHighPotency ? 
                     `<div class="upgrade-target">Applied to: ${upgrade.targetUnitType}</div>` :
-                    '<div class="upgrade-target">Choose unit type below:</div>'
+                    '<div class="upgrade-target">Select units to upgrade:</div>'
                 }
-                ${!isHighPotency ? createUnitTypeSelector(upgrade.id) : ''}
+                ${createUnitTypeSelector(upgrade.id, isHighPotency, upgrade.targetUnitType)}
+                <div class="upgrade-actions">
+                    <!-- Individual card buttons removed - using global fixed position button -->
+                </div>
             `;
             
-            if (isHighPotency) {
-                // High-potency upgrades can be clicked to apply immediately
-                card.onclick = () => {
-                    if (socket && socket.connected) {
-                        socket.emit('selectUpgrade', upgrade.id, upgrade.targetUnitType);
-                    }
-                };
-            } else {
-                // Normal upgrades need unit type selection first
-                card.onclick = () => {
-                    // Show unit type selector
-                    const selector = card.querySelector('.unit-type-selector');
-                    if (selector) {
-                        selector.style.display = 'flex';
-                    }
-                };
-            }
+            // Add click handler to select this upgrade card
+            card.addEventListener('click', () => {
+                selectUpgradeCard(upgrade, isHighPotency);
+            });
             
             return card;
         }
         
-        function createUnitTypeSelector(upgradeId) {
+        function createUnitTypeSelector(upgradeId, isHighPotency, targetUnitType = null) {
             // Get owned unit types from current game state
             const ownedUnitTypes = new Set();
             if (gameState && gameState.players) {
@@ -2663,20 +3813,305 @@
             }
             
             const unitTypes = Array.from(ownedUnitTypes);
-            const buttons = unitTypes.map(unitType => 
-                `<button class="unit-type-btn" onclick="selectUnitType('${upgradeId}', '${unitType}')">${unitType}</button>`
-            ).join('');
             
-            return `<div class="unit-type-selector" style="display: none;">${buttons}</div>`;
+            if (isHighPotency && targetUnitType) {
+                // For high potency upgrades, show the target unit sprite
+                const unitKey = targetUnitType.toLowerCase();
+                return `
+                    <div class="unit-type-selector high-potency-target">
+                        <div class="unit-selection-sprite selected" data-unit-type="${targetUnitType}">
+                            <div class="unit-sprite-container" id="sprite-${upgradeId}-${unitKey}">
+                                <!-- Target unit sprite will be added here -->
+                            </div>
+                            <div class="unit-selection-name">${targetUnitType}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // For normal upgrades, show all available unit types as animated sprites
+                const unitSprites = unitTypes.map(unitType => {
+                    const unitKey = unitType.toLowerCase();
+                    return `
+                        <div class="unit-selection-sprite" 
+                             data-unit-type="${unitType}" 
+                             data-upgrade-id="${upgradeId}"
+                             onclick="selectUnitForUpgrade('${upgradeId}', '${unitType}')">
+                            <div class="unit-sprite-container" id="sprite-${upgradeId}-${unitKey}">
+                                <!-- Sprite will be added here by JavaScript -->
+                            </div>
+                            <div class="unit-selection-name">${unitType}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                return `<div class="unit-type-selector unit-sprite-selector">${unitSprites}</div>`;
+            }
+        }
+        
+        // Track selected units for each upgrade
+        let upgradeSelections = new Map(); // upgradeId -> selectedUnitType
+        
+        // Track currently selected upgrade for global button
+        let selectedUpgrade = null;
+        
+        function selectUpgradeCard(upgrade, isHighPotency) {
+            // Clear previous selection
+            document.querySelectorAll('.upgrade-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Mark this card as selected
+            const card = document.querySelector(`[data-upgrade-id="${upgrade.id}"]`);
+            if (card) {
+                card.classList.add('selected');
+            }
+            
+            // Store the selected upgrade
+            selectedUpgrade = { upgrade, isHighPotency };
+            
+            // Show the global select button
+            const selectBtn = document.getElementById('select-upgrade-btn');
+            selectBtn.classList.remove('hidden');
+            
+            // For normal upgrades, check if a unit type is selected
+            if (!isHighPotency) {
+                const hasUnitSelection = upgradeSelections.has(upgrade.id);
+                selectBtn.disabled = !hasUnitSelection;
+            } else {
+                selectBtn.disabled = false;
+            }
+        }
+        
+        function confirmSelectedUpgrade() {
+            if (!selectedUpgrade) return;
+            
+            const { upgrade, isHighPotency } = selectedUpgrade;
+            
+            if (isHighPotency) {
+                confirmUpgrade(upgrade.id, upgrade.targetUnitType);
+            } else {
+                confirmUpgradeWithSelection(upgrade.id);
+            }
+        }
+        
+        function selectUnitForUpgrade(upgradeId, unitType) {
+            // Clear selections on all other upgrade cards
+            upgradeSelections.forEach((selectedUnit, otherUpgradeId) => {
+                if (otherUpgradeId !== upgradeId) {
+                    // Clear visual selection
+                    document.querySelectorAll(`[data-upgrade-id="${otherUpgradeId}"] .unit-selection-sprite`).forEach(sprite => {
+                        sprite.classList.remove('selected');
+                    });
+                    // Disable confirm button
+                    const otherConfirmBtn = document.querySelector(`[data-upgrade-id="${otherUpgradeId}"] .confirm-upgrade-btn`);
+                    if (otherConfirmBtn) {
+                        otherConfirmBtn.disabled = true;
+                    }
+                }
+            });
+            
+            // Clear all selections except this one
+            upgradeSelections.clear();
+            upgradeSelections.set(upgradeId, unitType);
+            
+            // Update visual selection for this upgrade
+            document.querySelectorAll(`[data-upgrade-id="${upgradeId}"] .unit-selection-sprite`).forEach(sprite => {
+                sprite.classList.remove('selected');
+            });
+            
+            const selectedSprite = document.querySelector(`[data-upgrade-id="${upgradeId}"][data-unit-type="${unitType}"]`);
+            if (selectedSprite) {
+                selectedSprite.classList.add('selected');
+            }
+            
+            // Update the global select button if this upgrade is currently selected
+            if (selectedUpgrade && selectedUpgrade.upgrade.id === upgradeId) {
+                const selectBtn = document.getElementById('select-upgrade-btn');
+                selectBtn.disabled = false;
+            }
+        }
+        
+        function updateUpgradeSelection(upgradeId) {
+            // Legacy function - still needed for radio button compatibility
+            const selectedRadio = document.querySelector(`input[name="unit-${upgradeId}"]:checked`);
+            const confirmBtn = document.querySelector(`[data-upgrade-id="${upgradeId}"] .confirm-upgrade-btn`);
+            
+            if (confirmBtn) {
+                confirmBtn.disabled = !selectedRadio;
+            }
+        }
+        
+        function confirmUpgrade(upgradeId, targetUnitType) {
+            console.log(`Confirming high potency upgrade ${upgradeId} for ${targetUnitType}`);
+            
+            if (socket && socket.connected) {
+                socket.emit('selectUpgrade', upgradeId, targetUnitType);
+            }
+        }
+        
+        function confirmUpgradeWithSelection(upgradeId) {
+            // Get the selected unit type from our tracking system
+            const selectedType = upgradeSelections.get(upgradeId);
+            
+            if (!selectedType) {
+                console.log('No unit type selected');
+                return;
+            }
+            
+            console.log(`Confirming upgrade ${upgradeId} for unit type: ${selectedType}`);
+            
+            // Apply upgrade to the selected unit type
+            if (socket && socket.connected) {
+                socket.emit('selectUpgrade', upgradeId, selectedType);
+            }
+        }
+        
+        function initializeUpgradeSprites() {
+            // Find all unit sprite containers in upgrade cards
+            document.querySelectorAll('.unit-sprite-container').forEach(container => {
+                const id = container.id;
+                const match = id.match(/sprite-(.+)-(.+)/);
+                if (match) {
+                    const upgradeId = match[1];
+                    const unitKey = match[2];
+                    
+                    // Create a mini canvas for this unit
+                    createUpgradeUnitSprite(container, unitKey);
+                }
+            });
+        }
+        
+        // Track active animations to prevent duplicates
+        const activeAnimations = new Map();
+        
+        // Universal animated sprite creator - EXACTLY matches grid sprite behavior
+        function createAnimatedUnitSprite(container, unitKey, width = 48, height = 48, animSpeed = 300) {
+            // Clear any existing animation for this container
+            const containerId = container.id || Math.random().toString();
+            if (activeAnimations.has(containerId)) {
+                clearTimeout(activeAnimations.get(containerId));
+                activeAnimations.delete(containerId);
+            }
+            
+            // Clear any existing content
+            container.innerHTML = '';
+            
+            // Create canvas for unit animation
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            canvas.style.imageRendering = 'pixelated';
+            container.appendChild(canvas);
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Try to create a Phaser sprite exactly like grid sprites if scene is available
+            if (window.gameScene && window.gameScene.textures && window.gameScene.textures.exists(unitKey)) {
+                // Create an off-screen Phaser sprite EXACTLY like addUnitToScene does
+                const offScreenSprite = window.gameScene.add.sprite(-2000, -2000, unitKey);
+                offScreenSprite.setScale(0.75); // Initial scale from addUnitToScene
+                offScreenSprite.setVisible(false); // Keep it invisible
+                
+                // Apply the SAME secondary scale as grid sprites
+                // This is the key missing piece! Grid sprites get scaled again
+                // Use the actual grid cellSize if available, otherwise estimate from container
+                const actualCellSize = window.gameScene?.cellSize || Math.min(width, height);
+                const gridScale = Math.min(actualCellSize / 80, 0.8); // EXACT same formula as grid
+                offScreenSprite.setScale(gridScale); // This overwrites 0.75 just like grid sprites
+                
+                // Try to play idle animation exactly like grid sprites
+                const idleAnimKey = `${unitKey}_idle`;
+                if (window.gameScene.anims.exists(idleAnimKey)) {
+                    offScreenSprite.play(idleAnimKey);
+                    console.log(`UI Sprite: Playing ${idleAnimKey} animation like grid`);
+                } else {
+                    // Fallback to first frame like grid sprites
+                    console.warn(`UI Sprite: Animation ${idleAnimKey} not found, trying first frame`);
+                    const texture = window.gameScene.textures.get(unitKey);
+                    const frames = texture.getFrameNames();
+                    if (frames.length > 0) {
+                        offScreenSprite.setFrame(frames[0]);
+                        console.log(`UI Sprite: Set ${unitKey} to frame: ${frames[0]}`);
+                    }
+                }
+                
+                // Set depth like grid sprites
+                offScreenSprite.setDepth(10);
+                
+                // Render the Phaser sprite to our canvas
+                const renderSprite = () => {
+                    if (!container.parentNode) {
+                        // Clean up sprite when container is removed
+                        if (offScreenSprite) {
+                            offScreenSprite.destroy();
+                        }
+                        if (activeAnimations.has(containerId)) {
+                            clearTimeout(activeAnimations.get(containerId));
+                            activeAnimations.delete(containerId);
+                        }
+                        return;
+                    }
+                    
+                    ctx.clearRect(0, 0, width, height);
+                    
+                    // Get the current frame from the Phaser sprite
+                    const frame = offScreenSprite.frame;
+                    if (frame && frame.source && frame.source.image) {
+                        // Calculate positioning to center the sprite in canvas
+                        const spriteWidth = frame.width * offScreenSprite.scaleX;
+                        const spriteHeight = frame.height * offScreenSprite.scaleY;
+                        const x = (width - spriteWidth) / 2;
+                        const y = (height - spriteHeight) / 2;
+                        
+                        // Draw the sprite frame exactly as Phaser would
+                        ctx.save();
+                        ctx.translate(x + spriteWidth / 2, y + spriteHeight / 2);
+                        if (offScreenSprite.flipX) ctx.scale(-1, 1);
+                        if (offScreenSprite.flipY) ctx.scale(1, -1);
+                        ctx.globalAlpha = offScreenSprite.alpha;
+                        
+                        ctx.drawImage(
+                            frame.source.image,
+                            frame.x, frame.y, frame.width, frame.height,
+                            -spriteWidth / 2, -spriteHeight / 2, spriteWidth, spriteHeight
+                        );
+                        ctx.restore();
+                    }
+                    
+                    // Continue animation loop
+                    const animationId = setTimeout(renderSprite, animSpeed);
+                    activeAnimations.set(containerId, animationId);
+                };
+                
+                renderSprite();
+            } else {
+                // Fallback to text sprite if Phaser not available
+                drawTextSprite(ctx, unitKey.toUpperCase(), width, height);
+            }
+        }
+        
+        // Maintain backward compatibility
+        function createUpgradeUnitSprite(container, unitKey) {
+            createAnimatedUnitSprite(container, unitKey, 48, 48, 300);
+        }
+        
+        function drawTextSprite(ctx, text, width, height) {
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.fillStyle = '#FFD700';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, width/2, height/2 + 3);
         }
         
         function selectUnitType(upgradeId, unitType) {
             console.log(`Selected unit type ${unitType} for upgrade ${upgradeId}`);
             
-            // Immediately send upgrade to server
-            if (socket && socket.connected) {
-                socket.emit('selectUpgrade', upgradeId, unitType);
-            }
+            // This function is kept for backward compatibility but no longer used
+            // The new UI uses sprite selection
         }
         
         function rerollUpgrades() {
@@ -2697,17 +4132,78 @@
         
         // Handle window resize
         window.addEventListener('resize', () => {
-            if (game) {
-                game.scale.resize(window.innerWidth, window.innerHeight);
-                
-                // Redraw grid after resize
-                setTimeout(() => {
+            handleResize();
+        });
+        
+        // Debounced resize handler for better performance
+        let resizeTimeout;
+        function handleResize() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (game) {
+                    game.scale.resize(window.innerWidth, window.innerHeight);
+                    
+                    // Redraw grid after resize
                     if (window.gameScene && window.gameScene.drawGrid) {
                         window.gameScene.drawGrid();
+                        
+                        // Update unit positions if in preparation phase
+                        if (gameState && (gameState.phase === 'preparation' || gameState.phase === 'post-combat')) {
+                            window.gameScene.updateGameState(gameState);
+                        }
                     }
-                }, 100);
+                }
+                
+                // Update HUD positions for mobile/electron
+                updateHUDPositions();
+            }, 150);
+        }
+        
+        // Update HUD positions based on screen size
+        function updateHUDPositions() {
+            const isSmallScreen = window.innerWidth < 768 || window.innerHeight < 600;
+            const shopPanel = document.getElementById('shop-panel');
+            const unitPanel = document.getElementById('unit-panel');
+            
+            if (isSmallScreen) {
+                // Compact mode for small screens
+                if (shopPanel) {
+                    shopPanel.style.padding = '10px';
+                    shopPanel.style.gap = '8px';
+                }
+                if (unitPanel) {
+                    unitPanel.style.maxHeight = '120px';
+                }
+            } else {
+                // Normal mode
+                if (shopPanel) {
+                    shopPanel.style.padding = '15px';
+                    shopPanel.style.gap = '10px';
+                }
+                if (unitPanel) {
+                    unitPanel.style.maxHeight = '150px';
+                }
             }
+        }
+        
+        // Handle orientation change for mobile
+        window.addEventListener('orientationchange', () => {
+            setTimeout(handleResize, 100);
         });
+        
+        // React Native WebView message handling
+        if (window.ReactNativeWebView) {
+            window.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'resize') {
+                    handleResize();
+                }
+            });
+        }
+        
+        // Electron IPC handling
+        if (window.electron && window.electron.ipcRenderer) {
+            window.electron.ipcRenderer.on('window-resize', handleResize);
+        }
     </script>
 </body>
 </html>

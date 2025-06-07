@@ -122,15 +122,28 @@ export default class Grid extends Phaser.GameObjects.Container {
     return { x: worldX, y: worldY };
   }
 
-  isValidPlacement(gridX: number, gridY: number): boolean {
+  isValidPlacement(gridX: number, gridY: number, currentPlayerId?: string): boolean {
     if (gridX < 0 || gridX >= this.gridWidth || gridY < 0 || gridY >= this.gridHeight) {
       return false;
     }
     
-    return !this.gridState[gridY][gridX].occupied;
+    const cell = this.gridState[gridY][gridX];
+    
+    // If cell is not occupied, it's valid
+    if (!cell.occupied) {
+      return true;
+    }
+    
+    // If cell is occupied but by the same player, it's valid (can swap units)
+    if (currentPlayerId && cell.playerId === currentPlayerId) {
+      return true;
+    }
+    
+    // Otherwise, cell is occupied by another player - invalid
+    return false;
   }
 
-  highlightCell(gridX: number, gridY: number) {
+  highlightCell(gridX: number, gridY: number, currentPlayerId?: string) {
     if (!this.highlightRect) return;
     
     if (gridX < 0 || gridX >= this.gridWidth || gridY < 0 || gridY >= this.gridHeight) {
@@ -146,7 +159,7 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.highlightRect.setVisible(true);
     
     // Change color based on validity
-    if (this.isValidPlacement(gridX, gridY)) {
+    if (this.isValidPlacement(gridX, gridY, currentPlayerId)) {
       this.highlightRect.setStrokeStyle(3, 0x4CAF50, 1);
     } else {
       this.highlightRect.setStrokeStyle(3, 0xF44336, 1);

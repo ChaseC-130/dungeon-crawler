@@ -16,7 +16,25 @@
       "Bash(curl:*)",
       "Bash(grep:*)",
       "Bash(find:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(rg:*)",
+      "Bash(npm run build:web:*)",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx typescript:*)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(timeout 30 npm run dev)",
+      "Bash(kill:*)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"socket\\.on\\(''gameStateUpdate''\" game.html)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"DPS.*toFixed\\|damage.*attackSpeed.*%\" game.html)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"DPS\" game.html)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"setupGridUnitDrag\" game.html)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"config.*=\" game.html)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"death.*animation\\|playDeathAnimation\\|dead.*animation\" game.html)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"death\" game.html)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"body {\" game.html)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"body\" game.html)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 10 -B 5 \"strokePath\" game.html)"
     ],
     "deny": []
   }
