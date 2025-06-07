@@ -33,7 +33,8 @@ class Match {
           x,
           y,
           occupied: false,
-          unitId: null
+          unitId: null,
+          playerId: null
         };
       }
     }
@@ -48,7 +49,9 @@ class Match {
       gold: GAME_CONFIG.STARTING_GOLD,
       units: [],
       isReady: false,
-      initialUnitPositions: new Map() // unitId -> position
+      initialUnitPositions: new Map(), // unitId -> position
+      upgradeCards: [], // Individual upgrade cards for this player
+      hasSelectedUpgrade: false // Track if player has selected upgrade this round
     });
   }
 
@@ -57,9 +60,16 @@ class Match {
     if (player) {
       // Remove player's units from grid
       player.units.forEach(unit => {
-        if (unit.position) {
+        if (unit.position && 
+            unit.position.y >= 0 && 
+            unit.position.y < this.grid.length &&
+            unit.position.x >= 0 && 
+            unit.position.x < this.grid[0].length &&
+            this.grid[unit.position.y] &&
+            this.grid[unit.position.y][unit.position.x]) {
           this.grid[unit.position.y][unit.position.x].occupied = false;
           this.grid[unit.position.y][unit.position.x].unitId = null;
+          this.grid[unit.position.y][unit.position.x].playerId = null;
         }
       });
       
@@ -119,22 +129,38 @@ class Match {
       return;
     }
 
+    // Check if new position is occupied by another player's unit
+    if (this.grid[position.y][position.x].occupied) {
+      const occupyingUnitId = this.grid[position.y][position.x].unitId;
+      // Check if it's occupied by another player's unit
+      let isOwnUnit = false;
+      for (const [pid, p] of this.players) {
+        if (p.units.some(u => u.id === occupyingUnitId)) {
+          if (pid === playerId) {
+            isOwnUnit = true;
+          }
+          break;
+        }
+      }
+      
+      if (!isOwnUnit) {
+        this.sendError(player.socket, 'Position already occupied by another player');
+        return;
+      }
+    }
+
     // Clear old position
     if (unit.position) {
       this.grid[unit.position.y][unit.position.x].occupied = false;
       this.grid[unit.position.y][unit.position.x].unitId = null;
-    }
-
-    // Check if new position is occupied
-    if (this.grid[position.y][position.x].occupied) {
-      this.sendError(player.socket, 'Position already occupied');
-      return;
+      this.grid[unit.position.y][unit.position.x].playerId = null;
     }
 
     // Place unit
     unit.position = position;
     this.grid[position.y][position.x].occupied = true;
     this.grid[position.y][position.x].unitId = unitId;
+    this.grid[position.y][position.x].playerId = playerId; // Track owner
     player.initialUnitPositions.set(unit.id, { ...position }); // Store a copy
 
     this.broadcastGameState();
@@ -175,6 +201,9 @@ class Match {
 
     // Play purchase sound
     player.socket.emit('play-sound', 'purchase');
+    
+    // Emit unit-purchased event for placement handling
+    player.socket.emit('unit-purchased', unit);
 
     this.broadcastGameState();
   }
@@ -192,6 +221,7 @@ class Match {
     if (unit.position) {
       this.grid[unit.position.y][unit.position.x].occupied = false;
       this.grid[unit.position.y][unit.position.x].unitId = null;
+      this.grid[unit.position.y][unit.position.x].playerId = null;
     }
 
     // Refund gold
@@ -201,6 +231,47 @@ class Match {
     player.units.splice(unitIndex, 1);
     player.initialUnitPositions.delete(unit.id);
 
+    this.broadcastGameState();
+  }
+
+  moveUnit(playerId, unitId, newPosition) {
+    const player = this.players.get(playerId);
+    if (!player || (this.phase !== 'preparation' && this.phase !== 'post-combat')) return;
+
+    const unit = player.units.find(u => u.id === unitId);
+    if (!unit) return;
+
+    // Check if new position is valid
+    if (newPosition.x < 0 || newPosition.x >= GAME_CONFIG.GRID_WIDTH ||
+        newPosition.y < 0 || newPosition.y >= GAME_CONFIG.GRID_HEIGHT) {
+      console.log(`Invalid move position for unit ${unitId}: (${newPosition.x}, ${newPosition.y})`);
+      return;
+    }
+
+    // Check if new position is occupied by another player's unit
+    const targetCell = this.grid[newPosition.y][newPosition.x];
+    if (targetCell.occupied && targetCell.playerId !== playerId) {
+      console.log(`Position (${newPosition.x}, ${newPosition.y}) occupied by another player`);
+      return;
+    }
+
+    // Clear old position
+    if (unit.position) {
+      this.grid[unit.position.y][unit.position.x].occupied = false;
+      this.grid[unit.position.y][unit.position.x].unitId = null;
+      this.grid[unit.position.y][unit.position.x].playerId = null;
+    }
+
+    // Set new position
+    unit.position = newPosition;
+    this.grid[newPosition.y][newPosition.x].occupied = true;
+    this.grid[newPosition.y][newPosition.x].unitId = unitId;
+    this.grid[newPosition.y][newPosition.x].playerId = playerId;
+    
+    // Update initial position tracking
+    player.initialUnitPositions.set(unit.id, { ...newPosition });
+
+    console.log(`Moved unit ${unitId} from player ${playerId} to position (${newPosition.x}, ${newPosition.y})`);
     this.broadcastGameState();
   }
   
@@ -253,6 +324,7 @@ class Match {
     // Place on grid
     this.grid[position.y][position.x].occupied = true;
     this.grid[position.y][position.x].unitId = unit.id;
+    this.grid[position.y][position.x].playerId = playerId; // Track owner
     player.initialUnitPositions.set(unit.id, { ...unit.position }); // Store a copy
 
     // Play purchase sound
@@ -288,8 +360,12 @@ class Match {
     const player = this.players.get(playerId);
     if (!player || this.phase !== 'post-combat') return;
 
-    const upgrade = this.upgradeCards.find(u => u.id === upgradeId);
+    // Find upgrade in this player's individual upgrade cards
+    const upgrade = player.upgradeCards.find(u => u.id === upgradeId);
     if (!upgrade) return;
+
+    // Check if player has already selected an upgrade
+    if (player.hasSelectedUpgrade) return;
 
     // Apply upgrade to units
     const unitsToUpgrade = player.units.filter(u => {
@@ -305,13 +381,28 @@ class Match {
       this.applyUpgrade(unit, upgrade);
     });
 
-    // Clear all upgrade cards after selecting one
-    this.upgradeCards = [];
+    // Mark player as having selected an upgrade
+    player.hasSelectedUpgrade = true;
+    player.upgradeCards = []; // Clear this player's upgrade cards
 
-    // Start next floor immediately after selecting any upgrade
-    this.startNewFloor();
+    console.log(`Player ${playerId} selected upgrade ${upgradeId}`);
 
-    this.broadcastGameState();
+    // Check if all players have selected upgrades
+    const allPlayersSelected = Array.from(this.players.values()).every(p => p.hasSelectedUpgrade);
+    
+    if (allPlayersSelected) {
+      console.log('All players have selected upgrades, starting next floor');
+      // Reset upgrade selection status for all players
+      this.players.forEach(player => {
+        player.hasSelectedUpgrade = false;
+      });
+      // Start next floor only when all players have selected
+      this.startNewFloor();
+    } else {
+      console.log(`Waiting for other players to select upgrades. Selected: ${Array.from(this.players.values()).filter(p => p.hasSelectedUpgrade).length}/${this.players.size}`);
+      // Just broadcast current state without starting next floor
+      this.broadcastGameState();
+    }
   }
 
   applyUpgrade(unit, upgrade) {
@@ -449,6 +540,9 @@ class Match {
     if (winner === 'players') {
       this.phase = 'post-combat';
       
+      // Reset unit positions to initial positions immediately for post-combat phase
+      this.resetUnitsToInitialPositions();
+      
       // Generate upgrade cards
       this.generateUpgradeCards();
       
@@ -466,38 +560,85 @@ class Match {
     }
   }
 
-  generateUpgradeCards() {
-    this.upgradeCards = [];
-    
-    // Get owned unit types
-    const ownedUnitTypes = new Set();
+  resetUnitsToInitialPositions() {
+    // Clear current grid state related to player units
     this.players.forEach(player => {
       player.units.forEach(unit => {
-        if (unit.status !== 'dead') {
-          ownedUnitTypes.add(unit.name);
+        if (unit.position && this.grid[unit.position.y] && this.grid[unit.position.y][unit.position.x]) {
+          this.grid[unit.position.y][unit.position.x].occupied = false;
+          this.grid[unit.position.y][unit.position.x].unitId = null;
+          this.grid[unit.position.y][unit.position.x].playerId = null;
         }
       });
+    });
+
+    // Reset unit positions to initial and update grid
+    this.players.forEach(player => {
+      player.units.forEach(unit => {
+        const initialPos = player.initialUnitPositions.get(unit.id);
+        if (initialPos) {
+          unit.position = { ...initialPos }; // Restore position
+          // Update the grid with the restored position
+          if (this.grid[initialPos.y] && this.grid[initialPos.y][initialPos.x]) {
+            this.grid[initialPos.y][initialPos.x].occupied = true;
+            this.grid[initialPos.y][initialPos.x].unitId = unit.id;
+            this.grid[initialPos.y][initialPos.x].playerId = unit.playerId;
+          }
+        } else {
+          // If a unit doesn't have an initial position, ensure its position is null
+          unit.position = null;
+        }
+        // Reset status to idle, unless it's dead
+        if (unit.status !== 'dead') {
+          unit.status = 'idle';
+        }
+        // Reset any combat-specific temporary state
+        unit.targetId = null;
+        unit.attackCooldown = 0;
+      });
+    });
+  }
+
+  generateUpgradeCards() {
+    // Generate individual upgrade cards for each player
+    this.players.forEach(player => {
+      this.generateUpgradeCardsForPlayer(player.id);
+    });
+  }
+
+  generateUpgradeCardsForPlayer(playerId) {
+    const player = this.players.get(playerId);
+    if (!player) return;
+
+    player.upgradeCards = [];
+    
+    // Get owned unit types for this specific player
+    const ownedUnitTypes = new Set();
+    player.units.forEach(unit => {
+      if (unit.status !== 'dead') {
+        ownedUnitTypes.add(unit.name);
+      }
     });
     
     if (ownedUnitTypes.size === 0) return;
     
     // Generate 1 high-potency upgrade
     const highPotencyUpgrade = {
-      id: `upgrade-${Date.now()}-high`,
+      id: `upgrade-${playerId}-${Date.now()}-high`,
       ...UPGRADE_TEMPLATES[Math.floor(Math.random() * UPGRADE_TEMPLATES.length)],
       isHighPotency: true,
       targetUnitType: Array.from(ownedUnitTypes)[Math.floor(Math.random() * ownedUnitTypes.size)]
     };
-    this.upgradeCards.push(highPotencyUpgrade);
+    player.upgradeCards.push(highPotencyUpgrade);
     
     // Generate 3 normal upgrades
     for (let i = 0; i < 3; i++) {
       const normalUpgrade = {
-        id: `upgrade-${Date.now()}-${i}`,
+        id: `upgrade-${playerId}-${Date.now()}-${i}`,
         ...UPGRADE_TEMPLATES[Math.floor(Math.random() * UPGRADE_TEMPLATES.length)],
         isHighPotency: false
       };
-      this.upgradeCards.push(normalUpgrade);
+      player.upgradeCards.push(normalUpgrade);
     }
   }
 
@@ -510,8 +651,13 @@ class Match {
       return;
     }
 
+    if (player.hasSelectedUpgrade) {
+      this.sendError(player.socket, 'Cannot reroll after selecting an upgrade');
+      return;
+    }
+
     player.gold -= GAME_CONFIG.REROLL_COST;
-    this.generateUpgradeCards();
+    this.generateUpgradeCardsForPlayer(playerId); // Generate new cards only for this player
     this.broadcastGameState();
   }
 
@@ -526,41 +672,8 @@ class Match {
       this.phase = 'preparation';
       this.enemyUnits = [];
 
-      // Clear current grid state related to player units from previous combat
-      this.players.forEach(player => {
-        player.units.forEach(unit => {
-          if (unit.position && this.grid[unit.position.y] && this.grid[unit.position.y][unit.position.x]) {
-            this.grid[unit.position.y][unit.position.x].occupied = false;
-            this.grid[unit.position.y][unit.position.x].unitId = null;
-          }
-        });
-      });
-
-      // Reset unit positions to initial and update grid, also reset status
-      this.players.forEach(player => {
-        player.units.forEach(unit => {
-          const initialPos = player.initialUnitPositions.get(unit.id);
-          if (initialPos) {
-            unit.position = { ...initialPos }; // Restore position
-            // Update the grid with the restored position
-            if (this.grid[initialPos.y] && this.grid[initialPos.y][initialPos.x]) {
-              this.grid[initialPos.y][initialPos.x].occupied = true;
-              this.grid[initialPos.y][initialPos.x].unitId = unit.id;
-            }
-          } else {
-            // If a unit doesn't have an initial position (e.g., it was never placed),
-            // ensure its position is null.
-            unit.position = null;
-          }
-          // Reset status to idle for the new preparation phase, unless it's dead
-          if (unit.status !== 'dead') {
-              unit.status = 'idle';
-          }
-          // Reset any combat-specific temporary state
-          unit.targetId = null;
-          unit.attackCooldown = 0;
-        });
-      });
+      // Units are already reset to initial positions in endCombat()
+      // Just ensure they're in the correct state for preparation phase
 
       this.updateShopWithStartingUnits(); // Keep original 5 units, don't reroll
       
@@ -622,12 +735,15 @@ class Match {
         name: p.name,
         gold: p.gold,
         units: p.units,
-        isReady: p.isReady
+        isReady: p.isReady,
+        upgradeCards: p.upgradeCards,
+        hasSelectedUpgrade: p.hasSelectedUpgrade
       })),
       enemyUnits: this.enemyUnits,
       grid: this.grid,
       shopUnits: this.shopUnits,
-      upgradeCards: this.upgradeCards,
+      // Keep legacy upgradeCards for backward compatibility
+      upgradeCards: this.upgradeCards || [],
       winner: this.phase === 'game-over' ? (this.currentFloor > GAME_CONFIG.MAX_FLOORS ? 'players' : 'enemies') : null
     };
     

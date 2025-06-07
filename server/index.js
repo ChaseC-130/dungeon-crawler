@@ -68,6 +68,10 @@ io.on('connection', (socket) => {
     gameManager.handlePlaceUnit(socket, unitId, position);
   });
   
+  socket.on('moveUnit', (unitId, position) => {
+    gameManager.handleMoveUnit(socket, unitId, position);
+  });
+  
   socket.on('purchase-unit', (unitType) => {
     gameManager.handlePurchaseUnit(socket, unitType);
   });

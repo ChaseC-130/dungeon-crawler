@@ -40,6 +40,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [player, setPlayer] = useState<Player | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  // Update global gameContext when player changes
+  useEffect(() => {
+    if ((window as any).gameContext) {
+      (window as any).gameContext.player = player;
+    }
+  }, [player]);
+
   useEffect(() => {
     // Initialize socket connection
     const socketInstance = io(process.env.EXPO_PUBLIC_SERVER_URL || 'http://localhost:3001');
@@ -61,6 +68,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const updatedPlayer = state.players.find(p => p.id === player.id);
         if (updatedPlayer) {
           setPlayer(updatedPlayer);
+        }
+      }
+      
+      // Update game instance with current player ID
+      if ((window as any).gameInstance) {
+        const scene = (window as any).gameInstance.scene.getScene('MainScene');
+        if (scene && scene.currentPlayerId === null && player) {
+          scene.currentPlayerId = player.id;
         }
       }
     });
@@ -101,8 +116,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
     setSocket(socketInstance);
 
+    // Store context reference for game instance
+    (window as any).gameContext = { player, socket: socketInstance };
+
     return () => {
       socketInstance.disconnect();
+      delete (window as any).gameContext;
     };
   }, []);
 
@@ -135,7 +154,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
   const purchaseAndPlaceUnit = (unitType: string, position: Position) => {
     if (socket && isConnected) {
-      socket.emit('purchase-and-place', unitType, position);
+      socket.emit('purchaseAndPlaceUnit', { unitType, position });
     }
   };
 

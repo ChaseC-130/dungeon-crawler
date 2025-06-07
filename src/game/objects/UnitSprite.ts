@@ -7,7 +7,7 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
   private healthBar: Phaser.GameObjects.Graphics;
   private healthBarBg: Phaser.GameObjects.Rectangle;
   private nameText: Phaser.GameObjects.Text;
-  private unit: Unit;
+  public unit: Unit;  // Made public so MainScene can access it
   private isPlayerUnit: boolean;
   private lastStatus: string = 'idle';
   private lastSoundTime: number = 0;
@@ -111,23 +111,22 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
 
     this.sprite.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (animation: Phaser.Animations.Animation) => {
       if (animation.key === `${this.unit.name.toLowerCase()}_dead`) {
-        // Option 1: Just make it fully transparent
-        this.setAlpha(0);
-        // Option 2: Start a fade out tween (if a more gradual disappearance is desired)
-        // this.scene.tweens.add({
-        //   targets: this,
-        //   alpha: 0,
-        //   duration: 300, // 300ms fade
-        //   onComplete: () => {
-        //     // The actual destruction will be handled by MainScene for now
-        //     // to avoid race conditions, but we can mark it as ready for removal.
-        //     (this as any).readyForRemoval = true;
-        //   }
-        // });
-
-        // It's important that MainScene knows when to remove this sprite.
-        // We can emit an event from the sprite itself.
-        this.emit('death_animation_complete', this.unitId);
+        // Keep the last frame of death animation visible
+        // but darken it and reduce opacity slightly
+        // Clear any existing tint first before applying death tint
+        this.sprite.clearTint();
+        this.sprite.setTint(0x444444);
+        this.setAlpha(0.5);
+        
+        // Hide health bar and name for dead units
+        this.healthBarBg.setVisible(false);
+        this.healthBar.setVisible(false);
+        this.nameText.setVisible(false);
+        
+        // Emit event after a delay to show the death state
+        this.scene.time.delayedCall(1000, () => {
+          this.emit('death_animation_complete', this.unitId);
+        });
       }
     }, this);
   }
@@ -252,7 +251,7 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
           frames: this.scene.anims.generateFrameNames(textureKey, {
             frames: animFrames
           }),
-          frameRate: 8,
+          frameRate: animKey === 'dead' ? 6 : 10,
           repeat: animKey === 'dead' ? 0 : -1
         });
       } else if (animKey === 'idle' && frameNames.length > 0) {
@@ -262,7 +261,7 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
           frames: this.scene.anims.generateFrameNames(textureKey, {
             frames: frameNames.slice(0, Math.min(4, frameNames.length))
           }),
-          frameRate: 8,
+          frameRate: 10,
           repeat: -1
         });
       }
@@ -286,7 +285,8 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
   }
 
   update(time: number, delta: number) {
-    // Smooth movement interpolation could be added here
+    // Update depth based on current Y position for proper layering
+    this.setDepth(this.y);
   }
 
   private playAttackSound() {

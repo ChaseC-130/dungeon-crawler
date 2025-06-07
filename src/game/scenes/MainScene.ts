@@ -1,7 +1,9 @@
 import * as Phaser from 'phaser';
-import { GameState, Unit, GridCell, Position, UnitStats } from '../../types/game';
+import { GameState, Unit, GridCell, Position, UnitStats, Player } from '../../types/game';
 import Grid from '../objects/Grid';
 import UnitSprite from '../objects/UnitSprite';
+import { Projectile, ProjectileConfig } from '../objects/Projectile';
+import UnitTooltip from '../objects/UnitTooltip';
 
 export default class MainScene extends Phaser.Scene {
   public grid!: Grid;
@@ -14,6 +16,10 @@ export default class MainScene extends Phaser.Scene {
   private placementUnit: UnitStats | null = null;
   private placedUnit: Unit | null = null;
   private placementGhost: Phaser.GameObjects.Sprite | null = null;
+  private projectiles: Projectile[] = [];
+  private lastAttackTime: Map<string, number> = new Map();
+  private tooltip: UnitTooltip | null = null;
+  private currentPlayerId: string | null = null;
 
   constructor() {
     super({ key: 'MainScene' });
@@ -23,9 +29,9 @@ export default class MainScene extends Phaser.Scene {
     // Set background based on floor
     this.updateBackground();
     
-    // Create grid - 20 columns x 10 rows
+    // Create grid - 20 columns x 8 rows
     const gridWidth = 20;
-    const gridHeight = 10;
+    const gridHeight = 8;
     const cellSize = Math.min(
       (this.cameras.main.width * 0.9) / gridWidth,
       (this.cameras.main.height * 0.7) / gridHeight
@@ -39,6 +45,17 @@ export default class MainScene extends Phaser.Scene {
       gridHeight,
       cellSize
     );
+
+    // Create tooltip
+    this.tooltip = new UnitTooltip(this);
+
+    // Get current player ID from the game context
+    if ((window as any).gameContext) {
+      const player = (window as any).gameContext.player;
+      if (player) {
+        this.currentPlayerId = player.id;
+      }
+    }
 
     // Setup input
     this.setupInput();
@@ -55,15 +72,15 @@ export default class MainScene extends Phaser.Scene {
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer) {
-    if (!this.gameState || this.gameState.phase !== 'preparation') return;
+    if (!this.gameState) return;
 
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     
     // Handle placement mode
-    if (this.placementMode) {
+    if (this.placementMode && this.gameState.phase === 'preparation') {
       const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
       
-      if (this.grid.isValidPlacement(gridPos.x, gridPos.y)) {
+      if (this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined)) {
         if (this.placedUnit) {
           // Place an already purchased unit
           this.events.emit('place-unit', this.placedUnit.id, gridPos);
@@ -88,20 +105,52 @@ export default class MainScene extends Phaser.Scene {
     }
     
     // Check if clicking on a unit
+    let clickedUnit: Unit | null = null;
+    let clickedSprite: UnitSprite | null = null;
+    
     for (const [id, sprite] of this.unitSprites) {
       const bounds = sprite.getBounds();
       if (bounds.contains(worldPoint.x, worldPoint.y)) {
-        // Only allow dragging player units during preparation phase
-        const unit = this.gameState.players
+        // Find the unit
+        clickedUnit = this.gameState.players
           .flatMap(p => p.units)
-          .find(u => u.id === id);
+          .find(u => u.id === id) || 
+          this.gameState.enemyUnits.find(u => u.id === id) || null;
         
-        if (unit) {
-          this.selectedUnit = sprite;
-          this.isDragging = true;
-          sprite.setScale(1.1); // Visual feedback
-          break;
-        }
+        clickedSprite = sprite;
+        break;
+      }
+    }
+    
+    if (clickedUnit) {
+      // Show tooltip on click
+      if (this.tooltip) {
+        const owner = this.gameState.players.find(p => 
+          p.units.some(u => u.id === clickedUnit!.id)
+        );
+        const ownerName = owner ? owner.name : 'Enemy';
+        this.tooltip.showForUnit(clickedUnit, ownerName, worldPoint.x, worldPoint.y);
+        
+        // Hide tooltip after 3 seconds
+        this.time.delayedCall(3000, () => {
+          if (this.tooltip) {
+            this.tooltip.hide();
+          }
+        });
+      }
+      
+      // Only allow dragging own units during preparation phase
+      if (this.gameState.phase === 'preparation' && 
+          clickedUnit.playerId === this.currentPlayerId &&
+          clickedSprite) {
+        this.selectedUnit = clickedSprite;
+        this.isDragging = true;
+        clickedSprite.setScale(1.1); // Visual feedback
+      }
+    } else {
+      // Hide tooltip when clicking empty space
+      if (this.tooltip) {
+        this.tooltip.hide();
       }
     }
   }
@@ -116,24 +165,59 @@ export default class MainScene extends Phaser.Scene {
       this.placementGhost.setPosition(worldPos.x, worldPos.y);
       
       // Update ghost alpha based on validity
-      if (this.grid.isValidPlacement(gridPos.x, gridPos.y)) {
+      if (this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined)) {
         this.placementGhost.setAlpha(0.8);
       } else {
         this.placementGhost.setAlpha(0.3);
       }
       
-      this.grid.highlightCell(gridPos.x, gridPos.y);
+      this.grid.highlightCell(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
       return;
     }
     
     // Handle unit dragging
-    if (!this.isDragging || !this.selectedUnit) return;
-
-    this.selectedUnit.setPosition(worldPoint.x, worldPoint.y);
+    if (this.isDragging && this.selectedUnit) {
+      this.selectedUnit.setPosition(worldPoint.x, worldPoint.y);
+      
+      // Highlight grid cell under pointer
+      this.grid.highlightCell(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
+      return;
+    }
     
-    // Highlight grid cell under pointer
-    this.grid.highlightCell(gridPos.x, gridPos.y);
+    // Handle tooltip on hover (only when not dragging)
+    if (!this.isDragging) {
+      this.handleTooltipHover(worldPoint);
+    }
   }
+
+  private handleTooltipHover(worldPoint: Phaser.Math.Vector2) {
+    if (!this.gameState || !this.tooltip) return;
+    
+    // Check if hovering over a unit
+    for (const [id, sprite] of this.unitSprites) {
+      const bounds = sprite.getBounds();
+      if (bounds.contains(worldPoint.x, worldPoint.y)) {
+        // Find the unit
+        const hoveredUnit = this.gameState.players
+          .flatMap(p => p.units)
+          .find(u => u.id === id) || 
+          this.gameState.enemyUnits.find(u => u.id === id) || null;
+        
+        if (hoveredUnit) {
+          const owner = this.gameState.players.find(p => 
+            p.units.some(u => u.id === hoveredUnit.id)
+          );
+          const ownerName = owner ? owner.name : 'Enemy';
+          this.tooltip.showForUnit(hoveredUnit, ownerName, worldPoint.x, worldPoint.y);
+        }
+        return;
+      }
+    }
+    
+    // If not hovering over any unit, hide tooltip
+    this.tooltip.hide();
+  }
+
 
   private onPointerUp(pointer: Phaser.Input.Pointer) {
     if (!this.isDragging || !this.selectedUnit || !this.gameState) {
@@ -146,7 +230,7 @@ export default class MainScene extends Phaser.Scene {
     const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
     
     // Check if valid placement
-    if (this.grid.isValidPlacement(gridPos.x, gridPos.y)) {
+    if (this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined)) {
       // Emit placement event
       this.events.emit('place-unit', this.selectedUnit.unitId, gridPos);
       
@@ -159,7 +243,7 @@ export default class MainScene extends Phaser.Scene {
         .flatMap(p => p.units)
         .find(u => u.id === this.selectedUnit!.unitId);
       
-      if (unit) {
+      if (unit && unit.position) {
         const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
         this.selectedUnit.setPosition(worldPos.x, worldPos.y);
       }
@@ -173,6 +257,11 @@ export default class MainScene extends Phaser.Scene {
 
   updateGameState(gameState: GameState) {
     this.gameState = gameState;
+    
+    // Update current player ID if not set
+    if (!this.currentPlayerId && (window as any).gameContext?.player) {
+      this.currentPlayerId = (window as any).gameContext.player.id;
+    }
     
     // Update background if floor changed
     this.updateBackground();
@@ -233,6 +322,11 @@ export default class MainScene extends Phaser.Scene {
     
     // Update or create sprites for existing units
     for (const unit of allUnits) {
+      // Skip units without positions during preparation phase
+      if (!unit.position) {
+        continue;
+      }
+      
       let sprite = this.unitSprites.get(unit.id);
       
       if (!sprite) {
@@ -249,6 +343,12 @@ export default class MainScene extends Phaser.Scene {
             this.unitSprites.delete(unitId);
           }
         });
+      } else if (unit.position) {
+        // Update position if unit has moved
+        const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
+        if (sprite.x !== worldPos.x || sprite.y !== worldPos.y) {
+          sprite.setPosition(worldPos.x, worldPos.y);
+        }
       }
       
       // Update sprite state
@@ -311,12 +411,28 @@ export default class MainScene extends Phaser.Scene {
     for (const [id, sprite] of this.unitSprites) {
       sprite.stopCombat();
     }
+    
+    // Clear any remaining projectiles
+    for (const projectile of this.projectiles) {
+      projectile.destroy();
+    }
+    this.projectiles = [];
   }
 
   update(time: number, delta: number) {
     // Update unit sprites
     for (const [id, sprite] of this.unitSprites) {
       sprite.update(time, delta);
+    }
+    
+    // Update projectiles
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const projectile = this.projectiles[i];
+      if (projectile.active) {
+        projectile.update(time, delta);
+      } else {
+        this.projectiles.splice(i, 1);
+      }
     }
   }
 
@@ -330,17 +446,42 @@ export default class MainScene extends Phaser.Scene {
         // Update position with smooth interpolation
         const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
         
+        // Calculate distance for dynamic duration
+        const distance = Phaser.Math.Distance.Between(sprite.x, sprite.y, worldPos.x, worldPos.y);
+        const duration = Math.min(500, Math.max(200, distance * 2)); // 200-500ms based on distance
+        
         // Smooth movement to new position
         this.tweens.add({
           targets: sprite,
           x: worldPos.x,
           y: worldPos.y,
-          duration: 200,
-          ease: 'Power2'
+          duration: duration,
+          ease: 'Power2.InOut'
         });
+        
+        // Check if unit just started attacking (for projectile creation)
+        const oldUnit = sprite.unit;
+        const justStartedAttacking = oldUnit.status !== 'attacking' && unit.status === 'attacking';
+        
+        // Debug logging
+        if (unit.status === 'attacking' && this.isRangedUnit(unit)) {
+          console.log(`${unit.name} is attacking, old status: ${oldUnit.status}, new status: ${unit.status}`);
+        }
         
         // Update unit data (health, status, etc.)
         sprite.updateUnit(unit);
+        
+        // Create projectile for ranged attackers
+        if (justStartedAttacking && this.isRangedUnit(unit)) {
+          // Check cooldown to avoid duplicate projectiles
+          const lastAttack = this.lastAttackTime.get(unit.id) || 0;
+          const now = this.time.now;
+          
+          if (now - lastAttack > 500) { // 500ms cooldown between projectiles
+            this.createProjectileForAttack(unit, allUnits);
+            this.lastAttackTime.set(unit.id, now);
+          }
+        }
       }
     }
     
@@ -446,6 +587,120 @@ export default class MainScene extends Phaser.Scene {
     // Add escape key to cancel
     this.input.keyboard?.once('keydown-ESC', () => {
       this.exitPlacementMode();
+    });
+  }
+  
+  private isRangedUnit(unit: Unit): boolean {
+    const rangedUnitTypes = ['wizard', 'priest', 'druidess', 'storms'];
+    const isRanged = rangedUnitTypes.includes(unit.name.toLowerCase());
+    console.log(`Checking if ${unit.name} is ranged: ${isRanged}`);
+    return isRanged;
+  }
+  
+  private createProjectileForAttack(attacker: Unit, allUnits: Unit[]) {
+    // Find the closest enemy unit as the target
+    const isPlayerUnit = this.gameState?.players.some(p => 
+      p.units.some(u => u.id === attacker.id)
+    ) || false;
+    
+    const enemies = allUnits.filter(u => {
+      const isEnemy = isPlayerUnit ? 
+        this.gameState?.enemyUnits.some(e => e.id === u.id) :
+        this.gameState?.players.some(p => p.units.some(pu => pu.id === u.id));
+      return isEnemy && u.status !== 'dead';
+    });
+    
+    if (enemies.length === 0) return;
+    
+    // Find closest enemy
+    let closestEnemy: Unit | null = null;
+    let closestDistance = Infinity;
+    
+    for (const enemy of enemies) {
+      const distance = Math.abs(enemy.position.x - attacker.position.x) + 
+                      Math.abs(enemy.position.y - attacker.position.y);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestEnemy = enemy;
+      }
+    }
+    
+    if (!closestEnemy) return;
+    
+    console.log(`Creating projectile: ${attacker.name} attacking ${closestEnemy.name}`);
+    
+    // Get world positions
+    const startPos = this.grid.gridToWorld(attacker.position.x, attacker.position.y);
+    const targetPos = this.grid.gridToWorld(closestEnemy.position.x, closestEnemy.position.y);
+    
+    // Determine projectile texture based on unit type
+    let textureKey = attacker.name.toLowerCase();
+    let projectileScale = 0.6;
+    
+    if (attacker.name.toLowerCase() === 'priest') {
+      // For priest, we'll create a generic holy projectile effect
+      // Since priest doesn't have projectile frames, we'll use a particle effect
+      this.createHolyProjectileEffect(startPos.x, startPos.y, targetPos.x, targetPos.y);
+      return;
+    }
+    
+    // For wizard, make sure we use the first magic arrow frame
+    let initialFrame = undefined;
+    if (attacker.name.toLowerCase() === 'wizard') {
+      initialFrame = 'Magic_arrow_1 #6.png';
+    }
+    
+    // Create projectile
+    const projectile = new Projectile(this, {
+      startX: startPos.x,
+      startY: startPos.y - 20, // Start from unit's upper body
+      targetX: targetPos.x,
+      targetY: targetPos.y - 20,
+      texture: textureKey,
+      frame: initialFrame,
+      speed: 600,
+      scale: projectileScale
+    });
+    
+    this.projectiles.push(projectile);
+  }
+  
+  private createHolyProjectileEffect(startX: number, startY: number, targetX: number, targetY: number) {
+    // Create a simple holy light effect for priest attacks
+    const light = this.add.circle(startX, startY - 20, 8, 0xffff88, 1);
+    light.setDepth(startY + 100);
+    
+    // Add glow effect
+    const glow = this.add.circle(startX, startY - 20, 12, 0xffff88, 0.3);
+    glow.setDepth(startY + 99);
+    
+    // Animate to target
+    const duration = 400;
+    
+    this.tweens.add({
+      targets: [light, glow],
+      x: targetX,
+      y: targetY - 20,
+      duration: duration,
+      ease: 'Power2',
+      onComplete: () => {
+        // Create impact effect
+        const impact = this.add.circle(targetX, targetY - 20, 20, 0xffff88, 0.5);
+        impact.setDepth(targetY + 101);
+        
+        this.tweens.add({
+          targets: impact,
+          scale: 2,
+          alpha: 0,
+          duration: 200,
+          onComplete: () => {
+            impact.destroy();
+          }
+        });
+        
+        light.destroy();
+        glow.destroy();
+      }
     });
   }
 }

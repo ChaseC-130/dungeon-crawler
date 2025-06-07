@@ -73,6 +73,16 @@ class GameManager {
     }
   }
 
+  handleMoveUnit(socket, unitId, position) {
+    const playerId = this.socketToPlayer.get(socket.id);
+    const matchId = this.playerToMatch.get(playerId);
+    const match = this.matches.get(matchId);
+    
+    if (match) {
+      match.moveUnit(playerId, unitId, position);
+    }
+  }
+
   handlePurchaseUnit(socket, unitType) {
     const playerId = this.socketToPlayer.get(socket.id);
     const matchId = this.playerToMatch.get(playerId);
