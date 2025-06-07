@@ -68,11 +68,20 @@ export default class MainScene extends Phaser.Scene {
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointermove', this.onPointerMove, this);
     this.input.on('pointerup', this.onPointerUp, this);
-    this.input.on('pointercancel', this.onPointerUp, this);
+    this.input.on('pointercancel', this.cancelDrag, this);
+    
+    // Add keyboard support for canceling drag
+    this.input.keyboard?.on('keydown-ESC', this.cancelDrag, this);
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer) {
     if (!this.gameState) return;
+
+    // Check for right-click to cancel drag
+    if (pointer.rightButtonDown() && this.isDragging) {
+      this.cancelDrag();
+      return;
+    }
 
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     
@@ -145,7 +154,13 @@ export default class MainScene extends Phaser.Scene {
           clickedSprite) {
         this.selectedUnit = clickedSprite;
         this.isDragging = true;
-        clickedSprite.setScale(1.1); // Visual feedback
+        
+        // Enhanced visual feedback for dragging
+        clickedSprite.setScale(1.1);
+        clickedSprite.setAlpha(0.8);
+        clickedSprite.setDepth(1000); // Bring to front while dragging
+        
+        console.log(`Started dragging unit: ${clickedUnit.name} (${clickedUnit.id})`);
       }
     } else {
       // Hide tooltip when clicking empty space
@@ -158,6 +173,11 @@ export default class MainScene extends Phaser.Scene {
   private onPointerMove(pointer: Phaser.Input.Pointer) {
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
+    
+    // Send hover position to other players (only during preparation phase)
+    if (this.gameState?.phase === 'preparation') {
+      this.sendHoverPosition(gridPos);
+    }
     
     // Handle placement mode
     if (this.placementMode && this.placementGhost) {
@@ -177,10 +197,16 @@ export default class MainScene extends Phaser.Scene {
     
     // Handle unit dragging
     if (this.isDragging && this.selectedUnit) {
+      // Update unit position to follow cursor
       this.selectedUnit.setPosition(worldPoint.x, worldPoint.y);
       
-      // Highlight grid cell under pointer
+      // Highlight grid cell under pointer with validity indication
       this.grid.highlightCell(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
+      
+      // Add visual feedback for valid/invalid drop zones
+      const isValid = this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
+      this.selectedUnit.setAlpha(isValid ? 0.9 : 0.5);
+      
       return;
     }
     
@@ -229,30 +255,81 @@ export default class MainScene extends Phaser.Scene {
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
     
+    // Get the unit data
+    const unit = this.gameState.players
+      .flatMap(p => p.units)
+      .find(u => u.id === this.selectedUnit!.unitId);
+    
     // Check if valid placement
     if (this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined)) {
-      // Emit placement event
-      this.events.emit('place-unit', this.selectedUnit.unitId, gridPos);
+      // Check if position actually changed
+      const positionChanged = !unit?.position || 
+        unit.position.x !== gridPos.x || 
+        unit.position.y !== gridPos.y;
       
-      // Snap to grid
-      const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.y);
-      this.selectedUnit.setPosition(worldPos.x, worldPos.y);
+      if (positionChanged) {
+        // Emit placement/move event - server handles both cases
+        console.log(`Emitting place-unit event for ${this.selectedUnit.unitId} to position (${gridPos.x}, ${gridPos.y})`);
+        this.events.emit('place-unit', this.selectedUnit.unitId, gridPos);
+        
+        // Optimistically update position while waiting for server confirmation
+        const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.y);
+        this.selectedUnit.setPosition(worldPos.x, worldPos.y);
+        
+        console.log(`Moving unit ${this.selectedUnit.unitId} to position (${gridPos.x}, ${gridPos.y})`);
+      } else {
+        // No movement needed, just snap back to current position
+        const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.y);
+        this.selectedUnit.setPosition(worldPos.x, worldPos.y);
+      }
     } else {
-      // Return to original position
-      const unit = this.gameState.players
-        .flatMap(p => p.units)
-        .find(u => u.id === this.selectedUnit!.unitId);
-      
+      // Invalid placement - return to original position
       if (unit && unit.position) {
         const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
         this.selectedUnit.setPosition(worldPos.x, worldPos.y);
+        console.log(`Invalid placement, returning unit ${this.selectedUnit.unitId} to original position`);
+      } else {
+        // Unit has no position, remove it from the grid visually
+        console.log(`Unit ${this.selectedUnit.unitId} has no valid position, moving off grid`);
+        this.selectedUnit.setPosition(-100, -100); // Move off screen
       }
     }
 
+    // Reset visual state
     this.selectedUnit.setScale(1); // Reset scale
+    this.selectedUnit.setAlpha(1); // Reset transparency
+    this.selectedUnit.setDepth(this.selectedUnit.y); // Reset depth based on Y position
     this.selectedUnit = null;
     this.isDragging = false;
     this.grid.clearHighlight();
+  }
+
+  private cancelDrag() {
+    if (!this.isDragging || !this.selectedUnit || !this.gameState) {
+      return;
+    }
+
+    // Return unit to its original position
+    const unit = this.gameState.players
+      .flatMap(p => p.units)
+      .find(u => u.id === this.selectedUnit!.unitId);
+    
+    if (unit && unit.position) {
+      const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
+      this.selectedUnit.setPosition(worldPos.x, worldPos.y);
+    }
+
+    // Reset visual state
+    this.selectedUnit.setScale(1);
+    this.selectedUnit.setAlpha(1);
+    this.selectedUnit.setDepth(this.selectedUnit.y);
+    
+    // Clear drag state
+    this.selectedUnit = null;
+    this.isDragging = false;
+    this.grid.clearHighlight();
+    
+    console.log('Drag operation cancelled');
   }
 
   updateGameState(gameState: GameState) {
@@ -283,17 +360,30 @@ export default class MainScene extends Phaser.Scene {
   private updateBackground() {
     if (!this.gameState) return;
     
-    const floor = this.gameState.currentFloor;
+    console.log('Updating background for phase:', this.gameState.phase, 'floor:', this.gameState.currentFloor);
+    
     let backgroundKey = 'battle1';
     
-    if (floor <= 3) backgroundKey = 'battle1';
-    else if (floor <= 6) backgroundKey = 'battle2';
-    else if (floor <= 8) backgroundKey = 'battle3';
-    else backgroundKey = 'battle4';
+    // During preparation phase, use a neutral/preparation background
+    if (this.gameState.phase === 'preparation') {
+      // Use a darker, more subdued version for preparation
+      backgroundKey = 'battle1'; // Keep using battle1 but will add a dark overlay
+      console.log('Using preparation background');
+    } else {
+      // During combat, use floor-based backgrounds
+      const floor = this.gameState.currentFloor;
+      if (floor <= 3) backgroundKey = 'battle1';
+      else if (floor <= 6) backgroundKey = 'battle2';
+      else if (floor <= 8) backgroundKey = 'battle3';
+      else backgroundKey = 'battle4';
+      console.log('Using combat background:', backgroundKey);
+    }
     
-    // Remove existing background
+    // Remove existing background elements
     const existingBg = this.children.getByName('background');
     if (existingBg) existingBg.destroy();
+    const existingOverlay = this.children.getByName('phase-overlay');
+    if (existingOverlay) existingOverlay.destroy();
     
     // Add new background
     const bg = this.add.image(0, 0, backgroundKey);
@@ -301,6 +391,21 @@ export default class MainScene extends Phaser.Scene {
     bg.setName('background');
     bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
     bg.setDepth(-100);
+    
+    // Add phase-specific overlay
+    if (this.gameState.phase === 'preparation') {
+      // Add a blue-tinted overlay for preparation phase
+      const overlay = this.add.rectangle(
+        0, 0,
+        this.cameras.main.width,
+        this.cameras.main.height,
+        0x1a1a2e,
+        0.6
+      );
+      overlay.setOrigin(0, 0);
+      overlay.setName('phase-overlay');
+      overlay.setDepth(-90);
+    }
   }
 
   private updateUnits() {
@@ -702,5 +807,40 @@ export default class MainScene extends Phaser.Scene {
         glow.destroy();
       }
     });
+  }
+
+  private lastHoverPosition: Position | null = null;
+  private hoverDebounceTime = 100; // 100ms debounce
+  private lastHoverSentTime = 0;
+
+  private sendHoverPosition(gridPos: Position) {
+    const currentTime = this.time.now;
+    
+    // Debounce hover events to avoid spam
+    if (currentTime - this.lastHoverSentTime < this.hoverDebounceTime) {
+      return;
+    }
+    
+    // Only send if position actually changed
+    if (this.lastHoverPosition && 
+        this.lastHoverPosition.x === gridPos.x && 
+        this.lastHoverPosition.y === gridPos.y) {
+      return;
+    }
+    
+    this.lastHoverPosition = { x: gridPos.x, y: gridPos.y };
+    this.lastHoverSentTime = currentTime;
+    
+    // Send hover event via GameContext
+    if ((window as any).gameContext?.socket) {
+      console.log('Sending cell-hover event:', gridPos);
+      (window as any).gameContext.socket.emit('cell-hover', gridPos);
+    } else {
+      console.log('No socket available to send hover event');
+    }
+  }
+
+  updatePlayerHover(playerId: string, playerName: string, position: Position | null, playerColor: string) {
+    this.grid.updatePlayerHover(playerId, playerName, position, playerColor);
   }
 }

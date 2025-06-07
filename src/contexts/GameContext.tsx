@@ -18,6 +18,7 @@ interface GameContextType {
   selectUpgrade: (upgradeId: string, targetUnitType?: string) => void;
   setReady: () => void;
   selectStartingUnits: (units: string[]) => void;
+  sendCellHover: (position: Position | null) => void;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -114,6 +115,27 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
     });
 
+    socketInstance.on('player-hover', (playerId: string, playerName: string, position: Position | null, playerColor: string) => {
+      console.log('Received player-hover event:', { playerId, playerName, position, playerColor });
+      // Update other players' hover positions
+      if ((window as any).gameInstance) {
+        const scene = (window as any).gameInstance.scene.getScene('MainScene');
+        if (scene && scene.updatePlayerHover && player && playerId !== player.id) {
+          console.log('Updating player hover in scene');
+          scene.updatePlayerHover(playerId, playerName, position, playerColor);
+        } else {
+          console.log('Cannot update player hover:', { 
+            hasScene: !!scene, 
+            hasUpdateMethod: !!(scene?.updatePlayerHover), 
+            hasPlayer: !!player, 
+            isDifferentPlayer: player ? playerId !== player.id : false 
+          });
+        }
+      } else {
+        console.log('No game instance available for player hover');
+      }
+    });
+
     setSocket(socketInstance);
 
     // Store context reference for game instance
@@ -188,6 +210,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const sendCellHover = (position: Position | null) => {
+    if (socket && isConnected && player) {
+      socket.emit('cell-hover', position);
+    }
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -204,6 +232,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         selectUpgrade,
         setReady,
         selectStartingUnits,
+        sendCellHover,
       }}
     >
       {children}

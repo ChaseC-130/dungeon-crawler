@@ -71,6 +71,7 @@ const Game: React.FC = () => {
             });
             
             scene.events.on('place-unit', (unitId: string, position: any) => {
+              console.log('Game.tsx received place-unit event:', { unitId, position });
               placeUnit(unitId, position);
             });
           }

@@ -78,7 +78,7 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
           }
 
           if (frameData && frameData.frame) {
-            // Calculate scaling
+            // Calculate scaling to match main game (0.8)
             const frameWidth = frameData.frame.w;
             const frameHeight = frameData.frame.h;
             const scale = Math.min(width / frameWidth, height / frameHeight) * 0.8;
@@ -107,6 +107,7 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
             // Convert canvas to data URL for React Native Image
             setSpriteDataUrl(canvasRef.current.toDataURL());
             setIsLoading(false);
+            console.log(`Successfully loaded sprite for ${unitName}: ${frameData.filename || frameData.name || 'unknown frame'}`);
           } else {
             // Fallback: draw the entire image
             const scale = Math.min(width / img.width, height / img.height) * 0.8;
@@ -119,6 +120,7 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
             ctx.drawImage(img, destX, destY, destWidth, destHeight);
             setSpriteDataUrl(canvasRef.current.toDataURL());
             setIsLoading(false);
+            console.log(`Used fallback rendering for ${unitName}`);
           }
 
           // Clean up

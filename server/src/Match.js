@@ -42,6 +42,11 @@ class Match {
   }
 
   addPlayer(playerId, playerName, socket) {
+    // Assign player colors
+    const playerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3'];
+    const assignedColors = Array.from(this.players.values()).map(p => p.color);
+    const availableColor = playerColors.find(color => !assignedColors.includes(color)) || '#888888';
+    
     this.players.set(playerId, {
       id: playerId,
       name: playerName,
@@ -51,7 +56,8 @@ class Match {
       isReady: false,
       initialUnitPositions: new Map(), // unitId -> position
       upgradeCards: [], // Individual upgrade cards for this player
-      hasSelectedUpgrade: false // Track if player has selected upgrade this round
+      hasSelectedUpgrade: false, // Track if player has selected upgrade this round
+      color: availableColor
     });
   }
 
@@ -756,6 +762,21 @@ class Match {
 
   isEmpty() {
     return this.players.size === 0;
+  }
+
+  handlePlayerHover(playerId, position) {
+    const player = this.players.get(playerId);
+    if (!player) return;
+    
+    // Only send hover updates during preparation phase
+    if (this.phase !== 'preparation') return;
+    
+    // Broadcast this player's hover position to all other players in the match
+    for (const [otherPlayerId, otherPlayer] of this.players) {
+      if (otherPlayerId !== playerId) {
+        otherPlayer.socket.emit('player-hover', playerId, player.name, position, player.color);
+      }
+    }
   }
 }
 

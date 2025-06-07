@@ -34,7 +34,8 @@
       "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"death\" game.html)",
       "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"body {\" game.html)",
       "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"body\" game.html)",
-      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 10 -B 5 \"strokePath\" game.html)"
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 10 -B 5 \"strokePath\" game.html)",
+      "Bash(timeout 5s npm run server)"
     ],
     "deny": []
   }

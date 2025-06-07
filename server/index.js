@@ -107,6 +107,10 @@ io.on('connection', (socket) => {
   socket.on('player-ready', () => {
     gameManager.handlePlayerReady(socket);
   });
+
+  socket.on('cell-hover', (position) => {
+    gameManager.handleCellHover(socket, position);
+  });
   
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);

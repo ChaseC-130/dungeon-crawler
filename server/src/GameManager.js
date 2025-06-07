@@ -396,6 +396,16 @@ class GameManager {
     const unitKey = unitName.toLowerCase();
     return UNIT_STATS[unitKey] || UNIT_STATS.fighter; // fallback to fighter
   }
+
+  handleCellHover(socket, position) {
+    const playerId = this.socketToPlayer.get(socket.id);
+    const matchId = this.playerToMatch.get(playerId);
+    const match = this.matches.get(matchId);
+    
+    if (match) {
+      match.handlePlayerHover(playerId, position);
+    }
+  }
 }
 
 module.exports = GameManager;

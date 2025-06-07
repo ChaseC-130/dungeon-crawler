@@ -9,6 +9,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   private gridState: GridCell[][] = [];
   private highlightRect: Phaser.GameObjects.Rectangle | null = null;
   private isGridVisible: boolean = true;
+  private playerHoverRects: Map<string, Phaser.GameObjects.Rectangle> = new Map();
 
   constructor(
     scene: Phaser.Scene,
@@ -183,5 +184,70 @@ export default class Grid extends Phaser.GameObjects.Container {
 
   getGridVisibility(): boolean {
     return this.isGridVisible;
+  }
+
+  updatePlayerHover(playerId: string, playerName: string, position: Position | null, playerColor: string) {
+    // Remove existing hover rect for this player
+    if (this.playerHoverRects.has(playerId)) {
+      const existingRect = this.playerHoverRects.get(playerId)!;
+      existingRect.destroy();
+      this.playerHoverRects.delete(playerId);
+    }
+
+    // If position is null, just clear the hover
+    if (!position) return;
+
+    // Validate position
+    if (position.x < 0 || position.x >= this.gridWidth || position.y < 0 || position.y >= this.gridHeight) {
+      return;
+    }
+
+    // Create new hover rect for this player
+    const worldPos = this.gridToWorld(position.x, position.y);
+    const localX = worldPos.x - this.x;
+    const localY = worldPos.y - this.y;
+
+    // Parse player color (should be hex like "#FF0000")
+    let color = 0x888888; // Default gray
+    try {
+      if (playerColor.startsWith('#')) {
+        color = parseInt(playerColor.slice(1), 16);
+      }
+    } catch (e) {
+      console.warn('Invalid player color:', playerColor);
+    }
+
+    const hoverRect = this.scene.add.rectangle(
+      localX,
+      localY,
+      this.cellSize - 2,
+      this.cellSize - 2,
+      color,
+      0
+    );
+    hoverRect.setStrokeStyle(2, color, 0.8);
+    
+    // Add player name text
+    const nameText = this.scene.add.text(localX, localY - this.cellSize/2 - 10, playerName, {
+      fontSize: '10px',
+      color: playerColor,
+      stroke: '#000000',
+      strokeThickness: 1
+    });
+    nameText.setOrigin(0.5);
+
+    // Store both rect and text in a container for easy management
+    const container = this.scene.add.container(0, 0, [hoverRect, nameText]);
+    this.add(container);
+    
+    // Store reference (we'll store the container as the rect for simplicity)
+    this.playerHoverRects.set(playerId, container as any);
+  }
+
+  clearAllPlayerHovers() {
+    for (const [playerId, rect] of this.playerHoverRects) {
+      rect.destroy();
+    }
+    this.playerHoverRects.clear();
   }
 }
