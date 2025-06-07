@@ -750,6 +750,10 @@ class Match {
     this.io.to(this.matchId).emit('game-state', gameState);
   }
 
+  broadcastCellHover(playerId, position) {
+    this.io.to(this.matchId).emit('cell-hover', { playerId, position });
+  }
+
   sendError(socket, message) {
     socket.emit('error', message);
   }

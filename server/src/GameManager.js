@@ -127,9 +127,19 @@ class GameManager {
     const playerId = this.socketToPlayer.get(socket.id);
     const matchId = this.playerToMatch.get(playerId);
     const match = this.matches.get(matchId);
-    
+
     if (match) {
       match.rerollUpgrades(playerId);
+    }
+  }
+
+  handleHoverCell(socket, position) {
+    const playerId = this.socketToPlayer.get(socket.id);
+    const matchId = this.playerToMatch.get(playerId);
+    const match = this.matches.get(matchId);
+
+    if (match) {
+      match.broadcastCellHover(playerId, position);
     }
   }
 

@@ -158,6 +158,9 @@ export default class MainScene extends Phaser.Scene {
   private onPointerMove(pointer: Phaser.Input.Pointer) {
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
+
+    // Broadcast hover position
+    this.events.emit('hover-cell', gridPos);
     
     // Handle placement mode
     if (this.placementMode && this.placementGhost) {
@@ -275,9 +278,11 @@ export default class MainScene extends Phaser.Scene {
     // Handle phase changes
     if (gameState.phase === 'combat') {
       this.startCombat();
-    } else if (gameState.phase === 'preparation') {
+    } else if (gameState.phase === 'preparation' || gameState.phase === 'post-combat') {
       this.stopCombat();
     }
+
+    this.playBackgroundMusic();
   }
 
   private updateBackground() {
@@ -687,7 +692,7 @@ export default class MainScene extends Phaser.Scene {
         // Create impact effect
         const impact = this.add.circle(targetX, targetY - 20, 20, 0xffff88, 0.5);
         impact.setDepth(targetY + 101);
-        
+
         this.tweens.add({
           targets: impact,
           scale: 2,
@@ -697,10 +702,24 @@ export default class MainScene extends Phaser.Scene {
             impact.destroy();
           }
         });
-        
+
         light.destroy();
         glow.destroy();
       }
     });
+  }
+
+  showRemoteHover(playerId: string, position: Position) {
+    if (!this.grid) return;
+    const color = this.getPlayerColor(playerId);
+    this.grid.highlightCellForPlayer(playerId, position.x, position.y, color);
+  }
+
+  private getPlayerColor(playerId: string): number {
+    if (!this.gameState) return 0xffffff;
+    const idx = this.gameState.players.findIndex(p => p.id === playerId);
+    const colors = [0x2196F3, 0xFF9800, 0x9C27B0, 0xE91E63];
+    const color = colors[idx % colors.length] || 0x2196F3;
+    return color;
   }
 }

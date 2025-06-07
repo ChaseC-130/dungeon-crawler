@@ -18,6 +18,7 @@ interface GameContextType {
   selectUpgrade: (upgradeId: string, targetUnitType?: string) => void;
   setReady: () => void;
   selectStartingUnits: (units: string[]) => void;
+  hoverCell: (position: Position | null) => void;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -114,6 +115,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
     });
 
+    socketInstance.on('cell-hover', (data: { playerId: string; position: Position }) => {
+      if ((window as any).gameInstance) {
+        const scene = (window as any).gameInstance.scene.getScene('MainScene');
+        if (scene && scene.showRemoteHover) {
+          scene.showRemoteHover(data.playerId, data.position);
+        }
+      }
+    });
+
     setSocket(socketInstance);
 
     // Store context reference for game instance
@@ -188,6 +198,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const hoverCell = (position: Position | null) => {
+    if (socket && isConnected) {
+      socket.emit('hover-cell', position);
+    }
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -204,6 +220,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         selectUpgrade,
         setReady,
         selectStartingUnits,
+        hoverCell,
       }}
     >
       {children}

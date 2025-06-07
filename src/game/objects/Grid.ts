@@ -8,6 +8,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   private cells: Phaser.GameObjects.Rectangle[][] = [];
   private gridState: GridCell[][] = [];
   private highlightRect: Phaser.GameObjects.Rectangle | null = null;
+  private remoteHighlights: Map<string, Phaser.GameObjects.Rectangle> = new Map();
   private isGridVisible: boolean = true;
 
   constructor(
@@ -164,6 +165,29 @@ export default class Grid extends Phaser.GameObjects.Container {
     } else {
       this.highlightRect.setStrokeStyle(3, 0xF44336, 1);
     }
+  }
+
+  highlightCellForPlayer(playerId: string, gridX: number, gridY: number, color: number) {
+    if (gridX < 0 || gridX >= this.gridWidth || gridY < 0 || gridY >= this.gridHeight) {
+      const existing = this.remoteHighlights.get(playerId);
+      if (existing) existing.setVisible(false);
+      return;
+    }
+
+    let rect = this.remoteHighlights.get(playerId);
+    if (!rect) {
+      rect = this.scene.add.rectangle(0, 0, this.cellSize - 2, this.cellSize - 2);
+      rect.setStrokeStyle(2, color, 1);
+      rect.setFillStyle(color, 0.1);
+      rect.setDepth(1);
+      this.remoteHighlights.set(playerId, rect);
+      this.add(rect);
+    }
+
+    const worldPos = this.gridToWorld(gridX, gridY);
+    rect.setPosition(worldPos.x - this.x, worldPos.y - this.y);
+    rect.setStrokeStyle(2, color, 1);
+    rect.setVisible(true);
   }
 
   clearHighlight() {

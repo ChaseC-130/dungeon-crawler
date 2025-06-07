@@ -94,12 +94,14 @@ export interface SocketEvents {
   'reroll-shop': () => void;
   'select-upgrade': (upgradeId: string, targetUnitType?: string) => void;
   'player-ready': () => void;
+  'hover-cell': (position: Position | null) => void;
 
   // Server -> Client
   'game-state': (state: GameState) => void;
   'match-started': (matchId: string) => void;
   'floor-complete': (floor: number, gold: number) => void;
   'combat-update': (units: Unit[], enemyUnits: Unit[]) => void;
+  'cell-hover': (data: { playerId: string; position: Position }) => void;
   'game-over': (winner: 'players' | 'enemies') => void;
   'error': (message: string) => void;
 }

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useGame } from '../contexts/GameContext';
 import { UnitStats } from '../types/game';
-import UnitSpriteSimple from './UnitSpriteSimple';
+import UnitSprite from './UnitSprite';
 
 const ShopPanel: React.FC = () => {
   const { gameState, player, purchaseUnit, rerollShop } = useGame();
@@ -96,7 +96,7 @@ const ShopPanel: React.FC = () => {
           </View>
           
           <View style={styles.unitImageContainer}>
-            <UnitSpriteSimple unitName={unit.name} width={80} height={80} />
+            <UnitSprite unitName={unit.name} width={80} height={80} />
           </View>
         
           <View style={styles.statsContainer}>
@@ -160,7 +160,7 @@ const ShopPanel: React.FC = () => {
         </View>
         
         <View style={styles.unitImageContainer}>
-          <UnitSpriteSimple unitName={unit.name} width={80} height={80} />
+          <UnitSprite unitName={unit.name} width={80} height={80} />
         </View>
         
         <View style={styles.statsContainer}>

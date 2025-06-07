@@ -19,7 +19,7 @@ const { width, height } = Dimensions.get('window');
 
 const Game: React.FC = () => {
   const route = useRoute<GameScreenProps['route']>();
-  const { gameState, player, placeUnit, purchaseUnit, purchaseAndPlaceUnit, selectStartingUnits } = useGame();
+  const { gameState, player, placeUnit, purchaseUnit, purchaseAndPlaceUnit, selectStartingUnits, hoverCell } = useGame();
   const gameRef = useRef<PhaserGame | null>(null);
   const containerRef = useRef<View>(null);
   const [showUnitSelection, setShowUnitSelection] = useState(true);
@@ -58,6 +58,7 @@ const Game: React.FC = () => {
       (window as any).purchaseAndPlaceUnit = purchaseAndPlaceUnit;
       (window as any).placeUnit = placeUnit;
       (window as any).purchaseUnit = purchaseUnit;
+      (window as any).hoverCell = hoverCell;
       
       // Listen for game events
       const game = (window as any).gameInstance;
@@ -69,9 +70,13 @@ const Game: React.FC = () => {
             scene.events.on('purchase-and-place', (unitType: string, position: any) => {
               purchaseAndPlaceUnit(unitType, position);
             });
-            
+
             scene.events.on('place-unit', (unitId: string, position: any) => {
               placeUnit(unitId, position);
+            });
+
+            scene.events.on('hover-cell', (pos: any) => {
+              hoverCell(pos);
             });
           }
         });
@@ -88,8 +93,9 @@ const Game: React.FC = () => {
       delete (window as any).purchaseAndPlaceUnit;
       delete (window as any).placeUnit;
       delete (window as any).purchaseUnit;
+      delete (window as any).hoverCell;
     };
-  }, [placeUnit, purchaseUnit, purchaseAndPlaceUnit]);
+  }, [placeUnit, purchaseUnit, purchaseAndPlaceUnit, hoverCell]);
 
   useEffect(() => {
     // Update Phaser game state when React state changes
