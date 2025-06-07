@@ -175,8 +175,8 @@ export default class MainScene extends Phaser.Scene {
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
     
-    // Send hover position to other players (only during preparation phase)
-    if (this.gameState?.phase === 'preparation') {
+    // Send hover position to other players only when moving or placing a unit
+    if (this.gameState?.phase === 'preparation' && (this.isDragging || this.placementMode)) {
       this.sendHoverPosition(gridPos);
     }
     
@@ -305,6 +305,7 @@ export default class MainScene extends Phaser.Scene {
     this.selectedUnit = null;
     this.isDragging = false;
     this.grid.clearHighlight();
+    this.sendHoverPosition(null);
   }
 
   private cancelDrag() {
@@ -331,7 +332,8 @@ export default class MainScene extends Phaser.Scene {
     this.selectedUnit = null;
     this.isDragging = false;
     this.grid.clearHighlight();
-    
+    this.sendHoverPosition(null);
+
     console.log('Drag operation cancelled');
   }
 
@@ -367,8 +369,8 @@ export default class MainScene extends Phaser.Scene {
     
     let backgroundKey = 'battle1';
     
-    // During preparation phase, use a neutral/preparation background
-    if (this.gameState.phase === 'preparation') {
+    // During preparation or post-combat phase, use a neutral/preparation background
+    if (this.gameState.phase === 'preparation' || this.gameState.phase === 'post-combat') {
       // Use a darker, more subdued version for preparation
       backgroundKey = 'battle1'; // Keep using battle1 but will add a dark overlay
       console.log('Using preparation background');
@@ -396,7 +398,7 @@ export default class MainScene extends Phaser.Scene {
     bg.setDepth(-100);
     
     // Add phase-specific overlay
-    if (this.gameState.phase === 'preparation') {
+    if (this.gameState.phase === 'preparation' || this.gameState.phase === 'post-combat') {
       // Add a blue-tinted overlay for preparation phase
       const overlay = this.add.rectangle(
         0, 0,
@@ -665,8 +667,9 @@ export default class MainScene extends Phaser.Scene {
       this.placementGhost.destroy();
       this.placementGhost = null;
     }
-    
+
     this.grid.clearHighlight();
+    this.sendHoverPosition(null);
   }
 
   enterPlacementModeForUnit(unit: Unit) {
@@ -819,7 +822,7 @@ export default class MainScene extends Phaser.Scene {
   private hoverDebounceTime = 100; // 100ms debounce
   private lastHoverSentTime = 0;
 
-  private sendHoverPosition(gridPos: Position) {
+  private sendHoverPosition(gridPos: Position | null) {
     const currentTime = this.time.now;
     
     // Debounce hover events to avoid spam
@@ -828,13 +831,13 @@ export default class MainScene extends Phaser.Scene {
     }
     
     // Only send if position actually changed
-    if (this.lastHoverPosition && 
-        this.lastHoverPosition.x === gridPos.x && 
+    if (gridPos && this.lastHoverPosition &&
+        this.lastHoverPosition.x === gridPos.x &&
         this.lastHoverPosition.y === gridPos.y) {
       return;
     }
-    
-    this.lastHoverPosition = { x: gridPos.x, y: gridPos.y };
+
+    this.lastHoverPosition = gridPos ? { x: gridPos.x, y: gridPos.y } : null;
     this.lastHoverSentTime = currentTime;
     
     // Send hover event via GameContext

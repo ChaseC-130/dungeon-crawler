@@ -30,6 +30,9 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+  const animationRef = useRef<number | null>(null);
+  const idleFramesRef = useRef<any[]>([]);
+  const currentFrameRef = useRef(0);
 
   useEffect(() => {
     const loadSprite = async () => {
@@ -62,64 +65,79 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
           // Clear canvas
           ctx.clearRect(0, 0, width, height);
 
-          // Find the first idle frame or first frame
+          // Find idle frames (TexturePacker or Phaser atlas formats)
           let frameData: any = null;
-          
+          let idleFrames: any[] = [];
+
           if (jsonData.textures && jsonData.textures[0] && jsonData.textures[0].frames) {
             // TexturePacker format
             const frames = jsonData.textures[0].frames;
-            // Find a proper idle frame, prefer Idle_1.png or similar numbered frames
-            const idleFrames = frames.filter((f: any) => f.filename.toLowerCase().includes('idle'));
+            idleFrames = frames.filter((f: any) => f.filename.toLowerCase().includes('idle'));
             if (idleFrames.length > 0) {
-              // Sort idle frames to get the first one (Idle_1.png)
               idleFrames.sort((a: any, b: any) => a.filename.localeCompare(b.filename));
-              frameData = idleFrames[0];
             } else {
-              frameData = frames[0];
+              idleFrames = [frames[0]];
             }
+            frameData = idleFrames[0];
           } else if (jsonData.frames) {
             // Phaser atlas format
             const frames = Object.entries(jsonData.frames);
-            const idleFrames = frames.filter(([key]) => key.toLowerCase().includes('idle'));
-            if (idleFrames.length > 0) {
-              // Sort idle frames to get the first one
-              idleFrames.sort(([a], [b]) => a.localeCompare(b));
-              frameData = idleFrames[0][1];
+            const idlePairs = frames.filter(([key]) => key.toLowerCase().includes('idle'));
+            if (idlePairs.length > 0) {
+              idlePairs.sort(([a], [b]) => a.localeCompare(b));
+              idleFrames = idlePairs.map(([, val]) => val);
             } else {
-              frameData = Object.values(jsonData.frames)[0];
+              idleFrames = [Object.values(jsonData.frames)[0]];
             }
+            frameData = idleFrames[0];
           }
 
-          if (frameData && frameData.frame) {
-            // Calculate scaling to match main game (0.8)
-            const frameWidth = frameData.frame.w;
-            const frameHeight = frameData.frame.h;
+          idleFramesRef.current = idleFrames;
+
+          const renderFrame = (frame: any) => {
+            const frameWidth = frame.frame.w;
+            const frameHeight = frame.frame.h;
             const scale = Math.min(width / frameWidth, height / frameHeight) * 0.8;
-            
+
             const destWidth = frameWidth * scale;
             const destHeight = frameHeight * scale;
-            const destX = (width - destWidth) / 2;
-            const destY = (height - destHeight) / 2;
+            const destX = (width - destWidth) / 2 - (frame.spriteSourceSize?.x || 0) * scale;
+            const destY = (height - destHeight) / 2 - (frame.spriteSourceSize?.y || 0) * scale;
 
-            // Enable pixelated rendering
+            ctx.clearRect(0, 0, width, height);
             ctx.imageSmoothingEnabled = false;
-            
-            // Draw the sprite frame
             ctx.drawImage(
               img,
-              frameData.frame.x,
-              frameData.frame.y,
-              frameData.frame.w,
-              frameData.frame.h,
+              frame.frame.x,
+              frame.frame.y,
+              frame.frame.w,
+              frame.frame.h,
               destX,
               destY,
               destWidth,
               destHeight
             );
 
-            // Convert canvas to data URL for React Native Image
-            setSpriteDataUrl(canvasRef.current.toDataURL());
+            setSpriteDataUrl(canvasRef.current!.toDataURL());
+          };
+
+          if (frameData && frameData.frame) {
+            renderFrame(frameData);
             setIsLoading(false);
+
+            if (idleFrames.length > 1) {
+              const animate = () => {
+                currentFrameRef.current = (currentFrameRef.current + 1) % idleFramesRef.current.length;
+                const frame = idleFramesRef.current[currentFrameRef.current];
+                renderFrame(frame);
+                animationRef.current = requestAnimationFrame(() => {
+                  setTimeout(animate, 150);
+                });
+              };
+              animationRef.current = requestAnimationFrame(() => {
+                setTimeout(animate, 150);
+              });
+            }
             console.log(`Successfully loaded sprite for ${unitName}: ${frameData.filename || frameData.name || 'unknown frame'}`);
           } else {
             // Fallback: draw the entire image
@@ -156,7 +174,15 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
     };
 
     loadSprite();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
   }, [unitName, width, height]);
+
 
   if (Platform.OS === 'web') {
     return (

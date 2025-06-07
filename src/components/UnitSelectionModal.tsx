@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { UnitStats } from '../types/game';
 import UnitSpriteSimple from './UnitSpriteSimple';
+import UnitSprite from './UnitSprite';
 
 // Unit stats - should match server
 const UNIT_STATS: Record<string, UnitStats> = {
@@ -151,7 +152,11 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
         </View>
         
         <View style={styles.unitImageContainer}>
-          <UnitSpriteSimple unitName={unit.name} width={100} height={100} />
+          {Platform.OS === 'web' ? (
+            <UnitSprite unitName={unit.name} width={100} height={100} />
+          ) : (
+            <UnitSpriteSimple unitName={unit.name} width={100} height={100} />
+          )}
         </View>
         
         <View style={styles.statsContainer}>
