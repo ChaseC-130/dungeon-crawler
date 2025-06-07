@@ -743,7 +743,8 @@ class Match {
         units: p.units,
         isReady: p.isReady,
         upgradeCards: p.upgradeCards,
-        hasSelectedUpgrade: p.hasSelectedUpgrade
+        hasSelectedUpgrade: p.hasSelectedUpgrade,
+        color: p.color
       })),
       enemyUnits: this.enemyUnits,
       grid: this.grid,

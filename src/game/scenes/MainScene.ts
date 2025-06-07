@@ -113,20 +113,21 @@ export default class MainScene extends Phaser.Scene {
       return;
     }
     
-    // Check if clicking on a unit
+    // Check if clicking on a unit using Phaser's built-in system
     let clickedUnit: Unit | null = null;
     let clickedSprite: UnitSprite | null = null;
     
-    for (const [id, sprite] of this.unitSprites) {
-      const bounds = sprite.getBounds();
-      if (bounds.contains(worldPoint.x, worldPoint.y)) {
-        // Find the unit
+    // Get all interactive objects under the pointer
+    const hitObjects = this.input.hitTestPointer(pointer);
+    for (const obj of hitObjects) {
+      if (obj instanceof UnitSprite) {
+        // Find the unit data for this sprite
         clickedUnit = this.gameState.players
           .flatMap(p => p.units)
-          .find(u => u.id === id) || 
-          this.gameState.enemyUnits.find(u => u.id === id) || null;
+          .find(u => u.id === obj.unitId) || 
+          this.gameState.enemyUnits.find(u => u.id === obj.unitId) || null;
         
-        clickedSprite = sprite;
+        clickedSprite = obj;
         break;
       }
     }
@@ -219,15 +220,17 @@ export default class MainScene extends Phaser.Scene {
   private handleTooltipHover(worldPoint: Phaser.Math.Vector2) {
     if (!this.gameState || !this.tooltip) return;
     
-    // Check if hovering over a unit
-    for (const [id, sprite] of this.unitSprites) {
-      const bounds = sprite.getBounds();
-      if (bounds.contains(worldPoint.x, worldPoint.y)) {
-        // Find the unit
+    // Check if hovering over a unit using more efficient hit testing
+    const pointer = this.input.activePointer;
+    const hitObjects = this.input.hitTestPointer(pointer);
+    
+    for (const obj of hitObjects) {
+      if (obj instanceof UnitSprite) {
+        // Find the unit data for this sprite
         const hoveredUnit = this.gameState.players
           .flatMap(p => p.units)
-          .find(u => u.id === id) || 
-          this.gameState.enemyUnits.find(u => u.id === id) || null;
+          .find(u => u.id === obj.unitId) || 
+          this.gameState.enemyUnits.find(u => u.id === obj.unitId) || null;
         
         if (hoveredUnit) {
           const owner = this.gameState.players.find(p => 
@@ -340,7 +343,14 @@ export default class MainScene extends Phaser.Scene {
       this.currentPlayerId = (window as any).gameContext.player.id;
     }
     
-    // Update background if floor changed
+    // Handle phase changes first
+    if (gameState.phase === 'combat') {
+      this.startCombat();
+    } else if (gameState.phase === 'preparation') {
+      this.stopCombat();
+    }
+    
+    // Update background after phase change
     this.updateBackground();
     
     // Update grid state
@@ -348,13 +358,6 @@ export default class MainScene extends Phaser.Scene {
     
     // Update units
     this.updateUnits();
-    
-    // Handle phase changes
-    if (gameState.phase === 'combat') {
-      this.startCombat();
-    } else if (gameState.phase === 'preparation') {
-      this.stopCombat();
-    }
   }
 
   private updateBackground() {
@@ -516,6 +519,9 @@ export default class MainScene extends Phaser.Scene {
     for (const [id, sprite] of this.unitSprites) {
       sprite.stopCombat();
     }
+    
+    // Ensure background is updated for preparation phase
+    this.updateBackground();
     
     // Clear any remaining projectiles
     for (const projectile of this.projectiles) {

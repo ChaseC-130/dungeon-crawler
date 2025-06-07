@@ -38,7 +38,7 @@ function connectToServer() {
             state.players.forEach(p => {
                 const div = document.createElement('div');
                 div.className = 'player-item';
-                div.innerHTML = `<span>${p.name}</span><span>${p.isReady ? '✓ Ready' : 'Waiting...'}</span>`;
+                div.innerHTML = `<span style="color: ${p.color || '#FFF'}">${p.name}</span><span>${p.isReady ? '✓ Ready' : 'Waiting...'}</span>`;
                 playerList.appendChild(div);
             });
         }
@@ -51,6 +51,13 @@ function connectToServer() {
     
     socket.on('error', (message) => {
         alert('Error: ' + message);
+    });
+    
+    socket.on('player-hover', (playerId, playerName, position, playerColor) => {
+        // Update other players' hover positions in Phaser scene
+        if (mainScene && mainScene.scene.isActive() && player && playerId !== player.id) {
+            mainScene.updatePlayerHover(playerId, playerName, position, playerColor);
+        }
     });
 }
 
@@ -111,6 +118,13 @@ function updateGameState() {
     if (currentPlayer) {
         player = currentPlayer;
         document.getElementById('gold-amount').textContent = player.gold;
+        
+        // Update player name display with color
+        const playerNameElement = document.getElementById('player-name-display');
+        if (playerNameElement) {
+            playerNameElement.textContent = player.name;
+            playerNameElement.style.color = player.color || '#FFF';
+        }
     }
     
     // Update phase info
@@ -201,18 +215,80 @@ function updateShop() {
 }
 
 function drawUnitSprite(unitName) {
-    setTimeout(() => {
+    setTimeout(async () => {
         const canvas = document.querySelector(`#sprite-${unitName} canvas`);
-        if (canvas && unitSpritesheets[unitName.toLowerCase()]) {
-            const ctx = canvas.getContext('2d');
-            ctx.imageSmoothingEnabled = false;
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        
+        try {
+            // Load both image and JSON data
+            const [imgResponse, jsonResponse] = await Promise.all([
+                fetch(`/assets/units/${unitName.toLowerCase()}/${unitName.toLowerCase()}.png`),
+                fetch(`/assets/units/${unitName.toLowerCase()}/${unitName.toLowerCase()}.json`)
+            ]);
             
-            const img = unitSpritesheets[unitName.toLowerCase()];
-            if (img && img.complete) {
-                // Draw first frame of sprite
-                ctx.clearRect(0, 0, 64, 64);
-                ctx.drawImage(img, 0, 0, 64, 64, 0, 0, 64, 64);
+            if (!imgResponse.ok || !jsonResponse.ok) {
+                console.error('Failed to load sprite assets for:', unitName);
+                return;
             }
+            
+            const jsonData = await jsonResponse.json();
+            const imgBlob = await imgResponse.blob();
+            const imgUrl = URL.createObjectURL(imgBlob);
+            
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, 64, 64);
+                
+                // Find the first idle frame
+                let frameData = null;
+                if (jsonData.textures && jsonData.textures[0] && jsonData.textures[0].frames) {
+                    const frames = jsonData.textures[0].frames;
+                    const idleFrames = frames.filter(f => f.filename.toLowerCase().includes('idle'));
+                    if (idleFrames.length > 0) {
+                        idleFrames.sort((a, b) => a.filename.localeCompare(b.filename));
+                        frameData = idleFrames[0];
+                    } else {
+                        frameData = frames[0];
+                    }
+                }
+                
+                if (frameData && frameData.frame) {
+                    // Calculate scaling to fit in 64x64 canvas
+                    const frameWidth = frameData.frame.w;
+                    const frameHeight = frameData.frame.h;
+                    const scale = Math.min(64 / frameWidth, 64 / frameHeight) * 0.8;
+                    
+                    const destWidth = frameWidth * scale;
+                    const destHeight = frameHeight * scale;
+                    const destX = (64 - destWidth) / 2;
+                    const destY = (64 - destHeight) / 2;
+                    
+                    // Draw the specific frame from the spritesheet
+                    ctx.drawImage(
+                        img,
+                        frameData.frame.x, frameData.frame.y, 
+                        frameData.frame.w, frameData.frame.h,
+                        destX, destY, 
+                        destWidth, destHeight
+                    );
+                } else {
+                    // Fallback: draw scaled version of entire image
+                    const scale = Math.min(64 / img.width, 64 / img.height) * 0.8;
+                    const destWidth = img.width * scale;
+                    const destHeight = img.height * scale;
+                    const destX = (64 - destWidth) / 2;
+                    const destY = (64 - destHeight) / 2;
+                    ctx.drawImage(img, destX, destY, destWidth, destHeight);
+                }
+                
+                URL.revokeObjectURL(imgUrl);
+            };
+            img.src = imgUrl;
+        } catch (error) {
+            console.error('Error loading sprite:', error);
         }
     }, 100);
 }
@@ -392,6 +468,24 @@ function create() {
         this.unitsContainer.setPosition(width/2, height/2);
     });
     
+    // Track mouse movement for hover effects
+    this.input.on('pointermove', (pointer) => {
+        if (gameState && gameState.phase === 'preparation' && player) {
+            // Convert pointer position to grid coordinates
+            const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            const gridX = Math.floor((worldPoint.x - this.gridContainer.x + this.gridSize * this.cellSize / 2) / this.cellSize);
+            const gridY = Math.floor((worldPoint.y - this.gridContainer.y + this.gridSize * this.cellSize / 2) / this.cellSize);
+            
+            // Only send if within grid bounds
+            if (gridX >= 0 && gridX < this.gridSize && gridY >= 0 && gridY < this.gridSize) {
+                this.sendHoverPosition(gridX, gridY);
+            }
+        }
+    });
+    
+    // Player hover storage
+    this.playerHovers = new Map();
+    
     // Set up animations
     this.createAnimations();
 }
@@ -447,16 +541,42 @@ function update() {
 Phaser.Scene.prototype.updateGameState = function(state) {
     if (!state) return;
     
-    // Update background based on floor
+    // Update background based on phase and floor
     const floor = state.currentFloor;
     let bgKey = 'battle1';
-    if (floor <= 3) bgKey = 'battle1';
-    else if (floor <= 6) bgKey = 'battle2';
-    else if (floor <= 8) bgKey = 'battle3';
-    else bgKey = 'battle4';
+    
+    // During preparation phase, use preparation background style
+    if (state.phase === 'preparation') {
+        bgKey = 'battle1'; // Use battle1 but will add overlay
+    } else {
+        // During combat, use floor-based backgrounds
+        if (floor <= 3) bgKey = 'battle1';
+        else if (floor <= 6) bgKey = 'battle2';
+        else if (floor <= 8) bgKey = 'battle3';
+        else bgKey = 'battle4';
+    }
     
     if (this.background.texture.key !== bgKey) {
         this.background.setTexture(bgKey);
+    }
+    
+    // Handle phase overlay
+    if (state.phase === 'preparation') {
+        // Add blue tint overlay for preparation phase
+        if (!this.phaseOverlay) {
+            this.phaseOverlay = this.add.rectangle(
+                this.scale.width/2, this.scale.height/2,
+                this.scale.width, this.scale.height,
+                0x1a1a2e, 0.6
+            );
+            this.phaseOverlay.setDepth(-90);
+        }
+        this.phaseOverlay.setVisible(true);
+    } else {
+        // Remove overlay during combat
+        if (this.phaseOverlay) {
+            this.phaseOverlay.setVisible(false);
+        }
     }
     
     // Update units
@@ -497,6 +617,91 @@ Phaser.Scene.prototype.updateGameState = function(state) {
             sprite.healthBar = healthBar;
             sprite.unitId = unit.id;
             sprite.unitData = unit;
+            
+            // Make unit interactive and draggable (only for player's own units)
+            if (!unit.id.startsWith('enemy-') && state.phase === 'preparation') {
+                const currentPlayer = state.players.find(p => p.id === player.id);
+                const isPlayerUnit = currentPlayer && currentPlayer.units.some(u => u.id === unit.id);
+                
+                if (isPlayerUnit) {
+                    sprite.setInteractive();
+                    this.input.setDraggable(sprite);
+                    
+                    sprite.on('dragstart', () => {
+                        sprite.setScale(sprite.scaleX * 1.1);
+                        sprite.setAlpha(0.8);
+                        sprite.setDepth(1000);
+                    });
+                    
+                    sprite.on('drag', (pointer, dragX, dragY) => {
+                        sprite.x = dragX;
+                        sprite.y = dragY;
+                        sprite.healthBarBg.x = dragX;
+                        sprite.healthBarBg.y = dragY - 40;
+                        sprite.healthBar.x = dragX;
+                        sprite.healthBar.y = dragY - 40;
+                        
+                        // Highlight grid cell under pointer
+                        const gridX = Math.floor((dragX - this.gridContainer.x + this.gridSize * this.cellSize / 2) / this.cellSize);
+                        const gridY = Math.floor((dragY - this.gridContainer.y + this.gridSize * this.cellSize / 2) / this.cellSize);
+                        
+                        if (gridX >= 0 && gridX < this.gridSize && gridY >= 0 && gridY < this.gridSize) {
+                            const cellX = (gridX - this.gridSize/2 + 0.5) * this.cellSize;
+                            const cellY = (gridY - this.gridSize/2 + 0.5) * this.cellSize;
+                            
+                            this.highlightCell.setPosition(cellX, cellY);
+                            this.highlightCell.setVisible(true);
+                            
+                            // Check if cell is valid for placement
+                            const occupied = state.grid[gridY][gridX].occupied;
+                            const isCurrentPosition = unit.position && unit.position.x === gridX && unit.position.y === gridY;
+                            
+                            if (occupied && !isCurrentPosition) {
+                                this.highlightCell.setStrokeStyle(3, 0xFF0000, 1);
+                            } else {
+                                this.highlightCell.setStrokeStyle(3, 0x4CAF50, 1);
+                            }
+                        }
+                    });
+                    
+                    sprite.on('dragend', (pointer) => {
+                        this.highlightCell.setVisible(false);
+                        
+                        // Convert drop position to grid coordinates
+                        const gridX = Math.floor((sprite.x - this.gridContainer.x + this.gridSize * this.cellSize / 2) / this.cellSize);
+                        const gridY = Math.floor((sprite.y - this.gridContainer.y + this.gridSize * this.cellSize / 2) / this.cellSize);
+                        
+                        // Check if valid placement
+                        if (gridX >= 0 && gridX < this.gridSize && gridY >= 0 && gridY < this.gridSize) {
+                            const occupied = state.grid[gridY][gridX].occupied;
+                            const isCurrentPosition = unit.position && unit.position.x === gridX && unit.position.y === gridY;
+                            const positionChanged = !unit.position || unit.position.x !== gridX || unit.position.y !== gridY;
+                            
+                            if ((!occupied || isCurrentPosition) && positionChanged) {
+                                // Valid drop - emit place unit event
+                                socket.emit('place-unit', unit.id, { x: gridX, y: gridY });
+                            }
+                        }
+                        
+                        // Reset sprite appearance
+                        sprite.setScale(this.cellSize / 100);
+                        sprite.setAlpha(1);
+                        sprite.setDepth(unit.position ? unit.position.y : 0);
+                        
+                        // Snap back to grid position
+                        if (unit.position) {
+                            const cellX = (unit.position.x - this.gridSize/2 + 0.5) * this.cellSize;
+                            const cellY = (unit.position.y - this.gridSize/2 + 0.5) * this.cellSize;
+                            sprite.x = cellX;
+                            sprite.y = cellY;
+                            sprite.healthBarBg.x = cellX;
+                            sprite.healthBarBg.y = cellY - 40;
+                            sprite.healthBar.x = cellX;
+                            sprite.healthBar.y = cellY - 40;
+                        }
+                    });
+                }
+            }
             
             // Create container for unit and health bars
             const container = this.add.container(0, 0, [sprite, healthBarBg, healthBar]);
@@ -566,6 +771,71 @@ Phaser.Scene.prototype.updateGameState = function(state) {
         }
     });
 };
+
+// Add hover methods to Phaser scene
+Phaser.Scene.prototype.sendHoverPosition = function(gridX, gridY) {
+    // Debounce hover sending
+    if (!this.lastHoverTime || Date.now() - this.lastHoverTime > 100) {
+        this.lastHoverTime = Date.now();
+        if (socket && socket.connected) {
+            socket.emit('cell-hover', { x: gridX, y: gridY });
+        }
+    }
+}
+
+Phaser.Scene.prototype.updatePlayerHover = function(playerId, playerName, position, playerColor) {
+    // Remove existing hover for this player
+    if (this.playerHovers.has(playerId)) {
+        const existingHover = this.playerHovers.get(playerId);
+        existingHover.destroy();
+        this.playerHovers.delete(playerId);
+    }
+    
+    // If position is null, just clear the hover
+    if (!position) return;
+    
+    // Validate position
+    if (position.x < 0 || position.x >= this.gridSize || position.y < 0 || position.y >= this.gridSize) {
+        return;
+    }
+    
+    // Convert player color from hex string to number
+    let color = 0x888888; // Default gray
+    try {
+        if (playerColor && playerColor.startsWith('#')) {
+            color = parseInt(playerColor.slice(1), 16);
+        }
+    } catch (e) {
+        console.warn('Invalid player color:', playerColor);
+    }
+    
+    // Create hover rectangle
+    const cellX = (position.x - this.gridSize/2 + 0.5) * this.cellSize;
+    const cellY = (position.y - this.gridSize/2 + 0.5) * this.cellSize;
+    
+    const hoverRect = this.add.rectangle(
+        cellX, cellY,
+        this.cellSize - 2, this.cellSize - 2,
+        color, 0
+    );
+    hoverRect.setStrokeStyle(2, color, 0.8);
+    
+    // Add player name text
+    const nameText = this.add.text(cellX, cellY - this.cellSize/2 - 10, playerName, {
+        fontSize: '10px',
+        color: playerColor || '#FFFFFF',
+        stroke: '#000000',
+        strokeThickness: 1
+    });
+    nameText.setOrigin(0.5);
+    
+    // Store both rect and text in a container
+    const container = this.add.container(0, 0, [hoverRect, nameText]);
+    this.gridContainer.add(container);
+    
+    // Store reference
+    this.playerHovers.set(playerId, container);
+}
 
 // Initialize connection when page loads
 window.onload = function() {

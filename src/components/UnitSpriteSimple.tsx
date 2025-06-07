@@ -68,13 +68,26 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
           if (jsonData.textures && jsonData.textures[0] && jsonData.textures[0].frames) {
             // TexturePacker format
             const frames = jsonData.textures[0].frames;
-            const idleFrame = frames.find((f: any) => f.filename.toLowerCase().includes('idle'));
-            frameData = idleFrame || frames[0];
+            // Find a proper idle frame, prefer Idle_1.png or similar numbered frames
+            const idleFrames = frames.filter((f: any) => f.filename.toLowerCase().includes('idle'));
+            if (idleFrames.length > 0) {
+              // Sort idle frames to get the first one (Idle_1.png)
+              idleFrames.sort((a: any, b: any) => a.filename.localeCompare(b.filename));
+              frameData = idleFrames[0];
+            } else {
+              frameData = frames[0];
+            }
           } else if (jsonData.frames) {
             // Phaser atlas format
             const frames = Object.entries(jsonData.frames);
-            const idleFrame = frames.find(([key]) => key.toLowerCase().includes('idle'));
-            frameData = idleFrame ? idleFrame[1] : Object.values(jsonData.frames)[0];
+            const idleFrames = frames.filter(([key]) => key.toLowerCase().includes('idle'));
+            if (idleFrames.length > 0) {
+              // Sort idle frames to get the first one
+              idleFrames.sort(([a], [b]) => a.localeCompare(b));
+              frameData = idleFrames[0][1];
+            } else {
+              frameData = Object.values(jsonData.frames)[0];
+            }
           }
 
           if (frameData && frameData.frame) {

@@ -53,7 +53,7 @@ const Lobby: React.FC = () => {
 
   const renderPlayer = ({ item }: { item: any }) => (
     <View style={styles.playerItem}>
-      <Text style={styles.playerName}>{item.name}</Text>
+      <Text style={[styles.playerName, { color: item.color || '#FFF' }]}>{item.name}</Text>
       <Text style={styles.playerStatus}>
         {item.isReady ? '✓ Ready' : 'Waiting...'}
       </Text>

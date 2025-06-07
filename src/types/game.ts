@@ -71,6 +71,7 @@ export interface Player {
   gold: number;
   units: Unit[];
   isReady: boolean;
+  color: string;
 }
 
 export interface GameState {

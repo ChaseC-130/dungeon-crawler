@@ -104,6 +104,9 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     // Set depth based on y position
     this.setDepth(y);
     
+    // Make the container interactive for proper drag and drop
+    this.setInteractive(new Phaser.Geom.Rectangle(-32, -32, 64, 64), Phaser.Geom.Rectangle.Contains);
+    
     // Play idle animation
     this.playAnimation('idle');
     

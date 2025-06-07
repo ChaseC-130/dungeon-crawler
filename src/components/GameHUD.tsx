@@ -88,7 +88,7 @@ const GameHUD: React.FC = () => {
         </View>
         {renderPhaseInfo()}
         <View style={styles.playerInfo}>
-          <Text style={styles.playerName}>{player.name}</Text>
+          <Text style={[styles.playerName, { color: player.color || '#FFF' }]}>{player.name}</Text>
           <Text style={styles.unitCount}>Units: {player.units.length}</Text>
         </View>
       </View>
