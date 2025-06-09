@@ -1,8 +1,29 @@
-# Sprites on the Unit Selection Modal, the shop screen of your selected units, and the upgrade available panel do not match the sprites rendered in the grid cells. They are often misaligned, show multiple sprites from spritesheet, and do not loop their idle animation. The preparation phase grid sprite should be used consistently across the other interfaces. An example is shown in client1.png screenshot where it can be clearly be seen the goblin sprite shows two sprites when it should show one as it does when it's placed on the grid.
+# Task 1: The functionality is supposed to be implemented already in which allows players to click + drag their own units (Or press + drag on mobile) on the grid to relocate them to other cells. The functionality implemented does not work at all. Re-implement this functionality and ensure any old code that was intended for this functionality is either removed or cleaned up. It seems to make units slightly larger when i press on them on the grid cell, but it doesn't let me drag them. The animation should look very similar to like when a player presses + drags a unit to purchase then drops on the grid, except this should just let the player move one of their units to another cell.
 
+### Subtasks:
+- [x] Debug why current drag functionality only scales but doesn't drag
+- [x] Check Phaser drag system configuration and input manager
+- [x] Study shop unit drag implementation for reference
+- [x] Fix or reimplement grid unit drag functionality  
+- [x] Test drag behavior matches shop unit drag visuals
+- [x] Ensure proper cleanup of drag events
 
-# When a player hovers over a cell, other players should see their color hovering over the cell. client1.png and client2.png were both taken at the same time, for some reason one player hovers show red cells. Let's always make the cell highlight the same color as the player's color. Additionally, only show other player's highlighted cells when they are purchasing/placing a unit, or moving a unit.
+# Task 2: Players should be able to sell units they own by clicking on them during preparation phase on the grid to bring up a sell menu and sell them for 75% of the purchase price (Rounded up). Let's change this popup to be a tooltip, not a modal.
 
-# The game is not properly returning to the grid/preparation phase style background follow the battle end. This was supposed to be fixed previously but it still is not. The game seems to freeze when 1-2 enemies are still alive for all players then goes to upgrade screen, then back to battlefield instead of grid
+### Subtasks:
+- [ ] Replace sell modal with tooltip-style popup
+- [ ] Change sell price calculation to round up instead of down
+- [ ] Position tooltip near clicked unit
+- [ ] Add dismiss functionality for tooltip
+- [ ] Style tooltip to match game design
+- [ ] Test tooltip positioning and responsiveness
 
-# Players should be able to drag their own units on the grid and drop them in other cells to move them. This was supposed to be implemented previously, but it is still not working.
+# Task 3: The upgrade selection panel cards have their borders cut off, let's size down the cards and increase the size of the boxes for the upgrade icons and the unit sprites.
+
+### Subtasks:
+- [ ] Identify current upgrade card dimensions and why borders are cut off
+- [ ] Reduce upgrade card sizes to fit properly
+- [ ] Increase upgrade icon container sizes
+- [ ] Increase unit sprite container sizes in upgrade cards
+- [ ] Test layout on different screen sizes
+- [ ] Ensure all upgrade content fits within cards

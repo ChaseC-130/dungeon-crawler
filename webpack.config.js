@@ -7,6 +7,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'web-dist'),
     filename: 'bundle.js',
+    publicPath: '/',
   },
   module: {
     rules: [
@@ -34,7 +35,8 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './web-standalone/index.html',
+      template: './public/index.html',
+      title: 'Dungeon Crawler',
     }),
   ],
   devServer: {

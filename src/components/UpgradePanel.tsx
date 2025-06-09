@@ -4,17 +4,92 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Dimensions,
+  Image,
   ScrollView,
 } from 'react-native';
 import { useGame } from '../contexts/GameContext';
 import { UpgradeCard } from '../types/game';
 
+const { width, height } = Dimensions.get('window');
+
+// Map upgrade names to icon files
+const UPGRADE_ICONS: { [key: string]: any } = {
+  'Vampiric Strike': require('../../assets/upgradeicons/vampiric_strike.png'),
+  'Swift Boots': require('../../assets/upgradeicons/swift_boots.png'),
+  'Vitality Boost': require('../../assets/upgradeicons/vitality_boost.png'),
+  'Power Surge': require('../../assets/upgradeicons/power_surge.png'),
+  'Rapid Strikes': require('../../assets/upgradeicons/rapid_strikes.png'),
+  'Evasive Maneuvers': require('../../assets/upgradeicons/evasive_maneuvers.png'),
+  'Taunt': require('../../assets/upgradeicons/taunt.png'),
+  'Final Gift': require('../../assets/upgradeicons/final_gift.png'),
+  'Explosive End': require('../../assets/upgradeicons/explosive_end.png'),
+  'Poison Blade': require('../../assets/upgradeicons/poison_blade.png'),
+  'Slowing Aura': require('../../assets/upgradeicons/slowing_aura.png'),
+};
+
 const UpgradePanel: React.FC = () => {
   const { gameState, player, selectUpgrade, rerollShop } = useGame();
-  const [selectedCard, setSelectedCard] = useState<string | null>(null);
-  const [selectedUnitType, setSelectedUnitType] = useState<string | null>(null);
+  
+  // Use refs to persist state across re-renders
+  const selectedCardRef = React.useRef<string | null>(null);
+  const selectedUnitTypeRef = React.useRef<string | null>(null);
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+  
+  console.log(`UpgradePanel render - selectedCard: ${selectedCardRef.current}, upgradeCards count: ${player?.upgradeCards?.length || 0}`);
+  
+  // Log component lifecycle
+  React.useEffect(() => {
+    console.log('UpgradePanel mounted');
+    return () => {
+      console.log('UpgradePanel unmounted - clearing selection state');
+      selectedCardRef.current = null;
+      selectedUnitTypeRef.current = null;
+    };
+  }, []);
+  
+  // Helper functions to update ref state and trigger re-render
+  const setSelectedCard = (value: string | null) => {
+    selectedCardRef.current = value;
+    forceUpdate();
+  };
+  
+  const setSelectedUnitType = (value: string | null) => {
+    selectedUnitTypeRef.current = value;
+    forceUpdate();
+  };
+  
+  // Get player's upgrade cards
+  const upgradeCards = player?.upgradeCards || [];
+  
+  // Create a stable identifier for the upgrade cards to prevent unnecessary clears
+  const upgradeCardIds = upgradeCards.map(card => card.id).sort().join(',');
+  
+  // Clear selection only when the selected card is no longer available
+  React.useEffect(() => {
+    if (selectedCardRef.current && !upgradeCards.find(c => c.id === selectedCardRef.current)) {
+      console.log(`Clearing selection - card ${selectedCardRef.current} no longer available`);
+      setSelectedCard(null);
+      setSelectedUnitType(null);
+    }
+  }, [upgradeCardIds]); // Use card IDs instead of the array reference
+  
+  // Calculate card dimensions based on screen size
+  const numberOfCards = upgradeCards.length || 3;
+  const cardMargin = 8;
+  const containerPadding = 20;
+  const availableWidth = width - containerPadding;
+  const maxCardWidth = 200;
+  const minCardWidth = 140;
+  const calculatedWidth = (availableWidth - (cardMargin * (numberOfCards - 1))) / numberOfCards;
+  const cardWidth = Math.min(maxCardWidth, Math.max(minCardWidth, calculatedWidth));
 
   if (!gameState || !player) {
+    return null;
+  }
+  
+  // Don't show panel if not in post-combat phase or no upgrade cards available
+  if (gameState.phase !== 'post-combat' || !upgradeCards || upgradeCards.length === 0) {
     return null;
   }
 
@@ -32,15 +107,15 @@ const UpgradePanel: React.FC = () => {
   };
 
   const handleUnitTypeSelect = (unitType: string) => {
-    if (selectedCard) {
-      selectUpgrade(selectedCard, unitType);
+    if (selectedCardRef.current) {
+      selectUpgrade(selectedCardRef.current, unitType);
       setSelectedCard(null);
       setSelectedUnitType(null);
     }
   };
 
   const renderUpgradeCard = (card: UpgradeCard) => {
-    const isSelected = selectedCard === card.id;
+    const isSelected = selectedCardRef.current === card.id;
     
     return (
       <TouchableOpacity
@@ -48,7 +123,8 @@ const UpgradePanel: React.FC = () => {
         style={[
           styles.upgradeCard,
           card.isHighPotency && styles.highPotencyCard,
-          isSelected && styles.selectedCard
+          isSelected && styles.selectedCard,
+          { width: cardWidth }
         ]}
         onPress={() => handleUpgradeSelect(card)}
       >
@@ -56,6 +132,14 @@ const UpgradePanel: React.FC = () => {
           <View style={styles.highPotencyBadge}>
             <Text style={styles.highPotencyText}>×3 POWER</Text>
           </View>
+        )}
+        
+        {UPGRADE_ICONS[card.name] && (
+          <Image 
+            source={UPGRADE_ICONS[card.name]} 
+            style={styles.upgradeIcon}
+            resizeMode="contain"
+          />
         )}
         
         <Text style={styles.upgradeName}>{card.name}</Text>
@@ -71,30 +155,29 @@ const UpgradePanel: React.FC = () => {
     );
   };
 
-  if (selectedCard && !gameState.upgradeCards.find(c => c.id === selectedCard)?.isHighPotency) {
+  if (selectedCardRef.current && !upgradeCards.find(c => c.id === selectedCardRef.current)?.isHighPotency) {
     return (
-      <View style={styles.container}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
         <Text style={styles.title}>SELECT UNIT TYPE</Text>
         <Text style={styles.subtitle}>Choose which unit type to upgrade</Text>
         
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {ownedUnitTypes.map(unitType => (
-            <TouchableOpacity
-              key={unitType}
-              style={styles.unitTypeButton}
-              onPress={() => handleUnitTypeSelect(unitType)}
-            >
-              <Text style={styles.unitTypeText}>{unitType}</Text>
-              <Text style={styles.unitCount}>
-                {player.units.filter(u => u.name === unitType).length} owned
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={styles.unitTypeContainer}>
+          {ownedUnitTypes.map(unitType => {
+            const unitTypeWidth = Math.max(110, Math.min(180, (availableWidth - (8 * (ownedUnitTypes.length - 1))) / ownedUnitTypes.length));
+            return (
+              <TouchableOpacity
+                key={unitType}
+                style={[styles.unitTypeButton, { width: unitTypeWidth }]}
+                onPress={() => handleUnitTypeSelect(unitType)}
+              >
+                <Text style={styles.unitTypeText}>{unitType}</Text>
+                <Text style={styles.unitCount}>
+                  {player.units.filter(u => u.name === unitType).length} owned
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
         
         <TouchableOpacity
           style={styles.cancelButton}
@@ -105,12 +188,12 @@ const UpgradePanel: React.FC = () => {
         >
           <Text style={styles.cancelText}>CANCEL</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>CHOOSE UPGRADE</Text>
         <TouchableOpacity
@@ -123,27 +206,26 @@ const UpgradePanel: React.FC = () => {
         </TouchableOpacity>
       </View>
       
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {gameState.upgradeCards.map(renderUpgradeCard)}
-      </ScrollView>
-    </View>
+      <View style={styles.upgradeContainer}>
+        {upgradeCards.map(renderUpgradeCard)}
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    maxHeight: Math.min(height * 0.4, 300),
+  },
   container: {
-    padding: 15,
-    maxHeight: 250,
+    padding: 10,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   title: {
     fontSize: 24,
@@ -181,17 +263,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
-  scrollContent: {
-    paddingRight: 15,
+  upgradeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
   },
   upgradeCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 15,
-    marginRight: 10,
-    width: 200,
+    borderRadius: 10,
+    padding: 10,
+    marginRight: 8,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+  },
+  unitTypeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 12,
   },
   highPotencyCard: {
     backgroundColor: 'rgba(255, 215, 0, 0.15)',
@@ -203,31 +293,38 @@ const styles = StyleSheet.create({
   },
   highPotencyBadge: {
     backgroundColor: '#FFD700',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 6,
   },
   highPotencyText: {
     color: '#000',
     fontWeight: 'bold',
     fontSize: 12,
   },
+  upgradeIcon: {
+    width: 60,
+    height: 60,
+    marginBottom: 8,
+  },
   upgradeName: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   upgradeDescription: {
     color: '#CCC',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   targetContainer: {
-    marginTop: 10,
-    paddingTop: 10,
+    marginTop: 8,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -243,9 +340,10 @@ const styles = StyleSheet.create({
   },
   unitTypeButton: {
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    borderRadius: 12,
-    padding: 15,
-    marginRight: 10,
+    borderRadius: 10,
+    padding: 12,
+    marginRight: 8,
+    marginBottom: 8,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#4CAF50',
@@ -262,12 +360,14 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: 'rgba(244, 67, 54, 0.2)',
-    borderRadius: 12,
-    padding: 15,
-    marginTop: 15,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 10,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#F44336',
+    alignSelf: 'center',
+    paddingHorizontal: 30,
   },
   cancelText: {
     color: '#FFF',

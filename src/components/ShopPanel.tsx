@@ -14,6 +14,7 @@ import { useGame } from '../contexts/GameContext';
 import { UnitStats } from '../types/game';
 import UnitSpriteSimple from './UnitSpriteSimple';
 import UnitSprite from './UnitSprite';
+import UnifiedUnitSprite from './UnifiedUnitSprite';
 
 const ShopPanel: React.FC = () => {
   const { gameState, player, purchaseUnit, rerollShop } = useGame();
@@ -98,9 +99,9 @@ const ShopPanel: React.FC = () => {
           
           <View style={styles.unitImageContainer}>
             {Platform.OS === 'web' ? (
-              <UnitSprite unitName={unit.name} width={80} height={80} />
+              <UnitSprite unitName={unit.name} width={80} height={80} useGridCellSize={true} />
             ) : (
-              <UnitSpriteSimple unitName={unit.name} width={80} height={80} />
+              <UnitSpriteSimple unitName={unit.name} width={80} height={80} useGridCellSize={true} />
             )}
           </View>
         
@@ -166,9 +167,9 @@ const ShopPanel: React.FC = () => {
         
         <View style={styles.unitImageContainer}>
           {Platform.OS === 'web' ? (
-            <UnitSprite unitName={unit.name} width={80} height={80} />
+            <UnifiedUnitSprite unitName={unit.name} width={80} height={80} />
           ) : (
-            <UnitSpriteSimple unitName={unit.name} width={80} height={80} />
+            <UnitSpriteSimple unitName={unit.name} width={80} height={80} useGridCellSize={true} />
           )}
         </View>
         
@@ -337,10 +338,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   unitImageContainer: {
-    height: 80,
     marginBottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    // Container will adjust to sprite size automatically
   },
   unitImage: {
     width: 60,

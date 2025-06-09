@@ -32,15 +32,19 @@ class CombatEngine {
     // Filter living units for game logic
     const alivePlayerUnits = allPlayerUnits.filter(u => u.status !== 'dead');
     const aliveEnemyUnits = allEnemyUnits.filter(u => u.status !== 'dead');
+    
+    // Filter units that are dying (marked as dead but still animating)
+    const dyingPlayerUnits = allPlayerUnits.filter(u => u.status === 'dead' && !u.deathAnimationComplete);
+    const dyingEnemyUnits = allEnemyUnits.filter(u => u.status === 'dead' && !u.deathAnimationComplete);
 
-    // Check win conditions
-    if (alivePlayerUnits.length === 0) {
+    // Check win conditions - wait for death animations to complete
+    if (alivePlayerUnits.length === 0 && dyingPlayerUnits.length === 0) {
       this.stopCombat();
       this.match.endCombat('enemies');
       return;
     }
 
-    if (aliveEnemyUnits.length === 0) {
+    if (aliveEnemyUnits.length === 0 && dyingEnemyUnits.length === 0) {
       this.stopCombat();
       this.match.endCombat('players');
       return;
@@ -52,7 +56,11 @@ class CombatEngine {
     });
 
     // Broadcast combat state with ALL units (including dead) for client rendering
-    this.match.io.to(this.match.matchId).emit('combat-update', allPlayerUnits, allEnemyUnits);
+    // Filter out units without positions to prevent client-side errors
+    const validPlayerUnits = allPlayerUnits.filter(unit => unit.position !== null);
+    const validEnemyUnits = allEnemyUnits.filter(unit => unit.position !== null);
+    
+    this.match.io.to(this.match.matchId).emit('combat-update', validPlayerUnits, validEnemyUnits);
   }
 
   updateUnit(unit, playerUnits, enemyUnits) {
@@ -85,50 +93,89 @@ class CombatEngine {
       unit.stuckTimer = 0;
     }
 
-    // Find target (re-target if stuck or no current target)
-    let target = null;
-    if (unit.targetId && !unit.isBlocked) {
-      target = hostileUnits.find(u => u.id === unit.targetId);
-    }
-    
-    if (!target || unit.stuckTimer > 1000) {
-      target = this.findTarget(unit, hostileUnits);
-    }
+    // Special handling for priests - they heal instead of attack
+    if (unit.name && unit.name.toLowerCase() === 'priest') {
+      // Find injured friendly unit to heal
+      let healTarget = this.findHealTarget(unit, friendlyUnits);
+      
+      if (healTarget && healTarget.position) {
+        const distance = this.getDistance(unit.position, healTarget.position);
 
-    if (target && target.position) {
-      const distance = this.getDistance(unit.position, target.position);
+        if (distance <= unit.range) {
+          // In range - heal
+          unit.status = 'attacking'; // Use attack animation for healing
+          unit.targetId = healTarget.id;
 
-      if (distance <= unit.range) {
-        // In range - attack
-        unit.status = 'attacking';
-        unit.targetId = target.id;
-
-        if (unit.attackCooldown <= 0) {
-          this.performAttack(unit, target);
-          unit.attackCooldown = 1 / unit.attackSpeed;
+          if (unit.attackCooldown <= 0) {
+            this.performHeal(unit, healTarget);
+            unit.attackCooldown = 1 / unit.attackSpeed;
+          }
+        } else {
+          // Move towards heal target
+          unit.status = 'moving';
+          unit.targetId = healTarget.id;
+          this.moveTowards(unit, healTarget.position);
         }
       } else {
-        // Move towards target
-        unit.status = 'moving';
-        unit.targetId = target.id;
-        this.moveTowards(unit, target.position);
+        // No one to heal - follow nearest ally
+        const nearestAlly = this.findNearestAlly(unit, friendlyUnits);
+        if (nearestAlly && nearestAlly.position) {
+          unit.status = 'moving';
+          unit.targetId = nearestAlly.id;
+          this.moveTowards(unit, nearestAlly.position);
+        } else {
+          unit.status = 'idle';
+          unit.targetId = null;
+        }
       }
     } else {
-      // No target - move forward
-      unit.status = 'moving';
-      unit.targetId = null;
-      
-      if (isPlayerUnit) {
-        // Player units move north towards enemies
-        this.moveTowards(unit, { x: unit.position.x, y: 0 });
-      } else {
-        // Enemy units move south towards players
-        this.moveTowards(unit, { x: unit.position.x, y: GAME_CONFIG.GRID_HEIGHT - 1 });
+      // Normal combat units - find enemies to attack
+      let target = null;
+      if (unit.targetId && !unit.isBlocked) {
+        target = hostileUnits.find(u => u.id === unit.targetId);
       }
-    }
+      
+      if (!target || unit.stuckTimer > 1000) {
+        target = this.findTarget(unit, hostileUnits);
+      }
 
-    // Apply healing passives
-    this.applyHealing(unit, friendlyUnits);
+      if (target && target.position) {
+        const distance = this.getDistance(unit.position, target.position);
+
+        if (distance <= unit.range) {
+          // In range - attack
+          unit.status = 'attacking';
+          unit.targetId = target.id;
+
+          if (unit.attackCooldown <= 0) {
+            this.performAttack(unit, target);
+            unit.attackCooldown = 1 / unit.attackSpeed;
+          }
+        } else {
+          // Move towards target
+          unit.status = 'moving';
+          unit.targetId = target.id;
+          this.moveTowards(unit, target.position);
+        }
+      } else {
+        // No target - move forward
+        unit.status = 'moving';
+        unit.targetId = null;
+        
+        if (isPlayerUnit) {
+          // Player units move north towards enemies
+          this.moveTowards(unit, { x: unit.position.x, y: 0 });
+        } else {
+          // Enemy units move south towards players
+          this.moveTowards(unit, { x: unit.position.x, y: GAME_CONFIG.GRID_HEIGHT - 1 });
+        }
+      }
+    } // End of normal combat units block
+
+    // Apply healing passives (only for non-priest units)
+    if (unit.name && unit.name.toLowerCase() !== 'priest') {
+      this.applyHealing(unit, friendlyUnits);
+    }
   }
 
   findTarget(unit, hostileUnits) {
@@ -285,18 +332,107 @@ class CombatEngine {
     return null; // No valid alternative path found
   }
 
+  findHealTarget(healer, friendlyUnits) {
+    // Find injured units (not at full health and not dead)
+    const injuredUnits = friendlyUnits.filter(unit => 
+      unit.id !== healer.id && 
+      unit.status !== 'dead' && 
+      unit.health < unit.maxHealth &&
+      unit.position
+    );
+    
+    if (injuredUnits.length === 0) return null;
+    
+    // Find the unit with the lowest health percentage
+    let lowestHealthTarget = null;
+    let lowestHealthPercentage = 1;
+    
+    injuredUnits.forEach(unit => {
+      const healthPercentage = unit.health / unit.maxHealth;
+      if (healthPercentage < lowestHealthPercentage) {
+        lowestHealthPercentage = healthPercentage;
+        lowestHealthTarget = unit;
+      }
+    });
+    
+    return lowestHealthTarget;
+  }
+
+  findNearestAlly(unit, friendlyUnits) {
+    // Find the nearest living ally (excluding self)
+    const allies = friendlyUnits.filter(ally => 
+      ally.id !== unit.id && 
+      ally.status !== 'dead' && 
+      ally.position
+    );
+    
+    if (allies.length === 0) return null;
+    
+    // Prioritize allies that are north (lower Y values) of the priest
+    const alliesNorth = allies.filter(ally => ally.position.y < unit.position.y);
+    const alliesToConsider = alliesNorth.length > 0 ? alliesNorth : allies;
+    
+    let nearestAlly = null;
+    let nearestDistance = Infinity;
+    
+    alliesToConsider.forEach(ally => {
+      const distance = this.getDistance(unit.position, ally.position);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestAlly = ally;
+      }
+    });
+    
+    return nearestAlly;
+  }
+
+  performHeal(healer, target) {
+    // Calculate heal amount (priests heal for a percentage of target's max health)
+    const healAmount = Math.max(1, target.maxHealth * 0.0375); // 3.75% of max health (25% of 15%) or 1 HP minimum
+    
+    const oldHealth = target.health;
+    target.health = Math.min(target.health + healAmount, target.maxHealth);
+    
+    const actualHeal = target.health - oldHealth;
+    
+    // Debug logging for heal verification
+    console.log(`${healer.name} (${healer.id}) healed ${target.name} (${target.id}) for ${actualHeal.toFixed(1)} HP. Health: ${oldHealth.toFixed(1)} -> ${target.health.toFixed(1)}`);
+    
+    // Emit heal event for visual effect
+    this.match.io.to(this.match.matchId).emit('unit-healed', {
+      healerId: healer.id,
+      targetId: target.id,
+      healAmount: actualHeal
+    });
+  }
+
   performAttack(attacker, target) {
     // Calculate damage
     const armorMod = ARMOR_DAMAGE_MODIFIERS[target.armorType][attacker.attackType];
     let damage = attacker.damage * armorMod;
 
     // Apply damage
+    const oldHealth = target.health;
     target.health -= damage;
+    
+    // Debug logging for damage verification
+    console.log(`${attacker.name} (${attacker.id}) attacked ${target.name} (${target.id}) for ${damage.toFixed(1)} damage. Health: ${oldHealth.toFixed(1)} -> ${target.health.toFixed(1)}`);
+
+    // Emit projectile event for ranged units (wizards)
+    if (attacker.name && attacker.name.toLowerCase() === 'wizard') {
+      this.match.io.to(this.match.matchId).emit('wizard-attack', {
+        attackerId: attacker.id,
+        targetId: target.id
+      });
+    }
 
     // Check for death
     if (target.health <= 0) {
       target.health = 0;
       target.status = 'dead';
+      target.deathAnimationComplete = false; // Track death animation state
+      
+      console.log(`${target.name} (${target.id}) has died!`);
       
       // Award gold bounty
       const bounty = Math.ceil(target.cost * GAME_CONFIG.KILL_BOUNTY_RATE);
@@ -306,6 +442,11 @@ class CombatEngine {
 
       // Apply death effects
       this.applyDeathEffects(target);
+      
+      // Set a timer to mark death animation as complete (2 seconds for animation + fade)
+      setTimeout(() => {
+        target.deathAnimationComplete = true;
+      }, 2000);
     }
 
     // Apply on-hit effects
@@ -362,6 +503,11 @@ class CombatEngine {
             if (enemy.health <= 0) {
               enemy.health = 0;
               enemy.status = 'dead';
+              enemy.deathAnimationComplete = false;
+              // Set a timer to mark death animation as complete
+              setTimeout(() => {
+                enemy.deathAnimationComplete = true;
+              }, 2000);
             }
           });
           break;
@@ -377,6 +523,11 @@ class CombatEngine {
           if (unit.health <= 0) {
             unit.health = 0;
             unit.status = 'dead';
+            unit.deathAnimationComplete = false;
+            // Set a timer to mark death animation as complete
+            setTimeout(() => {
+              unit.deathAnimationComplete = true;
+            }, 2000);
           }
           break;
       }

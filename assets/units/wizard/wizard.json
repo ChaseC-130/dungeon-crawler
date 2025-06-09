@@ -10,7 +10,7 @@
 			"scale": 1,
 			"frames": [
 				{
-					"filename": "Attack_1_6 #3.png",
+					"filename": "placeholder2_1_6 #3.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -31,7 +31,7 @@
 					}
 				},
 				{
-					"filename": "Attack_1_5 #3.png",
+					"filename": "placeholder2_1_5 #3.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -52,7 +52,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_15.png",
+					"filename": "Attack_15.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -73,7 +73,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_14.png",
+					"filename": "Attack_14.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -94,7 +94,7 @@
 					}
 				},
 				{
-					"filename": "Attack_1_4 #3.png",
+					"filename": "placeholder2_1_4 #3.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -115,7 +115,7 @@
 					}
 				},
 				{
-					"filename": "Attack_2_7 #4.png",
+					"filename": "placeholder2_2_7 #4.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -136,7 +136,7 @@
 					}
 				},
 				{
-					"filename": "Attack_2_8 #2.png",
+					"filename": "placeholder2_2_8 #2.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -220,7 +220,7 @@
 					}
 				},
 				{
-					"filename": "Attack_2_9.png",
+					"filename": "placeholder2_2_9.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -325,7 +325,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_13.png",
+					"filename": "Attack_13.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -409,7 +409,7 @@
 					}
 				},
 				{
-					"filename": "Attack_1_7 #3.png",
+					"filename": "placeholder2_1_7 #3.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -451,7 +451,7 @@
 					}
 				},
 				{
-					"filename": "Attack_1_3 #3.png",
+					"filename": "placeholder2_1_3 #3.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -514,7 +514,7 @@
 					}
 				},
 				{
-					"filename": "Attack_2_6 #4.png",
+					"filename": "placeholder2_2_6 #4.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -535,7 +535,7 @@
 					}
 				},
 				{
-					"filename": "Attack_2_5 #4.png",
+					"filename": "placeholder2_2_5 #4.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -556,7 +556,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_8 #3.png",
+					"filename": "Attack_8 #3.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -577,7 +577,7 @@
 					}
 				},
 				{
-					"filename": "Attack_2_4 #4.png",
+					"filename": "placeholder2_2_4 #4.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -955,7 +955,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_6 #5.png",
+					"filename": "Attack_6 #5.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -997,7 +997,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_7 #5.png",
+					"filename": "Attack_7 #5.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1018,7 +1018,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_5 #5.png",
+					"filename": "Attack_5 #5.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1039,7 +1039,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_11.png",
+					"filename": "Attack_11.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1060,7 +1060,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_3 #5.png",
+					"filename": "Attack_3 #5.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1081,7 +1081,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_4 #5.png",
+					"filename": "Attack_4 #5.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1102,7 +1102,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_10.png",
+					"filename": "Attack_10.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1123,7 +1123,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_9 #1.png",
+					"filename": "Attack_9 #1.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1291,7 +1291,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_12.png",
+					"filename": "Attack_12.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1312,7 +1312,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_16.png",
+					"filename": "Attack_16.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1333,7 +1333,7 @@
 					}
 				},
 				{
-					"filename": "Attack_1_1 #3.png",
+					"filename": "placeholder2_1_1 #3.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1375,7 +1375,7 @@
 					}
 				},
 				{
-					"filename": "Attack_2_1 #4.png",
+					"filename": "placeholder2_2_1 #4.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1543,7 +1543,7 @@
 					}
 				},
 				{
-					"filename": "Attack_2_3 #4.png",
+					"filename": "placeholder2_2_3 #4.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1564,7 +1564,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_2 #5.png",
+					"filename": "Attack_2 #5.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1585,7 +1585,7 @@
 					}
 				},
 				{
-					"filename": "Attack_2_2 #4.png",
+					"filename": "placeholder2_2_2 #4.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1606,7 +1606,7 @@
 					}
 				},
 				{
-					"filename": "Magic_sphere_1 #5.png",
+					"filename": "Attack_1 #5.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -1669,7 +1669,7 @@
 					}
 				},
 				{
-					"filename": "Attack_1_2 #3.png",
+					"filename": "placeholder2_1_2 #3.png",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {

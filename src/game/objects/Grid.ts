@@ -77,6 +77,9 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.highlightRect.setStrokeStyle(3, 0x4CAF50, 1);
     this.highlightRect.setVisible(false);
     this.add(this.highlightRect);
+    
+    // Clear any leftover player hover rectangles
+    this.clearAllPlayerHovers();
   }
 
   updateGrid(gridState: GridCell[][]) {
@@ -159,12 +162,8 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.highlightRect.setPosition(localX, localY);
     this.highlightRect.setVisible(true);
     
-    // Change color based on validity
-    if (this.isValidPlacement(gridX, gridY, currentPlayerId)) {
-      this.highlightRect.setStrokeStyle(3, 0x4CAF50, 1);
-    } else {
-      this.highlightRect.setStrokeStyle(3, 0xF44336, 1);
-    }
+    // Always use green highlighting for all players
+    this.highlightRect.setStrokeStyle(3, 0x4CAF50, 1);
   }
 
   clearHighlight() {
@@ -187,61 +186,8 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   updatePlayerHover(playerId: string, playerName: string, position: Position | null, playerColor: string) {
-    // Remove existing hover rect for this player
-    if (this.playerHoverRects.has(playerId)) {
-      const existingRect = this.playerHoverRects.get(playerId)!;
-      existingRect.destroy();
-      this.playerHoverRects.delete(playerId);
-    }
-
-    // If position is null, just clear the hover
-    if (!position) return;
-
-    // Validate position
-    if (position.x < 0 || position.x >= this.gridWidth || position.y < 0 || position.y >= this.gridHeight) {
-      return;
-    }
-
-    // Create new hover rect for this player
-    const worldPos = this.gridToWorld(position.x, position.y);
-    const localX = worldPos.x - this.x;
-    const localY = worldPos.y - this.y;
-
-    // Parse player color (should be hex like "#FF0000")
-    let color = 0x888888; // Default gray
-    try {
-      if (playerColor.startsWith('#')) {
-        color = parseInt(playerColor.slice(1), 16);
-      }
-    } catch (e) {
-      console.warn('Invalid player color:', playerColor);
-    }
-
-    const hoverRect = this.scene.add.rectangle(
-      localX,
-      localY,
-      this.cellSize - 2,
-      this.cellSize - 2,
-      color,
-      0
-    );
-    hoverRect.setStrokeStyle(2, color, 0.8);
-    
-    // Add player name text
-    const nameText = this.scene.add.text(localX, localY - this.cellSize/2 - 10, playerName, {
-      fontSize: '10px',
-      color: playerColor,
-      stroke: '#000000',
-      strokeThickness: 1
-    });
-    nameText.setOrigin(0.5);
-
-    // Store both rect and text in a container for easy management
-    const container = this.scene.add.container(0, 0, [hoverRect, nameText]);
-    this.add(container);
-    
-    // Store reference (we'll store the container as the rect for simplicity)
-    this.playerHoverRects.set(playerId, container as any);
+    // Disabled: Don't show other players' highlighting
+    return;
   }
 
   clearAllPlayerHovers() {

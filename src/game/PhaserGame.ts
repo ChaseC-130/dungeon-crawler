@@ -17,6 +17,16 @@ export default class PhaserGame {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
       },
+      input: {
+        mouse: {
+          target: parent,
+        },
+        touch: {
+          target: parent,
+        },
+        smoothFactor: 0,
+        queue: true,
+      },
       physics: {
         default: 'arcade',
         arcade: {

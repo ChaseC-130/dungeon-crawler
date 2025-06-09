@@ -72,6 +72,8 @@ export interface Player {
   units: Unit[];
   isReady: boolean;
   color: string;
+  upgradeCards?: UpgradeCard[];
+  hasSelectedUpgrade?: boolean;
 }
 
 export interface GameState {

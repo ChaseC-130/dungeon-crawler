@@ -41,7 +41,7 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            right: 10px;
+            right: 10px; /* Full width again since no scoreboard */
             display: flex;
             gap: 10px;
             z-index: 50;
@@ -173,11 +173,11 @@
         }
         
         .shop-unit-sprite-container {
-            width: 60px;
-            height: 60px;
-            margin: 0 auto 10px auto;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 8px auto;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -355,7 +355,7 @@
             background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
             border: 2px solid rgba(255, 215, 0, 0.3);
             border-radius: 16px;
-            padding: 20px;
+            padding: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
@@ -395,9 +395,9 @@
         }
         
         .unit-sprite-container {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 15px auto;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 10px auto;
             background: linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
             border: 2px solid rgba(255, 215, 0, 0.3);
             border-radius: 12px;
@@ -598,8 +598,8 @@
             gap: 15px;
             flex-wrap: wrap;
             flex: 1;
-            overflow: hidden; /* No scrolling allowed */
-            padding: 5px;
+            overflow: visible; /* Allow cards to show their borders properly */
+            padding: 8px; /* Increased padding to accommodate borders */
             align-items: flex-start;
             align-content: flex-start;
         }
@@ -610,9 +610,9 @@
             background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
             border: 3px solid rgba(255, 215, 0, 0.3);
             border-radius: 16px;
-            padding: clamp(8px, 1.5vh, 15px); /* Responsive padding */
-            width: clamp(180px, 22vw, 240px); /* Responsive width */
-            max-width: calc(50% - 15px);
+            padding: clamp(6px, 1vh, 10px); /* Reduced responsive padding */
+            width: clamp(160px, 20vw, 220px); /* Reduced width to fit better */
+            max-width: calc(50% - 20px); /* Adjusted for better spacing */
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
@@ -622,14 +622,14 @@
             display: flex;
             flex-direction: column;
             max-height: clamp(200px, 35vh, 400px); /* Ensure cards fit on screen */
-            overflow: hidden; /* Prevent card content overflow */
+            overflow: visible; /* Allow content to show properly */
         }
         
         /* Responsive card size for different screen heights */
         @media (max-height: 700px) {
             .upgrade-card {
-                padding: clamp(6px, 1vh, 10px);
-                width: clamp(180px, 20vw, 220px);
+                padding: clamp(4px, 0.8vh, 8px);
+                width: clamp(150px, 18vw, 200px); /* Reduced width for smaller screens */
                 max-height: clamp(150px, 28vh, 280px);
             }
             
@@ -705,10 +705,10 @@
         }
         
         .upgrade-icon {
-            width: 40px;
-            height: 40px;
+            width: 60px; /* Increased from 40px */
+            height: 60px; /* Increased from 40px */
             margin: 0 auto 8px auto;
-            border-radius: 6px;
+            border-radius: 8px; /* Slightly larger radius */
             background: rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
@@ -718,9 +718,9 @@
         }
         
         .upgrade-icon img {
-            width: 32px;
-            height: 32px;
-            border-radius: 4px;
+            width: 48px; /* Increased from 32px */
+            height: 48px; /* Increased from 32px */
+            border-radius: 6px;
         }
         
         .upgrade-name {
@@ -836,8 +836,8 @@
         }
         
         .unit-sprite-container {
-            width: 36px;
-            height: 36px;
+            width: 48px; /* Increased from 36px */
+            height: 48px; /* Increased from 36px */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1019,6 +1019,131 @@
                 margin: 0 auto;
             }
         }
+        
+        /* Sell Unit Tooltip */
+        .sell-tooltip {
+            position: fixed;
+            background: linear-gradient(145deg, rgba(30, 30, 60, 0.95), rgba(20, 20, 40, 0.95));
+            border: 2px solid #FFD700;
+            border-radius: 12px;
+            padding: 12px;
+            z-index: 2500;
+            min-width: 200px;
+            max-width: 250px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(5px);
+            pointer-events: auto;
+            font-size: 12px;
+        }
+        
+        .sell-tooltip.hidden {
+            display: none;
+        }
+        
+        .sell-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .sell-tooltip-close {
+            background: none;
+            border: none;
+            color: #ccc;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .sell-tooltip-close:hover {
+            color: #fff;
+        }
+        
+        .sell-tooltip-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .sell-unit-sprite {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .sell-tooltip-details {
+            flex: 1;
+        }
+        
+        .sell-unit-name {
+            color: #FFD700;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        
+        .sell-unit-price {
+            color: #4CAF50;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .sell-tooltip-description {
+            color: #ccc;
+            font-size: 10px;
+            margin: 0;
+            line-height: 1.2;
+        }
+        
+        .sell-tooltip-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+        }
+        
+        .sell-confirm-btn, .sell-cancel-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+        
+        .sell-confirm-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .sell-confirm-btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+        
+        .sell-cancel-btn {
+            background: #666;
+            color: white;
+        }
+        
+        .sell-cancel-btn:hover {
+            background: #555;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -1029,6 +1154,7 @@
         <div id="player-banners" class="player-banners">
             <!-- Player banners will be dynamically added here -->
         </div>
+        
         
         <div class="hud top-hud">
             <div class="gold">
@@ -1142,6 +1268,31 @@
         </div>
     </div>
 
+    <!-- Sell Unit Tooltip -->
+    <div id="sell-tooltip" class="sell-tooltip hidden">
+        <div class="sell-tooltip-header">
+            <div class="sell-unit-name" id="sell-tooltip-name">Unit Name</div>
+            <button class="sell-tooltip-close" onclick="closeSellTooltip()">×</button>
+        </div>
+        <div class="sell-tooltip-content">
+            <div class="sell-unit-sprite" id="sell-tooltip-sprite">
+                <!-- Unit sprite will be added here -->
+            </div>
+            <div class="sell-tooltip-details">
+                <div class="sell-unit-price" id="sell-tooltip-price">💰 0</div>
+                <p class="sell-tooltip-description">75% of purchase price (rounded up)</p>
+            </div>
+        </div>
+        <div class="sell-tooltip-buttons">
+            <button class="sell-confirm-btn" onclick="confirmSellUnit()">
+                💰 Sell
+            </button>
+            <button class="sell-cancel-btn" onclick="closeSellTooltip()">
+                Cancel
+            </button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script>
@@ -1155,6 +1306,7 @@
         let hasSelectedStartingUnits = false;
         let playerStartingUnits = [];
         let isInLobby = false;
+        
         
         // Available units for selection (detailed stats per Game Requirements)
         const AVAILABLE_UNITS = {
@@ -1173,16 +1325,16 @@
             },
             priest: { 
                 cost: 12, 
-                damage: 1, 
+                damage: 0, // No damage - priests only heal
                 health: 20, // Reduced by another 50% for much faster combat
-                attackSpeed: 3.0,
+                attackSpeed: 0.5, // Heal every 2 seconds (1/0.5 = 2 seconds)
                 movementSpeed: 30, // Reduced by 50% for slower tactical movement
-                range: 50,
-                priority: 4,
-                attackType: 'Magical', 
+                range: 10, // Slightly higher than knight's 8 range
+                priority: 5, // Higher priority to protect healers
+                attackType: 'Healing', // Changed from Magical to Healing
                 armorType: 'Unarmored',
-                innatePassive: 'Heals a nearby damaged friendly Unit for 1 HP/sec',
-                description: 'Support unit that heals allies continuously'
+                innatePassive: 'Cannot attack enemies - instead heals friendly units',
+                description: 'Support unit that heals the lowest health ally instead of attacking enemies'
             },
             fighter: { 
                 cost: 10, 
@@ -1241,6 +1393,11 @@
                 console.log('Disconnected from server');
                 document.getElementById('connection-status').className = 'disconnected';
                 document.getElementById('connection-status').textContent = 'Disconnected';
+                
+                // Clear highlights when disconnected
+                if (typeof highlightedCells !== 'undefined') {
+                    highlightedCells.clear();
+                }
             });
             
             socket.on('matchFound', (data) => {
@@ -1301,6 +1458,20 @@
             socket.on('combat-update', (playerUnits, enemyUnits) => {
                 if (window.gameScene) {
                     window.gameScene.updateCombatState(playerUnits, enemyUnits);
+                }
+            });
+            
+            socket.on('unit-healed', (data) => {
+                // Show heal effect on the target unit
+                if (window.gameScene) {
+                    window.gameScene.showHealEffect(data.targetId, data.healAmount);
+                }
+            });
+            
+            socket.on('wizard-attack', (data) => {
+                // Show wizard projectile
+                if (window.gameScene) {
+                    window.gameScene.createWizardProjectile(data.attackerId, data.targetId);
                 }
             });
             
@@ -1704,7 +1875,7 @@
                 setTimeout(() => {
                     const container = document.getElementById(`unit-select-${unitName}`);
                     if (container) {
-                        createAnimatedUnitSprite(container, unitName, 64, 64, 400);
+                        createAnimatedUnitSprite(container, unitName, 120, 120, 400);
                     }
                 }, 100);
                 
@@ -1991,6 +2162,7 @@
             });
         }
         
+
         function updatePlayerBanners(players) {
             const bannerContainer = document.getElementById('player-banners');
             if (!bannerContainer) return;
@@ -2015,10 +2187,15 @@
                 banner.className = `player-banner ${isCurrentPlayer ? 'current-player' : ''}`;
                 banner.style.borderColor = color.primary;
                 
+                // Count alive units for this player
+                const aliveUnits = player.units ? player.units.filter(unit => unit.status !== 'dead').length : 0;
+                const totalUnits = player.units ? player.units.length : 0;
+                
                 banner.innerHTML = `
                     <div class="player-color-indicator" style="background-color: ${color.primary}"></div>
                     <span>${player.name}</span>
                     <span style="color: #FFD700;">💰${player.gold}</span>
+                    ${gameState && gameState.phase === 'combat' ? `<span style="color: #4CAF50;">⚔️${aliveUnits}/${totalUnits}</span>` : ''}
                     ${player.isReady ? '<span style="color: #4CAF50;">✓</span>' : ''}
                 `;
                 
@@ -2096,7 +2273,7 @@
                     const container = document.getElementById(containerId);
                     if (container) {
                         // Match the container size for proper centering
-                        createAnimatedUnitSprite(container, unit.name.toLowerCase(), 60, 60, 400);
+                        createAnimatedUnitSprite(container, unit.name.toLowerCase(), 100, 100, 400);
                     }
                 });
             }, 200); // Increased delay to ensure Phaser is ready
@@ -2491,8 +2668,8 @@
                 });
                 
                 const walkFrames = textureFrames.filter(frame => {
-                    return frame.startsWith("Walk_") || //frame.startsWith("Run_") || 
-                           frame.toLowerCase().includes("walk") //|| frame.toLowerCase().includes("run");
+                    return frame.startsWith("Run_") || //frame.startsWith("Run_") || 
+                           frame.toLowerCase().includes("run") //|| frame.toLowerCase().includes("run");
                 });
                 
                 const attackFrames = textureFrames.filter(frame => {
@@ -2500,8 +2677,8 @@
                 });
                 
                 const deathFrames = textureFrames.filter(frame => {
-                    return frame.startsWith("Death_") || frame.startsWith("Die_") || 
-                           frame.toLowerCase().includes("death") || frame.toLowerCase().includes("die");
+                    return frame.startsWith("Death_") || frame.startsWith("Die_") || frame.startsWith("Dead_") ||
+                           frame.toLowerCase().includes("death") || frame.toLowerCase().includes("die") || frame.toLowerCase().includes("dead_");
                 });
                 
                 console.log(`Found frames for ${atlasKey}: ${idleFrames.length} idle, ${walkFrames.length} walk, ${attackFrames.length} attack, ${deathFrames.length} death`);
@@ -2782,75 +2959,233 @@
         };
         
         Phaser.Scene.prototype.setupGridUnitDrag = function(sprite, unit) {
-            // Make sprite draggable
-            sprite.setInteractive({ draggable: true });
+            console.log(`🔧 Setting up DOM-based drag for unit ${unit.name} (ID: ${unit.id})`);
+            
+            // Store reference to unit data on sprite for easy access
+            sprite.unitData = unit;
+            
+            // Make sprite interactive for click detection only
+            sprite.setInteractive();
             
             let dragData = {
                 startGridPos: { x: unit.position.x, y: unit.position.y },
-                startWorldPos: { x: sprite.x, y: sprite.y },
-                isDragging: false
+                isDragging: false,
+                dragClone: null,
+                startMouseX: 0,
+                startMouseY: 0
             };
             
-            // Drag start
-            sprite.on('dragstart', (pointer, dragX, dragY) => {
-                console.log(`Started dragging unit ${unit.name} from grid (${unit.position.x}, ${unit.position.y})`);
-                dragData.isDragging = true;
-                sprite.setTint(0xffff00); // Yellow tint when dragging
-                sprite.setDepth(1000); // Bring to front
-                hideGameTooltipDelayed(); // Hide tooltip when dragging
-            });
-            
-            // Drag
-            sprite.on('drag', (pointer, dragX, dragY) => {
-                sprite.x = dragX;
-                sprite.y = dragY;
+            // DOM-based drag system similar to shop
+            sprite.on('pointerdown', (pointer) => {
+                console.log(`🖱️ Pointer down on unit ${unit.name}`);
                 
-                // Update ownership indicators to follow
-                if (sprite.ownershipIndicators) {
-                    sprite.ownershipIndicators.forEach(indicator => {
-                        if (indicator && indicator.setPosition) {
-                            indicator.setPosition(dragX, dragY);
-                        }
-                    });
-                }
-            });
-            
-            // Drag end
-            sprite.on('dragend', (pointer) => {
-                console.log(`Dropped unit ${unit.name} at world (${sprite.x}, ${sprite.y})`);
-                dragData.isDragging = false;
-                sprite.clearTint(); // Remove drag tint
-                sprite.setDepth(10); // Reset depth
+                dragData.startMouseX = pointer.x;
+                dragData.startMouseY = pointer.y;
                 
-                // Calculate grid position from world position
-                const gridX = Math.floor((sprite.x - this.gridX) / this.cellSize);
-                const gridY = Math.floor((sprite.y - this.gridY) / this.cellSize);
+                // Visual feedback - scale effect
+                sprite.setScale(sprite.scaleX * 1.1, sprite.scaleY * 1.1);
+                sprite.setDepth(500);
                 
-                console.log(`Calculated grid position: (${gridX}, ${gridY})`);
+                // Convert to DOM coordinates
+                const canvasRect = this.game.canvas.getBoundingClientRect();
+                const startX = canvasRect.left + pointer.x;
+                const startY = canvasRect.top + pointer.y;
                 
-                // Check if drop position is valid
-                if (gridX >= 0 && gridX < this.gridWidth && gridY >= 0 && gridY < this.gridHeight) {
-                    // Check if position is free or occupied by same player
-                    const targetCell = gameState?.grid?.[gridY]?.[gridX];
-                    const isValidDrop = !targetCell?.occupied || targetCell?.playerId === playerId;
+                // Set up DOM drag handlers
+                const handleMouseMove = (e) => {
+                    const deltaX = Math.abs(e.clientX - startX);
+                    const deltaY = Math.abs(e.clientY - startY);
                     
-                    if (isValidDrop) {
-                        // Valid drop - send move request to server
-                        console.log(`Valid drop at grid (${gridX}, ${gridY}), sending move request`);
-                        if (socket && socket.connected) {
-                            socket.emit('moveUnit', unit.id, { x: gridX, y: gridY });
+                    // Start dragging if moved more than 5 pixels
+                    if (!dragData.isDragging && (deltaX > 5 || deltaY > 5)) {
+                        startDragVisual(e.clientX, e.clientY);
+                    }
+                    
+                    if (dragData.isDragging) {
+                        updateDragVisual(e.clientX, e.clientY);
+                    }
+                };
+                
+                const handleMouseUp = (e) => {
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                    
+                    if (dragData.isDragging) {
+                        endDragVisual(e.clientX, e.clientY);
+                    } else {
+                        // Simple click - reset scale and handle sell
+                        sprite.setScale(sprite.scaleX / 1.1, sprite.scaleY / 1.1);
+                        sprite.setDepth(10);
+                        console.log(`Simple click on ${unit.name}`);
+                    }
+                };
+                
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            });
+            
+            const startDragVisual = (clientX, clientY) => {
+                console.log(`🔄 Starting drag visual for unit ${unit.name}`);
+                dragData.isDragging = true;
+                
+                // Reset sprite scale
+                sprite.setScale(sprite.scaleX / 1.1, sprite.scaleY / 1.1);
+                
+                // Create drag clone similar to shop
+                dragData.dragClone = document.createElement('div');
+                dragData.dragClone.style.position = 'fixed';
+                dragData.dragClone.style.pointerEvents = 'none';
+                dragData.dragClone.style.zIndex = '9999';
+                dragData.dragClone.style.opacity = '0.8';
+                dragData.dragClone.style.width = '64px';
+                dragData.dragClone.style.height = '64px';
+                dragData.dragClone.style.borderRadius = '8px';
+                dragData.dragClone.style.border = '2px solid #FFD700';
+                dragData.dragClone.style.background = 'rgba(0, 0, 0, 0.7)';
+                dragData.dragClone.style.left = (clientX - 32) + 'px';
+                dragData.dragClone.style.top = (clientY - 32) + 'px';
+                
+                // Create canvas for the drag sprite
+                const dragCanvas = document.createElement('canvas');
+                dragCanvas.width = 64;
+                dragCanvas.height = 64;
+                dragCanvas.style.width = '100%';
+                dragCanvas.style.height = '100%';
+                dragCanvas.style.imageRendering = 'pixelated';
+                
+                dragData.dragClone.appendChild(dragCanvas);
+                document.body.appendChild(dragData.dragClone);
+                
+                // Draw sprite to canvas
+                if (window.gameScene) {
+                    setTimeout(() => {
+                        createAnimatedUnitSprite(dragCanvas.parentElement, unit.name.toLowerCase(), 64, 64);
+                    }, 10);
+                }
+                
+                // Add visual effects to original sprite
+                sprite.setTint(0xffff00);
+                sprite.setAlpha(0.5);
+                
+                // Show drop zone preview - convert DOM to canvas coords
+                const gameCanvas = document.querySelector('#phaser-game canvas');
+                if (gameCanvas) {
+                    const canvasRect = gameCanvas.getBoundingClientRect();
+                    const canvasX = clientX - canvasRect.left;
+                    const canvasY = clientY - canvasRect.top;
+                    this.showDropZonePreview(canvasX, canvasY, unit.playerId);
+                }
+            };
+            
+            const updateDragVisual = (clientX, clientY) => {
+                if (dragData.dragClone) {
+                    dragData.dragClone.style.left = (clientX - 32) + 'px';
+                    dragData.dragClone.style.top = (clientY - 32) + 'px';
+                    
+                    // Update drop zone preview - convert DOM to canvas coords
+                    const gameCanvas = document.querySelector('#phaser-game canvas');
+                    if (gameCanvas) {
+                        const canvasRect = gameCanvas.getBoundingClientRect();
+                        const canvasX = clientX - canvasRect.left;
+                        const canvasY = clientY - canvasRect.top;
+                        this.showDropZonePreview(canvasX, canvasY, unit.playerId);
+                    }
+                }
+            };
+            
+            const endDragVisual = (clientX, clientY) => {
+                console.log(`🔻 Ending drag for unit ${unit.name}`);
+                
+                // Clean up drag clone
+                if (dragData.dragClone) {
+                    dragData.dragClone.remove();
+                    dragData.dragClone = null;
+                }
+                
+                // Reset sprite visual
+                sprite.clearTint();
+                sprite.setAlpha(1);
+                sprite.setDepth(10);
+                
+                // Clear drop zone preview
+                this.clearDropZonePreview();
+                
+                // Check if dropped on game canvas
+                const gameCanvas = document.querySelector('#phaser-game canvas');
+                if (gameCanvas) {
+                    const canvasRect = gameCanvas.getBoundingClientRect();
+                    const canvasX = clientX - canvasRect.left;
+                    const canvasY = clientY - canvasRect.top;
+                    
+                    // Convert to grid coordinates
+                    const gridX = Math.floor((canvasX - this.gridX) / this.cellSize);
+                    const gridY = Math.floor((canvasY - this.gridY) / this.cellSize);
+                    
+                    console.log(`📍 Drop at grid position: (${gridX}, ${gridY})`);
+                    
+                    // Validate drop
+                    if (gridX >= 0 && gridX < this.gridWidth && gridY >= 0 && gridY < this.gridHeight) {
+                        const targetCell = gameState?.grid?.[gridY]?.[gridX];
+                        const isValidDrop = !targetCell?.occupied || targetCell?.playerId === unit.playerId;
+                        
+                        if (isValidDrop && (gridX !== unit.position.x || gridY !== unit.position.y)) {
+                            console.log(`✅ Valid drop at grid (${gridX}, ${gridY}), sending move request`);
+                            if (socket && socket.connected) {
+                                socket.emit('moveUnit', unit.id, { x: gridX, y: gridY });
+                            }
+                        } else {
+                            console.log(`❌ Invalid drop or same position`);
                         }
                     } else {
-                        // Invalid drop - snap back to original position
-                        console.log(`Invalid drop at grid (${gridX}, ${gridY}), snapping back`);
-                        this.snapUnitBack(sprite, unit, dragData);
+                        console.log(`❌ Drop outside grid bounds`);
                     }
-                } else {
-                    // Out of bounds - snap back
-                    console.log(`Out of bounds drop, snapping back`);
-                    this.snapUnitBack(sprite, unit, dragData);
                 }
-            });
+                
+                dragData.isDragging = false;
+            };
+            
+            console.log(`✅ DOM-based drag setup complete for unit ${unit.name}`);
+        };
+        
+        Phaser.Scene.prototype.showSellConfirmation = function(sprite, unit) {
+            console.log(`💰 Showing sell confirmation for unit ${unit.name}`);
+            
+            // Check if we're in preparation phase
+            if (!gameState || gameState.phase !== 'preparation') {
+                console.log(`❌ Cannot sell unit - wrong phase: ${gameState?.phase}`);
+                return;
+            }
+            
+            // Calculate sell price (75% of purchase price, rounded up)
+            const unitCost = AVAILABLE_UNITS[unit.name.toLowerCase()]?.cost || 20;
+            const sellPrice = Math.ceil(unitCost * 0.75);
+            
+            // Store unit reference for confirmation
+            window.currentSellUnit = { sprite, unit, sellPrice };
+            
+            // Update tooltip content
+            document.getElementById('sell-tooltip-name').textContent = unit.name.toUpperCase();
+            document.getElementById('sell-tooltip-price').textContent = `💰 ${sellPrice}`;
+            
+            // Add sprite to tooltip
+            const spriteContainer = document.getElementById('sell-tooltip-sprite');
+            spriteContainer.innerHTML = '';
+            createAnimatedUnitSprite(spriteContainer, unit.name.toLowerCase(), 60, 60);
+            
+            // Position tooltip near the clicked unit
+            const tooltip = document.getElementById('sell-tooltip');
+            const gameCanvas = document.getElementById('game-canvas');
+            const canvasRect = gameCanvas.getBoundingClientRect();
+            
+            // Calculate tooltip position relative to sprite
+            const tooltipX = Math.min(canvasRect.left + sprite.x + 50, window.innerWidth - 250);
+            const tooltipY = Math.max(canvasRect.top + sprite.y - 100, 10);
+            
+            tooltip.style.left = `${tooltipX}px`;
+            tooltip.style.top = `${tooltipY}px`;
+            
+            // Show tooltip
+            tooltip.classList.remove('hidden');
         };
         
         Phaser.Scene.prototype.snapUnitBack = function(sprite, unit, dragData) {
@@ -2868,6 +3203,53 @@
                         indicator.setPosition(originalWorldX, originalWorldY);
                     }
                 });
+            }
+        };
+        
+        Phaser.Scene.prototype.showDropZonePreview = function(worldX, worldY, playerId) {
+            // Calculate grid position
+            const gridX = Math.floor((worldX - this.gridX) / this.cellSize);
+            const gridY = Math.floor((worldY - this.gridY) / this.cellSize);
+            
+            // Clear previous preview
+            this.clearDropZonePreview();
+            
+            // Check if position is valid
+            if (gridX >= 0 && gridX < this.gridWidth && gridY >= 0 && gridY < this.gridHeight) {
+                const targetCell = gameState?.grid?.[gridY]?.[gridX];
+                const isValidDrop = !targetCell?.occupied || targetCell?.playerId === playerId;
+                
+                // Create preview graphics
+                if (!this.dropZonePreview) {
+                    this.dropZonePreview = this.add.graphics();
+                }
+                
+                this.dropZonePreview.clear();
+                this.dropZonePreview.setDepth(5); // Above grid, below units
+                
+                // Draw preview cell
+                const cellWorldX = this.gridX + (gridX * this.cellSize);
+                const cellWorldY = this.gridY + (gridY * this.cellSize);
+                
+                if (isValidDrop) {
+                    // Green for valid drop
+                    this.dropZonePreview.fillStyle(0x4CAF50, 0.5);
+                    this.dropZonePreview.fillRect(cellWorldX, cellWorldY, this.cellSize, this.cellSize);
+                    this.dropZonePreview.lineStyle(3, 0x4CAF50, 1);
+                    this.dropZonePreview.strokeRect(cellWorldX, cellWorldY, this.cellSize, this.cellSize);
+                } else {
+                    // Red for invalid drop
+                    this.dropZonePreview.fillStyle(0xF44336, 0.5);
+                    this.dropZonePreview.fillRect(cellWorldX, cellWorldY, this.cellSize, this.cellSize);
+                    this.dropZonePreview.lineStyle(3, 0xF44336, 1);
+                    this.dropZonePreview.strokeRect(cellWorldX, cellWorldY, this.cellSize, this.cellSize);
+                }
+            }
+        };
+        
+        Phaser.Scene.prototype.clearDropZonePreview = function() {
+            if (this.dropZonePreview) {
+                this.dropZonePreview.clear();
             }
         };
         
@@ -2951,6 +3333,9 @@
             }
             this.gridGraphics.strokePath();
             
+            // Clear any existing highlights before setting up interaction
+            highlightedCells.clear();
+            
             // Setup grid cell interaction for highlighting
             this.setupGridCellInteraction();
         };
@@ -2974,15 +3359,21 @@
             });
         };
         
-        Phaser.Scene.prototype.getPlayerColor = function(playerId) {
-            // Find player index based on game state
-            if (gameState && gameState.players) {
-                const playerIndex = gameState.players.findIndex(p => p.id === playerId);
-                const colorValues = [0x00ff00, 0xff0000, 0x0000ff, 0xffff00]; // Green, Red, Blue, Yellow
-                return colorValues[playerIndex] || 0x00ff00;
+        Phaser.Scene.prototype.getPlayerColor = function(targetPlayerId) {
+            // Always show green for the current player's highlights
+            const currentPlayerId = playerId || (socket && socket.id);
+            if (targetPlayerId === currentPlayerId) {
+                return 0x00ff00; // Always green for current player
             }
             
-            return 0x00ff00; // Default green
+            // For other players, use distinct colors
+            if (gameState && gameState.players) {
+                const playerIndex = gameState.players.findIndex(p => p.id === targetPlayerId);
+                const colorValues = [0x00ff00, 0xff0000, 0x0000ff, 0xffff00]; // Green, Red, Blue, Yellow
+                return colorValues[playerIndex] || 0xff0000; // Default to red for others
+            }
+            
+            return 0xff0000; // Default red for other players
         };
         
         Phaser.Scene.prototype.setupGridCellInteraction = function() {
@@ -3011,14 +3402,22 @@
                     
                     // Mouse enter - highlight cell
                     zone.on('pointerover', () => {
-                        highlightedCells.set(playerId, { x: x, y: y });
-                        this.drawGrid(); // Redraw to show highlight
+                        // Use current player ID, not the potentially stale global variable
+                        const currentPlayerId = playerId || (socket && socket.id);
+                        if (currentPlayerId) {
+                            highlightedCells.set(currentPlayerId, { x: x, y: y });
+                            this.drawGrid(); // Redraw to show highlight
+                        }
                     });
                     
                     // Mouse leave - remove highlight
                     zone.on('pointerout', () => {
-                        highlightedCells.delete(playerId);
-                        this.drawGrid(); // Redraw to remove highlight
+                        // Use current player ID, not the potentially stale global variable
+                        const currentPlayerId = playerId || (socket && socket.id);
+                        if (currentPlayerId) {
+                            highlightedCells.delete(currentPlayerId);
+                            this.drawGrid(); // Redraw to remove highlight
+                        }
                     });
                     
                     this.gridInteractionZones.push(zone);
@@ -3231,8 +3630,22 @@
                                 console.log(`${isOwnUnit ? '👤 OWN' : '👥 OTHER'} UNIT: ${unitName} (Player: ${unit.playerId}, Color: ${color.primary})`);
                                 
                                 // Add drag functionality for own units only
-                                if (isOwnUnit && (state.phase === 'preparation' || state.phase === 'post-combat')) {
-                                    this.setupGridUnitDrag(sprite, unit);
+                                console.log(`Unit ${unitName}: isOwnUnit=${isOwnUnit}, phase=${state.phase}, playerId=${unit.playerId}, currentPlayer=${playerId}`);
+                                if (isOwnUnit) {
+                                    // Allow drag in preparation phase and post-combat phase
+                                    if (state.phase === 'preparation' || state.phase === 'post-combat') {
+                                        console.log(`✅ Setting up drag for unit ${unitName} (ID: ${unit.id}) in phase: ${state.phase}`);
+                                        this.setupGridUnitDrag(sprite, unit);
+                                    } else {
+                                        console.log(`⏸️ Unit ${unitName} owned but cannot drag - wrong phase: ${state.phase}`);
+                                        // Still make it clickable for future features (like selling)
+                                        sprite.setInteractive();
+                                        sprite.on('pointerdown', () => {
+                                            console.log(`🖱️ Click on unit ${unitName} in phase ${state.phase}`);
+                                        });
+                                    }
+                                } else {
+                                    console.log(`❌ Cannot drag unit ${unitName} - not owned by player (owner: ${unit.playerId})`);
                                 }
                                 
                                 // Tooltip functionality is already handled above
@@ -3516,6 +3929,115 @@
             }
         };
         
+        Phaser.Scene.prototype.showHealEffect = function(targetUnitId, healAmount) {
+            if (!this.combatUnits || !this.combatUnits[targetUnitId]) return;
+            
+            const unitData = this.combatUnits[targetUnitId];
+            if (!unitData.sprite || !unitData.sprite.scene) return;
+            
+            // Create yellow flash effect
+            const flash = this.add.circle(unitData.sprite.x, unitData.sprite.y - 10, 20, 0xFFFF00, 0.8);
+            flash.setDepth(unitData.sprite.y + 50);
+            
+            // Create healing text
+            const healText = this.add.text(unitData.sprite.x, unitData.sprite.y - 30, `+${Math.round(healAmount)}`, {
+                fontSize: '14px',
+                color: '#00FF00',
+                stroke: '#000000',
+                strokeThickness: 2
+            });
+            healText.setOrigin(0.5);
+            healText.setDepth(unitData.sprite.y + 51);
+            
+            // Animate the flash and text
+            this.tweens.add({
+                targets: flash,
+                scaleX: 2,
+                scaleY: 2,
+                alpha: 0,
+                duration: 300,
+                onComplete: () => {
+                    flash.destroy();
+                }
+            });
+            
+            this.tweens.add({
+                targets: healText,
+                y: healText.y - 20,
+                alpha: 0,
+                duration: 800,
+                onComplete: () => {
+                    healText.destroy();
+                }
+            });
+            
+            // Flash the unit sprite yellow briefly
+            const originalTint = unitData.sprite.tint;
+            unitData.sprite.setTint(0xFFFF88);
+            this.time.delayedCall(200, () => {
+                if (unitData.sprite && unitData.sprite.scene) {
+                    unitData.sprite.setTint(originalTint);
+                }
+            });
+        };
+        
+        Phaser.Scene.prototype.createWizardProjectile = function(attackerId, targetId) {
+            if (!this.combatUnits || !this.combatUnits[attackerId] || !this.combatUnits[targetId]) return;
+            
+            const attackerData = this.combatUnits[attackerId];
+            const targetData = this.combatUnits[targetId];
+            
+            if (!attackerData.sprite || !targetData.sprite || !attackerData.sprite.scene) return;
+            
+            // Check if wizard texture exists and has Magic_arrow_2 frame
+            if (!this.textures.exists('wizard')) return;
+            
+            const wizardTexture = this.textures.get('wizard');
+            const frameNames = wizardTexture.getFrameNames();
+            const magicArrowFrame = frameNames.find(frame => frame === 'Charge_2_1 #11.png');
+            
+            if (!magicArrowFrame) return;
+            
+            // Create projectile sprite
+            const projectile = this.add.sprite(attackerData.sprite.x, attackerData.sprite.y - 10, 'wizard', magicArrowFrame);
+            projectile.setScale(0.4);
+            projectile.setDepth(attackerData.sprite.y + 25);
+            
+            // Calculate angle to target
+            const angle = Phaser.Math.Angle.Between(
+                attackerData.sprite.x, attackerData.sprite.y,
+                targetData.sprite.x, targetData.sprite.y
+            );
+            projectile.setRotation(angle);
+            
+            // Animate projectile to target
+            this.tweens.add({
+                targets: projectile,
+                x: targetData.sprite.x,
+                y: targetData.sprite.y - 10,
+                duration: 400,
+                ease: 'Power2',
+                onComplete: () => {
+                    // Create impact effect
+                    const impact = this.add.circle(targetData.sprite.x, targetData.sprite.y - 10, 15, 0x4488FF, 0.7);
+                    impact.setDepth(targetData.sprite.y + 30);
+                    
+                    this.tweens.add({
+                        targets: impact,
+                        scaleX: 2,
+                        scaleY: 2,
+                        alpha: 0,
+                        duration: 200,
+                        onComplete: () => {
+                            impact.destroy();
+                        }
+                    });
+                    
+                    projectile.destroy();
+                }
+            });
+        };
+        
         Phaser.Scene.prototype.updateCombatState = function(playerUnits, enemyUnits) {
             // Update unit positions during combat
             [...playerUnits, ...enemyUnits].forEach(unit => {
@@ -3540,7 +4062,7 @@
                         const unitName = unit.name.toLowerCase();
                         const deathAnimKey = `${unitName}_death`;
                         
-                        if (!unitData.hasPlayedDeath) {
+                        if (!unitData.hasPlayedDeath && !unitData.deathAnimationComplete) {
                             // Mark that we've started the death animation
                             unitData.hasPlayedDeath = true;
                             
@@ -3548,27 +4070,10 @@
                                 console.log(`Playing death animation: ${deathAnimKey} for unit ${unit.id}`);
                                 unitData.sprite.play(deathAnimKey);
                                 
-                                // After death animation completes, remove unit from battlefield  
+                                // After death animation completes, remove unit from battlefield immediately
                                 unitData.sprite.once('animationcomplete', () => {
-                                    console.log(`Death animation complete for unit ${unit.id}, removing from battlefield`);
-                                    // Remove the sprite completely after death animation
-                                    this.time.delayedCall(500, () => {
-                                        if (unitData.sprite && unitData.sprite.scene) {
-                                            unitData.sprite.setVisible(false);
-                                            unitData.sprite.destroy();
-                                        }
-                                        if (unitData.healthBar && unitData.healthBar.container && unitData.healthBar.container.scene) {
-                                            unitData.healthBar.container.destroy();
-                                        }
-                                        // Remove from tracking
-                                        this.unitSprites = this.unitSprites.filter(s => s !== unitData.sprite);
-                                        delete this.unitSpriteMap[unit.id];
-                                    });
-                                });
-                            } else {
-                                // Fallback: immediately remove if no death animation
-                                console.log(`No death animation for ${unitName}, removing immediately`);
-                                this.time.delayedCall(1000, () => {
+                                    console.log(`Death animation complete for unit ${unit.id}, removing from battlefield immediately`);
+                                    // Remove the sprite immediately after death animation
                                     if (unitData.sprite && unitData.sprite.scene) {
                                         unitData.sprite.setVisible(false);
                                         unitData.sprite.destroy();
@@ -3576,9 +4081,26 @@
                                     if (unitData.healthBar && unitData.healthBar.container && unitData.healthBar.container.scene) {
                                         unitData.healthBar.container.destroy();
                                     }
+                                    // Remove from tracking
                                     this.unitSprites = this.unitSprites.filter(s => s !== unitData.sprite);
-                                    delete this.unitSpriteMap[unit.id];
+                                    if (unit && unit.id && this.unitSpriteMap) {
+                                        delete this.unitSpriteMap[unit.id];
+                                    }
                                 });
+                            } else {
+                                // Fallback: immediately remove if no death animation
+                                console.log(`No death animation for ${unitName}, removing immediately`);
+                                if (unitData.sprite && unitData.sprite.scene) {
+                                    unitData.sprite.setVisible(false);
+                                    unitData.sprite.destroy();
+                                }
+                                if (unitData.healthBar && unitData.healthBar.container && unitData.healthBar.container.scene) {
+                                    unitData.healthBar.container.destroy();
+                                }
+                                this.unitSprites = this.unitSprites.filter(s => s !== unitData.sprite);
+                                if (unit && unit.id && this.unitSpriteMap) {
+                                    delete this.unitSpriteMap[unit.id];
+                                }
                             }
                         }
                     } else {
@@ -3985,11 +4507,16 @@
         const activeAnimations = new Map();
         
         // Universal animated sprite creator - EXACTLY matches grid sprite behavior
-        function createAnimatedUnitSprite(container, unitKey, width = 48, height = 48, animSpeed = 300) {
+        function createAnimatedUnitSprite(container, unitKey, width = 48, height = 48, animSpeed = 100) {
             // Clear any existing animation for this container
             const containerId = container.id || Math.random().toString();
             if (activeAnimations.has(containerId)) {
-                clearTimeout(activeAnimations.get(containerId));
+                const existingAnimation = activeAnimations.get(containerId);
+                if (typeof existingAnimation === 'number') {
+                    cancelAnimationFrame(existingAnimation);
+                } else {
+                    clearTimeout(existingAnimation);
+                }
                 activeAnimations.delete(containerId);
             }
             
@@ -4003,44 +4530,70 @@
             canvas.style.width = width + 'px';
             canvas.style.height = height + 'px';
             canvas.style.imageRendering = 'pixelated';
+            canvas.setAttribute('data-unit', unitKey);
             container.appendChild(canvas);
             
             const ctx = canvas.getContext('2d');
             
             // Try to create a Phaser sprite exactly like grid sprites if scene is available
             if (window.gameScene && window.gameScene.textures && window.gameScene.textures.exists(unitKey)) {
-                // Create an off-screen Phaser sprite EXACTLY like addUnitToScene does
+                // Create an off-screen Phaser sprite EXACTLY like grid sprites
                 const offScreenSprite = window.gameScene.add.sprite(-2000, -2000, unitKey);
-                offScreenSprite.setScale(0.75); // Initial scale from addUnitToScene
-                offScreenSprite.setVisible(false); // Keep it invisible
                 
-                // Apply the SAME secondary scale as grid sprites
-                // This is the key missing piece! Grid sprites get scaled again
-                // Use the actual grid cellSize if available, otherwise estimate from container
-                const actualCellSize = window.gameScene?.cellSize || Math.min(width, height);
-                const gridScale = Math.min(actualCellSize / 80, 0.8); // EXACT same formula as grid
-                offScreenSprite.setScale(gridScale); // This overwrites 0.75 just like grid sprites
+                // Use EXACT same scaling as grid sprites - no complex calculations
+                // Grid sprites use 0.75 base scale, then cellSize scaling
+                offScreenSprite.setScale(0.75);
+                
+                // Apply grid cell scaling like grid sprites do
+                if (window.gameScene.cellSize) {
+                    const gridScale = Math.min(window.gameScene.cellSize / 80, 0.8);
+                    offScreenSprite.setScale(gridScale);
+                }
+                
+                offScreenSprite.setVisible(false);
                 
                 // Try to play idle animation exactly like grid sprites
                 const idleAnimKey = `${unitKey}_idle`;
                 if (window.gameScene.anims.exists(idleAnimKey)) {
                     offScreenSprite.play(idleAnimKey);
-                    console.log(`UI Sprite: Playing ${idleAnimKey} animation like grid`);
+                    console.log(`UI Sprite: Playing ${idleAnimKey} animation`);
                 } else {
-                    // Fallback to first frame like grid sprites
-                    console.warn(`UI Sprite: Animation ${idleAnimKey} not found, trying first frame`);
-                    const texture = window.gameScene.textures.get(unitKey);
-                    const frames = texture.getFrameNames();
-                    if (frames.length > 0) {
-                        offScreenSprite.setFrame(frames[0]);
-                        console.log(`UI Sprite: Set ${unitKey} to frame: ${frames[0]}`);
+                    // Fallback: try different animation naming patterns
+                    const altAnimKeys = [`${unitKey}-idle`, `idle_${unitKey}`, `${unitKey}_walk`];
+                    let animFound = false;
+                    
+                    for (const altKey of altAnimKeys) {
+                        if (window.gameScene.anims.exists(altKey)) {
+                            offScreenSprite.play(altKey);
+                            console.log(`UI Sprite: Playing alternative animation ${altKey}`);
+                            animFound = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!animFound) {
+                        // Use first frame like grid sprites
+                        const texture = window.gameScene.textures.get(unitKey);
+                        const frames = texture.getFrameNames();
+                        if (frames.length > 0) {
+                            // Try to find a good frame (not just first)
+                            let bestFrame = frames[0];
+                            const preferredFrames = frames.filter(f => 
+                                f.includes('idle') || f.includes('001') || f.includes('_1')
+                            );
+                            if (preferredFrames.length > 0) {
+                                bestFrame = preferredFrames[0];
+                            }
+                            offScreenSprite.setFrame(bestFrame);
+                            console.log(`UI Sprite: Set ${unitKey} to frame: ${bestFrame}`);
+                        }
                     }
                 }
                 
                 // Set depth like grid sprites
                 offScreenSprite.setDepth(10);
                 
-                // Render the Phaser sprite to our canvas
+                // Use requestAnimationFrame for smooth 60fps rendering like Phaser
                 const renderSprite = () => {
                     if (!container.parentNode) {
                         // Clean up sprite when container is removed
@@ -4048,7 +4601,7 @@
                             offScreenSprite.destroy();
                         }
                         if (activeAnimations.has(containerId)) {
-                            clearTimeout(activeAnimations.get(containerId));
+                            cancelAnimationFrame(activeAnimations.get(containerId));
                             activeAnimations.delete(containerId);
                         }
                         return;
@@ -4059,7 +4612,7 @@
                     // Get the current frame from the Phaser sprite
                     const frame = offScreenSprite.frame;
                     if (frame && frame.source && frame.source.image) {
-                        // Calculate positioning to center the sprite in canvas
+                        // Calculate positioning to center the sprite in canvas - EXACT same as grid
                         const spriteWidth = frame.width * offScreenSprite.scaleX;
                         const spriteHeight = frame.height * offScreenSprite.scaleY;
                         const x = (width - spriteWidth) / 2;
@@ -4072,16 +4625,21 @@
                         if (offScreenSprite.flipY) ctx.scale(1, -1);
                         ctx.globalAlpha = offScreenSprite.alpha;
                         
-                        ctx.drawImage(
-                            frame.source.image,
-                            frame.x, frame.y, frame.width, frame.height,
-                            -spriteWidth / 2, -spriteHeight / 2, spriteWidth, spriteHeight
-                        );
+                        try {
+                            ctx.drawImage(
+                                frame.source.image,
+                                frame.cutX || frame.x, frame.cutY || frame.y, 
+                                frame.cutWidth || frame.width, frame.cutHeight || frame.height,
+                                -spriteWidth / 2, -spriteHeight / 2, spriteWidth, spriteHeight
+                            );
+                        } catch (e) {
+                            console.warn(`Failed to draw ${unitKey}:`, e);
+                        }
                         ctx.restore();
                     }
                     
-                    // Continue animation loop
-                    const animationId = setTimeout(renderSprite, animSpeed);
+                    // Continue animation loop with requestAnimationFrame for smooth 60fps
+                    const animationId = requestAnimationFrame(renderSprite);
                     activeAnimations.set(containerId, animationId);
                 };
                 
@@ -4094,7 +4652,7 @@
         
         // Maintain backward compatibility
         function createUpgradeUnitSprite(container, unitKey) {
-            createAnimatedUnitSprite(container, unitKey, 48, 48, 300);
+            createAnimatedUnitSprite(container, unitKey, 80, 80, 300);
         }
         
         function drawTextSprite(ctx, text, width, height) {
@@ -4120,6 +4678,42 @@
                 socket.emit('rerollUpgrades');
             }
         }
+        
+        // Sell Unit Functions
+        function confirmSellUnit() {
+            console.log('Confirming unit sale');
+            
+            if (!window.currentSellUnit) {
+                console.error('No unit selected for sale');
+                return;
+            }
+            
+            const { unit, sellPrice } = window.currentSellUnit;
+            
+            if (socket && socket.connected) {
+                console.log(`💰 Selling unit ${unit.name} for ${sellPrice} gold`);
+                socket.emit('sellUnit', unit.id);
+            } else {
+                console.error('Socket not connected, cannot sell unit');
+            }
+            
+            // Close tooltip
+            closeSellTooltip();
+        }
+        
+        function closeSellTooltip() {
+            console.log('Closing sell tooltip');
+            document.getElementById('sell-tooltip').classList.add('hidden');
+            window.currentSellUnit = null;
+        }
+        
+        // Add click-outside functionality for sell tooltip
+        document.addEventListener('click', function(event) {
+            const tooltip = document.getElementById('sell-tooltip');
+            if (!tooltip.classList.contains('hidden') && !tooltip.contains(event.target)) {
+                closeSellTooltip();
+            }
+        });
         
         // Initialize everything when page loads
         window.addEventListener('load', () => {

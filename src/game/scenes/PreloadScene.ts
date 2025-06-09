@@ -101,6 +101,17 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.audio('furrySound', '/assets/units/furry/furrySound.mp3');
     this.load.audio('redDragonSound', '/assets/units/red dragon/red dragonSound.mp3');
     this.load.audio('explodeSound', '/assets/units/avatars/explode.mp3');
+    
+    // Load upgrade icons
+    const upgradeIcons = [
+      'evasive_maneuvers', 'explosive_end', 'final_gift', 'poison_blade',
+      'power_surge', 'rapid_strikes', 'slowing_aura', 'swift_boots',
+      'taunt', 'vampiric_strike', 'vitality_boost'
+    ];
+    
+    upgradeIcons.forEach(icon => {
+      this.load.image(icon, `/assets/upgradeicons/${icon}.png`);
+    });
   }
 
   create() {

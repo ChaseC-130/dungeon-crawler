@@ -84,6 +84,10 @@ io.on('connection', (socket) => {
     gameManager.handleSellUnit(socket, unitId);
   });
   
+  socket.on('sellUnit', (unitId) => {
+    gameManager.handleSellUnit(socket, unitId);
+  });
+  
   socket.on('reroll-shop', () => {
     gameManager.handleRerollShop(socket);
   });

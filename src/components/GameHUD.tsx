@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useGame } from '../contexts/GameContext';
 import ShopPanel from './ShopPanel';
@@ -13,10 +14,47 @@ import UpgradePanel from './UpgradePanel';
 const GameHUD: React.FC = () => {
   const { gameState, player, setReady } = useGame();
   const [showGridToggle, setShowGridToggle] = React.useState(false);
+  const [showPlayerTooltip, setShowPlayerTooltip] = useState(false);
 
   if (!gameState || !player) {
     return null;
   }
+
+  // Get unit counts by type
+  const getUnitCounts = () => {
+    const counts: { [key: string]: number } = {};
+    player.units.forEach(unit => {
+      counts[unit.name] = (counts[unit.name] || 0) + 1;
+    });
+    return counts;
+  };
+
+  // Get all upgrades applied to player's units
+  const getAllUpgrades = () => {
+    const upgrades: { [key: string]: string[] } = {};
+    player.units.forEach(unit => {
+      if (unit.buffs && unit.buffs.length > 0) {
+        const unitUpgrades = unit.buffs.map(buff => {
+          // Convert buff type to readable upgrade name
+          switch (buff.type) {
+            case 'lifesteal': return 'Vampiric Strike';
+            case 'movementSpeed': return 'Swift Boots';
+            case 'health': return 'Vitality Boost';
+            case 'damage': return 'Power Surge';
+            case 'attackSpeed': return 'Rapid Strikes';
+            case 'priority': return buff.value > 0 ? 'Evasive Maneuvers' : 'Taunt';
+            case 'deathHeal': return 'Final Gift';
+            case 'deathExplosion': return 'Explosive End';
+            case 'poison': return 'Poison Blade';
+            case 'slowAura': return 'Slowing Aura';
+            default: return buff.type;
+          }
+        });
+        upgrades[unit.name] = unitUpgrades;
+      }
+    });
+    return upgrades;
+  };
 
   const renderPhaseInfo = () => {
     switch (gameState.phase) {
@@ -87,10 +125,13 @@ const GameHUD: React.FC = () => {
           <Text style={styles.goldText}>{player.gold}</Text>
         </View>
         {renderPhaseInfo()}
-        <View style={styles.playerInfo}>
+        <TouchableOpacity 
+          style={styles.playerInfo}
+          onPress={() => setShowPlayerTooltip(true)}
+        >
           <Text style={[styles.playerName, { color: player.color || '#FFF' }]}>{player.name}</Text>
           <Text style={styles.unitCount}>Units: {player.units.length}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Unplaced Units */}
@@ -124,8 +165,59 @@ const GameHUD: React.FC = () => {
       {/* Bottom HUD */}
       <View style={styles.bottomHUD}>
         {gameState.phase === 'preparation' && <ShopPanel />}
-        {gameState.phase === 'post-combat' && <UpgradePanel />}
+        {gameState.phase === 'post-combat' && player?.upgradeCards && player.upgradeCards.length > 0 && <UpgradePanel />}
       </View>
+
+      {/* Player Info Tooltip Modal */}
+      <Modal
+        visible={showPlayerTooltip}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPlayerTooltip(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          onPress={() => setShowPlayerTooltip(false)}
+        >
+          <View style={styles.tooltipContainer}>
+            <Text style={styles.tooltipTitle}>{player.name}'s Army</Text>
+            
+            <View style={styles.tooltipSection}>
+              <Text style={styles.tooltipSectionTitle}>Unit Counts:</Text>
+              {Object.entries(getUnitCounts()).map(([unitType, count]) => (
+                <Text key={unitType} style={styles.tooltipItem}>
+                  • {unitType}: {count}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.tooltipSection}>
+              <Text style={styles.tooltipSectionTitle}>Upgrades:</Text>
+              {Object.keys(getAllUpgrades()).length > 0 ? (
+                Object.entries(getAllUpgrades()).map(([unitType, upgrades]) => (
+                  <View key={unitType} style={styles.upgradeGroup}>
+                    <Text style={styles.upgradeUnitType}>{unitType}:</Text>
+                    {upgrades.map((upgrade, index) => (
+                      <Text key={index} style={styles.tooltipItem}>
+                        • {upgrade}
+                      </Text>
+                    ))}
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.tooltipItem}>No upgrades yet</Text>
+              )}
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowPlayerTooltip(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -276,6 +368,67 @@ const styles = StyleSheet.create({
   unplacedUnitStats: {
     color: '#CCC',
     fontSize: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tooltipContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    borderRadius: 15,
+    padding: 20,
+    marginHorizontal: 20,
+    maxWidth: 400,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+  },
+  tooltipTitle: {
+    color: '#FFD700',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  tooltipSection: {
+    marginBottom: 15,
+  },
+  tooltipSectionTitle: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  tooltipItem: {
+    color: '#CCC',
+    fontSize: 14,
+    marginBottom: 4,
+    paddingLeft: 10,
+  },
+  upgradeGroup: {
+    marginBottom: 8,
+  },
+  upgradeUnitType: {
+    color: '#4CAF50',
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  closeButton: {
+    backgroundColor: '#1976D2',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignSelf: 'center',
+    marginTop: 10,
+    borderWidth: 2,
+    borderColor: '#0D47A1',
+  },
+  closeButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

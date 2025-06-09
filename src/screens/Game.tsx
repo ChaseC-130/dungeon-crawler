@@ -19,7 +19,7 @@ const { width, height } = Dimensions.get('window');
 
 const Game: React.FC = () => {
   const route = useRoute<GameScreenProps['route']>();
-  const { gameState, player, placeUnit, purchaseUnit, purchaseAndPlaceUnit, selectStartingUnits } = useGame();
+  const { gameState, player, placeUnit, moveUnit, purchaseUnit, purchaseAndPlaceUnit, selectStartingUnits } = useGame();
   const gameRef = useRef<PhaserGame | null>(null);
   const containerRef = useRef<View>(null);
   const [showUnitSelection, setShowUnitSelection] = useState(true);
@@ -35,8 +35,13 @@ const Game: React.FC = () => {
         height
       );
       
-      // Add drag and drop support to the container
+      // Add touch and drag support to the container
       if (container) {
+        // Prevent default touch behaviors to allow Phaser to handle them
+        container.style.touchAction = 'none';
+        container.style.userSelect = 'none';
+        container.style.webkitUserSelect = 'none';
+        
         container.addEventListener('dragover', (e: DragEvent) => {
           e.preventDefault();
           e.dataTransfer!.dropEffect = 'copy';
@@ -52,11 +57,17 @@ const Game: React.FC = () => {
             console.log('Dropped unit:', unitType);
           }
         });
+        
+        // Prevent context menu on touch devices
+        container.addEventListener('contextmenu', (e: Event) => {
+          e.preventDefault();
+        });
       }
       
       // Expose functions globally for Phaser to access
       (window as any).purchaseAndPlaceUnit = purchaseAndPlaceUnit;
       (window as any).placeUnit = placeUnit;
+      (window as any).moveUnit = moveUnit;
       (window as any).purchaseUnit = purchaseUnit;
       
       // Listen for game events
@@ -88,9 +99,10 @@ const Game: React.FC = () => {
       // Cleanup global functions
       delete (window as any).purchaseAndPlaceUnit;
       delete (window as any).placeUnit;
+      delete (window as any).moveUnit;
       delete (window as any).purchaseUnit;
     };
-  }, [placeUnit, purchaseUnit, purchaseAndPlaceUnit]);
+  }, [placeUnit, moveUnit, purchaseUnit, purchaseAndPlaceUnit]);
 
   useEffect(() => {
     // Update Phaser game state when React state changes

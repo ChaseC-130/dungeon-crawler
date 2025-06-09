@@ -23,7 +23,7 @@ const UNIT_STATS = {
     health: 38, // Reduced by another 50% for much faster combat
     range: 8, // Increased from 3 to 8 to prevent collision circling
     priority: 1,
-    movementSpeed: 38, // Reduced by 50% for slower tactical movement
+    movementSpeed: 48, // Increased by 25% from 38
     armorType: 'Heavy',
     innatePassive: 'Gains ×2 effectiveness from heals'
   },
@@ -31,14 +31,14 @@ const UNIT_STATS = {
     name: 'Priest',
     cost: 12,
     damage: 1,
-    attackSpeed: 3.00,
+    attackSpeed: 0.5, // 0.5 attacks per second = heals every 2 seconds
     attackType: 'Magical',
     health: 20, // Reduced by another 50% for much faster combat
-    range: 50,
+    range: 10, // Slightly higher than knight's 8, but much lower than 50
     priority: 4,
-    movementSpeed: 30, // Reduced by 50% for slower tactical movement
+    movementSpeed: 38, // Increased by 25% from 30
     armorType: 'Unarmored',
-    innatePassive: 'Heals a nearby damaged friendly Unit for 1 HP/sec'
+    innatePassive: 'Heals friendly units instead of attacking enemies'
   },
   bishop: {
     name: 'Bishop',
@@ -62,7 +62,7 @@ const UNIT_STATS = {
     health: 30, // Reduced by another 50% for much faster combat
     range: 8, // Increased from 3 to 8 to prevent collision circling
     priority: 3,
-    movementSpeed: 40, // Reduced by 50% for slower tactical movement
+    movementSpeed: 50, // Increased by 25% from 40
     armorType: 'Light',
     innatePassive: null
   },
@@ -75,7 +75,7 @@ const UNIT_STATS = {
     health: 20, // Reduced by another 50% for much faster combat
     range: 8, // Increased from 3 to 8 to prevent collision circling
     priority: 3,
-    movementSpeed: 35, // Reduced by 50% for slower tactical movement
+    movementSpeed: 44, // Increased by 25% from 35
     armorType: 'Unarmored',
     innatePassive: null
   },
@@ -88,7 +88,7 @@ const UNIT_STATS = {
     health: 18, // Reduced by another 50% for much faster combat
     range: 50,
     priority: 3,
-    movementSpeed: 30, // Reduced by 50% for slower tactical movement
+    movementSpeed: 38, // Increased by 25% from 30
     armorType: 'Unarmored',
     innatePassive: null
   },
@@ -101,7 +101,7 @@ const UNIT_STATS = {
     health: 25, // Reduced by another 50% for much faster combat
     range: 8, // Increased from 3 to 8 to prevent collision circling
     priority: 2,
-    movementSpeed: 30, // Reduced by 50% for slower tactical movement
+    movementSpeed: 38, // Increased by 25% from 30
     armorType: 'Heavy',
     innatePassive: 'Units damaged by this Unit grant +10% extra gold (stacks once per Gladiator)'
   }

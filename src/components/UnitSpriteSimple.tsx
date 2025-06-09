@@ -1,10 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Image, StyleSheet, Platform } from 'react-native';
+import { View, Image, StyleSheet, Platform, Dimensions } from 'react-native';
+
+// Calculate grid cell size to match main game
+const calculateGridCellSize = () => {
+  const { width, height } = Dimensions.get('window');
+  const gridWidth = 20;
+  const gridHeight = 8;
+  return Math.min(
+    (width * 0.9) / gridWidth,
+    (height * 0.7) / gridHeight
+  );
+};
 
 interface UnitSpriteSimpleProps {
   unitName: string;
   width: number;
   height: number;
+  useGridCellSize?: boolean; // If true, calculate size like grid cells
 }
 
 function getUnitColor(unitName: string): string {
@@ -25,7 +37,7 @@ function getUnitColor(unitName: string): string {
   return colors[unitName.toLowerCase()] || '#666666';
 }
 
-const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, height }) => {
+const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, height, useGridCellSize = false }) => {
   const [spriteDataUrl, setSpriteDataUrl] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +45,10 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
   const animationRef = useRef<number | null>(null);
   const idleFramesRef = useRef<any[]>([]);
   const currentFrameRef = useRef(0);
+
+  // Use grid cell size if requested, otherwise use provided dimensions
+  const finalWidth = useGridCellSize ? calculateGridCellSize() : width;
+  const finalHeight = useGridCellSize ? calculateGridCellSize() : height;
 
   useEffect(() => {
     const loadSprite = async () => {
@@ -63,20 +79,50 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
           if (!ctx) return;
 
           // Clear canvas
-          ctx.clearRect(0, 0, width, height);
+          ctx.clearRect(0, 0, finalWidth, finalHeight);
 
           // Find idle frames (TexturePacker or Phaser atlas formats)
           let frameData: any = null;
           let idleFrames: any[] = [];
+
+          // Complex frame sorting function matching main game exactly
+          const extractFrameInfo = (frameName: string) => {
+            // Matches: (Action)_ (MainFrameNumber) _ (SubFrameNumber) (AnythingElse) .png
+            // Or:      (Action)_ (MainFrameNumber) (AnythingElse) .png
+            const match = frameName.match(/^([a-zA-Z]+)_(\d+)(?:_(\d+))?.*?\.png$/i);
+            if (match) {
+              const mainFrame = parseInt(match[2], 10);
+              const subFrame = match[3] ? parseInt(match[3], 10) : 0;
+              return { mainFrame, subFrame };
+            }
+            // Fallback: try to find any number if the pattern is different
+            const fallbackMatch = frameName.match(/(\d+)/);
+            if (fallbackMatch) {
+              return { mainFrame: parseInt(fallbackMatch[1], 10), subFrame: 0 };
+            }
+            return { mainFrame: Infinity, subFrame: Infinity };
+          };
+
+          const sortFrames = (frameA: any, frameB: any, getNameFn: (f: any) => string) => {
+            const infoA = extractFrameInfo(getNameFn(frameA));
+            const infoB = extractFrameInfo(getNameFn(frameB));
+
+            if (infoA.mainFrame === infoB.mainFrame) {
+              return infoA.subFrame - infoB.subFrame;
+            }
+            return infoA.mainFrame - infoB.mainFrame;
+          };
 
           if (jsonData.textures && jsonData.textures[0] && jsonData.textures[0].frames) {
             // TexturePacker format
             const frames = jsonData.textures[0].frames;
             idleFrames = frames.filter((f: any) => f.filename.toLowerCase().includes('idle'));
             if (idleFrames.length > 0) {
-              idleFrames.sort((a: any, b: any) => a.filename.localeCompare(b.filename));
+              // Sort idle frames using exact same complex sorting as main game
+              idleFrames.sort((a: any, b: any) => sortFrames(a, b, (f) => f.filename));
             } else {
-              idleFrames = [frames[0]];
+              // Use all frames as fallback, limit to 4 like main game
+              idleFrames = frames.slice(0, Math.min(4, frames.length));
             }
             frameData = idleFrames[0];
           } else if (jsonData.frames) {
@@ -84,10 +130,20 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
             const frames = Object.entries(jsonData.frames);
             const idlePairs = frames.filter(([key]) => key.toLowerCase().includes('idle'));
             if (idlePairs.length > 0) {
-              idlePairs.sort(([a], [b]) => a.localeCompare(b));
+              // Sort idle frames using exact same complex sorting as main game
+              idlePairs.sort(([keyA], [keyB]) => {
+                const infoA = extractFrameInfo(keyA);
+                const infoB = extractFrameInfo(keyB);
+                if (infoA.mainFrame === infoB.mainFrame) {
+                  return infoA.subFrame - infoB.subFrame;
+                }
+                return infoA.mainFrame - infoB.mainFrame;
+              });
               idleFrames = idlePairs.map(([, val]) => val);
             } else {
-              idleFrames = [Object.values(jsonData.frames)[0]];
+              // Use all frames as fallback, limit to 4 like main game
+              const allFrames = Object.values(jsonData.frames);
+              idleFrames = allFrames.slice(0, Math.min(4, allFrames.length));
             }
             frameData = idleFrames[0];
           }
@@ -97,14 +153,16 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
           const renderFrame = (frame: any) => {
             const frameWidth = frame.frame.w;
             const frameHeight = frame.frame.h;
-            const scale = Math.min(width / frameWidth, height / frameHeight) * 0.8;
+            // Use exact same scaling as main game grid (0.8 scale factor)
+            const scale = 0.8;
 
             const destWidth = frameWidth * scale;
             const destHeight = frameHeight * scale;
-            const destX = (width - destWidth) / 2 - (frame.spriteSourceSize?.x || 0) * scale;
-            const destY = (height - destHeight) / 2 - (frame.spriteSourceSize?.y || 0) * scale;
+            // Position sprite like main game (accounting for sprite source positioning)
+            const destX = (finalWidth - destWidth) / 2 - (frame.spriteSourceSize?.x || 0) * scale;
+            const destY = (finalHeight - destHeight) / 2 - (frame.spriteSourceSize?.y || 0) * scale;
 
-            ctx.clearRect(0, 0, width, height);
+            ctx.clearRect(0, 0, finalWidth, finalHeight);
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(
               img,
@@ -131,21 +189,23 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
                 const frame = idleFramesRef.current[currentFrameRef.current];
                 renderFrame(frame);
                 animationRef.current = requestAnimationFrame(() => {
-                  setTimeout(animate, 150);
+                  // Match frame rate 10 from main game: 1000ms / 10 = 100ms per frame
+                  setTimeout(animate, 100);
                 });
               };
               animationRef.current = requestAnimationFrame(() => {
-                setTimeout(animate, 150);
+                // Match frame rate 10 from main game: 1000ms / 10 = 100ms per frame
+                setTimeout(animate, 100);
               });
             }
             console.log(`Successfully loaded sprite for ${unitName}: ${frameData.filename || frameData.name || 'unknown frame'}`);
           } else {
-            // Fallback: draw the entire image
-            const scale = Math.min(width / img.width, height / img.height) * 0.8;
+            // Fallback: draw the entire image with exact same scaling as main game
+            const scale = 0.8;
             const destWidth = img.width * scale;
             const destHeight = img.height * scale;
-            const destX = (width - destWidth) / 2;
-            const destY = (height - destHeight) / 2;
+            const destX = (finalWidth - destWidth) / 2;
+            const destY = (finalHeight - destHeight) / 2;
 
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(img, destX, destY, destWidth, destHeight);
@@ -181,32 +241,32 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
         animationRef.current = null;
       }
     };
-  }, [unitName, width, height]);
+  }, [unitName, finalWidth, finalHeight]);
 
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[styles.container, { width, height }]}>
+      <View style={[styles.container, { width: finalWidth, height: finalHeight }]}>
         <canvas
           ref={canvasRef as any}
-          width={width}
-          height={height}
+          width={finalWidth}
+          height={finalHeight}
           style={{ display: 'none' }}
         />
         {isLoading && !error && (
-          <View style={[styles.placeholder, { width, height }]}>
+          <View style={[styles.placeholder, { width: finalWidth, height: finalHeight }]}>
             <View style={styles.loadingBox} />
           </View>
         )}
         {error && (
-          <View style={[styles.placeholder, { width, height }]}>
+          <View style={[styles.placeholder, { width: finalWidth, height: finalHeight }]}>
             <View style={[styles.errorBox, { backgroundColor: getUnitColor(unitName) }]} />
           </View>
         )}
         {spriteDataUrl && !error && (
           <Image
             source={{ uri: spriteDataUrl }}
-            style={[styles.sprite, { width, height }]}
+            style={[styles.sprite, { width: finalWidth, height: finalHeight }]}
             resizeMode="contain"
           />
         )}
@@ -216,10 +276,10 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
 
   // Fallback for non-web platforms
   return (
-    <View style={[styles.container, { width, height }]}>
+    <View style={[styles.container, { width: finalWidth, height: finalHeight }]}>
       <Image
         source={{ uri: `/assets/units/${unitName.toLowerCase()}/${unitName.toLowerCase()}.png` }}
-        style={[styles.sprite, { width: width * 0.8, height: height * 0.8 }]}
+        style={[styles.sprite, { width: finalWidth * 0.8, height: finalHeight * 0.8 }]}
         resizeMode="contain"
       />
     </View>

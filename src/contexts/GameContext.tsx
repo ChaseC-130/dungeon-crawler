@@ -11,6 +11,7 @@ interface GameContextType {
   // Actions
   joinMatch: (playerName: string) => void;
   placeUnit: (unitId: string, position: Position) => void;
+  moveUnit: (unitId: string, position: Position) => void;
   purchaseUnit: (unitType: string) => void;
   purchaseAndPlaceUnit: (unitType: string, position: Position) => void;
   sellUnit: (unitId: string) => void;
@@ -168,6 +169,18 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const moveUnit = (unitId: string, position: Position) => {
+    console.log(`GameContext.moveUnit called with unitId: ${unitId}, position:`, position);
+    console.log(`Socket connected: ${isConnected}, socket exists: ${!!socket}`);
+    
+    if (socket && isConnected) {
+      socket.emit('moveUnit', unitId, position);
+      console.log(`Emitted moveUnit event to server`);
+    } else {
+      console.error(`Cannot emit moveUnit - socket: ${!!socket}, connected: ${isConnected}`);
+    }
+  };
+
   const purchaseUnit = (unitType: string) => {
     if (socket && isConnected) {
       socket.emit('purchase-unit', unitType);
@@ -225,6 +238,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         isConnected,
         joinMatch,
         placeUnit,
+        moveUnit,
         purchaseUnit,
         purchaseAndPlaceUnit,
         sellUnit,

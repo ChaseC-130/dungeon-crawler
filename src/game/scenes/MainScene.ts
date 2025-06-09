@@ -26,6 +26,14 @@ export default class MainScene extends Phaser.Scene {
   }
 
   create() {
+    // Initialize all state variables to prevent random highlighting
+    this.isDragging = false;
+    this.placementMode = false;
+    this.placementUnit = null;
+    this.placedUnit = null;
+    this.selectedUnit = null;
+    this.placementGhost = null;
+    
     // Set background based on floor
     this.updateBackground();
     
@@ -45,6 +53,15 @@ export default class MainScene extends Phaser.Scene {
       gridHeight,
       cellSize
     );
+
+    // Ensure highlight starts cleared and placement mode is disabled
+    this.grid.clearHighlight();
+    this.grid.clearAllPlayerHovers();
+    this.placementMode = false;
+    this.placementUnit = null;
+    this.placedUnit = null;
+    this.isDragging = false;
+    this.selectedUnit = null;
 
     // Create tooltip
     this.tooltip = new UnitTooltip(this);
@@ -119,37 +136,66 @@ export default class MainScene extends Phaser.Scene {
     
     // Get all interactive objects under the pointer
     const hitObjects = this.input.hitTestPointer(pointer);
-    for (const obj of hitObjects) {
-      if (obj instanceof UnitSprite) {
-        // Find the unit data for this sprite
-        clickedUnit = this.gameState.players
-          .flatMap(p => p.units)
-          .find(u => u.id === obj.unitId) || 
-          this.gameState.enemyUnits.find(u => u.id === obj.unitId) || null;
-        
-        clickedSprite = obj;
-        break;
+    
+    // Also check unit sprites directly
+    for (const [id, sprite] of this.unitSprites) {
+      if (sprite && sprite.active && !sprite.getData('destroying')) {
+        const bounds = sprite.getBounds();
+        if (bounds.contains(worldPoint.x, worldPoint.y)) {
+          clickedSprite = sprite;
+          clickedUnit = this.gameState.players
+            .flatMap(p => p.units)
+            .find(u => u.id === sprite.unitId) || 
+            this.gameState.enemyUnits.find(u => u.id === sprite.unitId) || null;
+          console.log(`Clicked on unit via bounds check: ${sprite.unitId}`);
+          break;
+        }
+      }
+    }
+    
+    // Fallback to hit test if bounds check didn't find anything
+    if (!clickedSprite) {
+      for (const obj of hitObjects) {
+        // Check if this is a UnitSprite instance
+        if (obj instanceof UnitSprite) {
+          const unitSprite = obj;
+          // Find the unit data for this sprite
+          clickedUnit = this.gameState.players
+            .flatMap(p => p.units)
+            .find(u => u.id === unitSprite.unitId) || 
+            this.gameState.enemyUnits.find(u => u.id === unitSprite.unitId) || null;
+          
+          clickedSprite = unitSprite;
+          console.log(`Clicked on unit via instanceof: ${unitSprite.unitId}`);
+          break;
+        }
       }
     }
     
     if (clickedUnit) {
       // Show tooltip on click
-      if (this.tooltip) {
+      if (this.tooltip && clickedUnit.position) {
         const owner = this.gameState.players.find(p => 
           p.units.some(u => u.id === clickedUnit!.id)
         );
         const ownerName = owner ? owner.name : 'Enemy';
-        this.tooltip.showForUnit(clickedUnit, ownerName, worldPoint.x, worldPoint.y);
+        
+        // Position tooltip at the unit's grid cell center, not mouse cursor
+        const unitWorldPos = this.grid.gridToWorld(clickedUnit.position.x, clickedUnit.position.y);
+        this.tooltip.showForUnit(clickedUnit, ownerName, unitWorldPos.x, unitWorldPos.y);
         
         // Hide tooltip after 3 seconds
         this.time.delayedCall(3000, () => {
-          if (this.tooltip) {
+          // Check if scene is still active before accessing tooltip
+          if (this.scene && this.tooltip) {
             this.tooltip.hide();
           }
         });
       }
       
       // Only allow dragging own units during preparation phase
+      console.log(`Drag check - Phase: ${this.gameState.phase}, Unit Player: ${clickedUnit.playerId}, Current Player: ${this.currentPlayerId}, Has Sprite: ${!!clickedSprite}`);
+      
       if (this.gameState.phase === 'preparation' && 
           clickedUnit.playerId === this.currentPlayerId &&
           clickedSprite) {
@@ -161,7 +207,13 @@ export default class MainScene extends Phaser.Scene {
         clickedSprite.setAlpha(0.8);
         clickedSprite.setDepth(1000); // Bring to front while dragging
         
-        console.log(`Started dragging unit: ${clickedUnit.name} (${clickedUnit.id})`);
+        // Add visual indicator that drag was detected
+        clickedSprite.setTint(0x00ff00); // Green tint to show drag is active
+        
+        console.log(`✅ DRAG STARTED: ${clickedUnit.name} (${clickedUnit.id})`);
+        console.log(`Unit current position:`, clickedUnit.position);
+      } else {
+        console.log(`❌ Cannot drag - Phase: ${this.gameState.phase}, Player match: ${clickedUnit.playerId === this.currentPlayerId}, Has sprite: ${!!clickedSprite}`);
       }
     } else {
       // Hide tooltip when clicking empty space
@@ -172,16 +224,19 @@ export default class MainScene extends Phaser.Scene {
   }
 
   private onPointerMove(pointer: Phaser.Input.Pointer) {
+    // Safety check: ensure we have a valid game state and proper phase before processing pointer moves
+    if (!this.gameState || this.gameState.phase !== 'preparation') {
+      this.grid.clearHighlight();
+      return;
+    }
+
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
     
-    // Send hover position to other players only when moving or placing a unit
-    if (this.gameState?.phase === 'preparation' && (this.isDragging || this.placementMode)) {
-      this.sendHoverPosition(gridPos);
-    }
+    // Don't send hover position to other players - highlighting is local only
     
-    // Handle placement mode
-    if (this.placementMode && this.placementGhost) {
+    // Handle placement mode - only during preparation phase
+    if (this.placementMode && this.placementGhost && this.gameState.phase === 'preparation') {
       const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.y);
       this.placementGhost.setPosition(worldPos.x, worldPos.y);
       
@@ -196,8 +251,8 @@ export default class MainScene extends Phaser.Scene {
       return;
     }
     
-    // Handle unit dragging
-    if (this.isDragging && this.selectedUnit) {
+    // Handle unit dragging - only during preparation phase
+    if (this.isDragging && this.selectedUnit && this.gameState.phase === 'preparation') {
       // Update unit position to follow cursor
       this.selectedUnit.setPosition(worldPoint.x, worldPoint.y);
       
@@ -207,6 +262,8 @@ export default class MainScene extends Phaser.Scene {
       // Add visual feedback for valid/invalid drop zones
       const isValid = this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
       this.selectedUnit.setAlpha(isValid ? 0.9 : 0.5);
+      
+      console.log(`Dragging to grid (${gridPos.x}, ${gridPos.y}), valid: ${isValid}`);
       
       return;
     }
@@ -232,12 +289,15 @@ export default class MainScene extends Phaser.Scene {
           .find(u => u.id === obj.unitId) || 
           this.gameState.enemyUnits.find(u => u.id === obj.unitId) || null;
         
-        if (hoveredUnit) {
+        if (hoveredUnit && hoveredUnit.position) {
           const owner = this.gameState.players.find(p => 
             p.units.some(u => u.id === hoveredUnit.id)
           );
           const ownerName = owner ? owner.name : 'Enemy';
-          this.tooltip.showForUnit(hoveredUnit, ownerName, worldPoint.x, worldPoint.y);
+          
+          // Position tooltip at the unit's grid cell center, not mouse cursor
+          const unitWorldPos = this.grid.gridToWorld(hoveredUnit.position.x, hoveredUnit.position.y);
+          this.tooltip.showForUnit(hoveredUnit, ownerName, unitWorldPos.x, unitWorldPos.y);
         }
         return;
       }
@@ -249,6 +309,8 @@ export default class MainScene extends Phaser.Scene {
 
 
   private onPointerUp(pointer: Phaser.Input.Pointer) {
+    console.log(`🎯 POINTER UP - isDragging: ${this.isDragging}, hasUnit: ${!!this.selectedUnit}, hasState: ${!!this.gameState}`);
+    
     if (!this.isDragging || !this.selectedUnit || !this.gameState) {
       this.isDragging = false;
       this.selectedUnit = null;
@@ -263,6 +325,8 @@ export default class MainScene extends Phaser.Scene {
       .flatMap(p => p.units)
       .find(u => u.id === this.selectedUnit!.unitId);
     
+    console.log(`🎯 Drop target: grid(${gridPos.x}, ${gridPos.y}), unit current pos:`, unit?.position);
+    
     // Check if valid placement
     if (this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined)) {
       // Check if position actually changed
@@ -270,30 +334,43 @@ export default class MainScene extends Phaser.Scene {
         unit.position.x !== gridPos.x || 
         unit.position.y !== gridPos.y;
       
+      console.log(`🎯 Position changed: ${positionChanged}`);
+      
       if (positionChanged) {
-        // Emit placement/move event - server handles both cases
-        console.log(`Emitting place-unit event for ${this.selectedUnit.unitId} to position (${gridPos.x}, ${gridPos.y})`);
-        this.events.emit('place-unit', this.selectedUnit.unitId, gridPos);
+        console.log(`📤 CALLING moveUnit: ${this.selectedUnit.unitId} to (${gridPos.x}, ${gridPos.y})`);
+        console.log(`📤 moveUnit function exists: ${!!(window as any).moveUnit}`);
+        console.log(`📤 gameContext exists: ${!!(window as any).gameContext}`);
+        
+        // Use moveUnit for repositioning
+        if ((window as any).moveUnit) {
+          console.log(`📤 Calling (window as any).moveUnit with:`, {
+            unitId: this.selectedUnit.unitId,
+            position: gridPos
+          });
+          (window as any).moveUnit(this.selectedUnit.unitId, gridPos);
+          console.log(`📤 moveUnit call completed`);
+        } else {
+          console.error('❌ moveUnit function not available on window');
+        }
         
         // Optimistically update position while waiting for server confirmation
         const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.y);
         this.selectedUnit.setPosition(worldPos.x, worldPos.y);
-        
-        console.log(`Moving unit ${this.selectedUnit.unitId} to position (${gridPos.x}, ${gridPos.y})`);
       } else {
         // No movement needed, just snap back to current position
         const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.y);
         this.selectedUnit.setPosition(worldPos.x, worldPos.y);
+        console.log(`🎯 No position change needed`);
       }
     } else {
       // Invalid placement - return to original position
       if (unit && unit.position) {
         const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
         this.selectedUnit.setPosition(worldPos.x, worldPos.y);
-        console.log(`Invalid placement, returning unit ${this.selectedUnit.unitId} to original position`);
+        console.log(`❌ Invalid placement, returning unit ${this.selectedUnit.unitId} to original position`);
       } else {
         // Unit has no position, remove it from the grid visually
-        console.log(`Unit ${this.selectedUnit.unitId} has no valid position, moving off grid`);
+        console.log(`❌ Unit ${this.selectedUnit.unitId} has no valid position, moving off grid`);
         this.selectedUnit.setPosition(-100, -100); // Move off screen
       }
     }
@@ -301,11 +378,11 @@ export default class MainScene extends Phaser.Scene {
     // Reset visual state
     this.selectedUnit.setScale(1); // Reset scale
     this.selectedUnit.setAlpha(1); // Reset transparency
+    this.selectedUnit.setTint(0xffffff); // Reset tint to white
     this.selectedUnit.setDepth(this.selectedUnit.y); // Reset depth based on Y position
     this.selectedUnit = null;
     this.isDragging = false;
     this.grid.clearHighlight();
-    this.sendHoverPosition(null);
   }
 
   private cancelDrag() {
@@ -326,19 +403,23 @@ export default class MainScene extends Phaser.Scene {
     // Reset visual state
     this.selectedUnit.setScale(1);
     this.selectedUnit.setAlpha(1);
+    this.selectedUnit.setTint(0xffffff); // Reset tint to white
     this.selectedUnit.setDepth(this.selectedUnit.y);
     
     // Clear drag state
     this.selectedUnit = null;
     this.isDragging = false;
     this.grid.clearHighlight();
-    this.sendHoverPosition(null);
 
     console.log('Drag operation cancelled');
   }
 
   updateGameState(gameState: GameState) {
+    console.log(`MainScene.updateGameState called - phase: ${gameState.phase}, players: ${gameState.players.length}`);
     this.gameState = gameState;
+    
+    // Clear any stray highlights when game state updates
+    this.grid.clearHighlight();
     
     // Update current player ID if not set
     if (!this.currentPlayerId && (window as any).gameContext?.player) {
@@ -348,7 +429,7 @@ export default class MainScene extends Phaser.Scene {
     // Handle phase changes first
     if (gameState.phase === 'combat') {
       this.startCombat();
-    } else if (gameState.phase === 'preparation') {
+    } else if (gameState.phase === 'preparation' || gameState.phase === 'post-combat') {
       this.stopCombat();
     }
     
@@ -449,6 +530,8 @@ export default class MainScene extends Phaser.Scene {
         sprite.on('death_animation_complete', (unitId: string) => {
           const मृतSprite = this.unitSprites.get(unitId); // "मृतSprite" means "deadSprite" in Hindi
           if (मृतSprite) {
+            console.log('Death animation complete for unit', unitId, ', removing from battlefield');
+            मृतSprite.setData('destroying', true); // Mark as being destroyed
             मृतSprite.destroy();
             this.unitSprites.delete(unitId);
           }
@@ -456,13 +539,20 @@ export default class MainScene extends Phaser.Scene {
       } else if (unit.position) {
         // Update position if unit has moved
         const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
-        if (sprite.x !== worldPos.x || sprite.y !== worldPos.y) {
+        const distanceThreshold = 1; // Only update if moved significantly
+        const dx = Math.abs(sprite.x - worldPos.x);
+        const dy = Math.abs(sprite.y - worldPos.y);
+        
+        if (dx > distanceThreshold || dy > distanceThreshold) {
+          console.log(`Moving sprite ${unit.id} from (${sprite.x}, ${sprite.y}) to (${worldPos.x}, ${worldPos.y})`);
           sprite.setPosition(worldPos.x, worldPos.y);
         }
       }
       
-      // Update sprite state
-      sprite.updateUnit(unit);
+      // Update sprite state only if sprite still exists and is active
+      if (sprite && sprite.active && !sprite.getData('destroying')) {
+        sprite.updateUnit(unit);
+      }
     }
   }
 
@@ -554,8 +644,13 @@ export default class MainScene extends Phaser.Scene {
     
     // Update existing units with new combat data
     for (const unit of allUnits) {
+      // Skip units without positions
+      if (!unit.position) {
+        continue;
+      }
+      
       const sprite = this.unitSprites.get(unit.id);
-      if (sprite) {
+      if (sprite && sprite.active && !sprite.getData('destroying')) {
         // Update position with smooth interpolation
         const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
         
@@ -563,25 +658,27 @@ export default class MainScene extends Phaser.Scene {
         const distance = Phaser.Math.Distance.Between(sprite.x, sprite.y, worldPos.x, worldPos.y);
         const duration = Math.min(500, Math.max(200, distance * 2)); // 200-500ms based on distance
         
-        // Smooth movement to new position
-        this.tweens.add({
-          targets: sprite,
-          x: worldPos.x,
-          y: worldPos.y,
-          duration: duration,
-          ease: 'Power2.InOut'
-        });
+        // Smooth movement to new position (only if sprite is still active)
+        if (sprite.active) {
+          this.tweens.add({
+            targets: sprite,
+            x: worldPos.x,
+            y: worldPos.y,
+            duration: duration,
+            ease: 'Power2.InOut'
+          });
+        }
         
         // Check if unit just started attacking (for projectile creation)
         const oldUnit = sprite.unit;
-        const justStartedAttacking = oldUnit.status !== 'attacking' && unit.status === 'attacking';
+        const justStartedAttacking = oldUnit && oldUnit.status !== 'attacking' && unit.status === 'attacking';
         
         // Debug logging
         if (unit.status === 'attacking' && this.isRangedUnit(unit)) {
-          console.log(`${unit.name} is attacking, old status: ${oldUnit.status}, new status: ${unit.status}`);
+          console.log(`${unit.name} is attacking, old status: ${oldUnit ? oldUnit.status : 'unknown'}, new status: ${unit.status}`);
         }
         
-        // Update unit data (health, status, etc.)
+        // Update unit data (health, status, etc.) - this has its own safety checks
         sprite.updateUnit(unit);
         
         // Create projectile for ranged attackers
@@ -669,7 +766,6 @@ export default class MainScene extends Phaser.Scene {
     }
 
     this.grid.clearHighlight();
-    this.sendHoverPosition(null);
   }
 
   enterPlacementModeForUnit(unit: Unit) {
@@ -712,6 +808,9 @@ export default class MainScene extends Phaser.Scene {
   }
   
   private createProjectileForAttack(attacker: Unit, allUnits: Unit[]) {
+    // Check if attacker has a valid position
+    if (!attacker.position) return;
+    
     // Find the closest enemy unit as the target
     const isPlayerUnit = this.gameState?.players.some(p => 
       p.units.some(u => u.id === attacker.id)
@@ -721,7 +820,7 @@ export default class MainScene extends Phaser.Scene {
       const isEnemy = isPlayerUnit ? 
         this.gameState?.enemyUnits.some(e => e.id === u.id) :
         this.gameState?.players.some(p => p.units.some(pu => pu.id === u.id));
-      return isEnemy && u.status !== 'dead';
+      return isEnemy && u.status !== 'dead' && u.position; // Also filter out enemies without positions
     });
     
     if (enemies.length === 0) return;
@@ -731,6 +830,9 @@ export default class MainScene extends Phaser.Scene {
     let closestDistance = Infinity;
     
     for (const enemy of enemies) {
+      // Enemy position is guaranteed to exist due to filter above, but double-check for safety
+      if (!enemy.position) continue;
+      
       const distance = Math.abs(enemy.position.x - attacker.position.x) + 
                       Math.abs(enemy.position.y - attacker.position.y);
       if (distance < closestDistance) {
@@ -739,7 +841,7 @@ export default class MainScene extends Phaser.Scene {
       }
     }
     
-    if (!closestEnemy) return;
+    if (!closestEnemy || !closestEnemy.position) return;
     
     console.log(`Creating projectile: ${attacker.name} attacking ${closestEnemy.name}`);
     
@@ -749,7 +851,7 @@ export default class MainScene extends Phaser.Scene {
     
     // Determine projectile texture based on unit type
     let textureKey = attacker.name.toLowerCase();
-    let projectileScale = 0.6;
+    let projectileScale = 0.8; // Increased from 0.6 to make projectiles bigger
     
     if (attacker.name.toLowerCase() === 'priest') {
       // For priest, we'll create a generic holy projectile effect
@@ -758,7 +860,7 @@ export default class MainScene extends Phaser.Scene {
       return;
     }
     
-    // For wizard, make sure we use the first magic arrow frame
+    // For wizard, make sure we use the magic arrow frame
     let initialFrame = undefined;
     if (attacker.name.toLowerCase() === 'wizard') {
       initialFrame = 'Magic_arrow_1 #6.png';

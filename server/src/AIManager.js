@@ -107,7 +107,8 @@ class AIManager {
       targetId: null,
       attackCooldown: 0,
       buffs: [],
-      debuffs: []
+      debuffs: [],
+      deathAnimationComplete: false
     };
   }
 }

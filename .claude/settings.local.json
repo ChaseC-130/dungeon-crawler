@@ -35,7 +35,15 @@
       "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"body {\" game.html)",
       "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"body\" game.html)",
       "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 10 -B 5 \"strokePath\" game.html)",
-      "Bash(timeout 5s npm run server)"
+      "Bash(timeout 5s npm run server)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"updateCombatUnits\" src/game/scenes/MainScene.ts)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -A 5 -B 5 \"position.*null|null.*position\" server/src/CombatEngine.js)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -A5 -B5 \"position\" server/src/CombatEngine.js)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"\\.position\\.[xy]\" src/)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"\\.position\\.[xy]\" server/)",
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"updateCombatUnits\" src/)",
+      "Bash(sed:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

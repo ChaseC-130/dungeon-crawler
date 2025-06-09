@@ -12,6 +12,7 @@ import {
 import { UnitStats } from '../types/game';
 import UnitSpriteSimple from './UnitSpriteSimple';
 import UnitSprite from './UnitSprite';
+import UnifiedUnitSprite from './UnifiedUnitSprite';
 
 // Unit stats - should match server
 const UNIT_STATS: Record<string, UnitStats> = {
@@ -116,6 +117,13 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
     name,
     ...stats
   }));
+  
+  // Calculate responsive grid layout
+  const containerPadding = 40;
+  const cardMargin = 16;
+  const availableWidth = width * 0.9 - containerPadding;
+  const cardsPerRow = Math.min(3, Math.max(2, Math.floor(width / 200))); // 2-3 cards per row based on screen size
+  const cardWidth = (availableWidth - (cardMargin * (cardsPerRow - 1))) / cardsPerRow;
 
   const toggleUnit = (unitName: string) => {
     if (selectedUnits.includes(unitName)) {
@@ -141,7 +149,8 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
         style={[
           styles.unitCard,
           isSelected && styles.unitCardSelected,
-          !canSelect && styles.unitCardDisabled
+          !canSelect && styles.unitCardDisabled,
+          { width: cardWidth }
         ]}
         onPress={() => toggleUnit(unit.name)}
         disabled={!canSelect}
@@ -153,9 +162,9 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
         
         <View style={styles.unitImageContainer}>
           {Platform.OS === 'web' ? (
-            <UnitSprite unitName={unit.name} width={100} height={100} />
+            <UnifiedUnitSprite unitName={unit.name} width={100} height={100} />
           ) : (
-            <UnitSpriteSimple unitName={unit.name} width={100} height={100} />
+            <UnitSpriteSimple unitName={unit.name} width={100} height={100} useGridCellSize={true} />
           )}
         </View>
         
@@ -198,12 +207,9 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
             Select {maxUnits} units ({selectedUnits.length}/{maxUnits})
           </Text>
           
-          <ScrollView 
-            contentContainerStyle={styles.unitsGrid}
-            showsVerticalScrollIndicator={false}
-          >
+          <View style={styles.unitsGrid}>
             {allUnits.map(renderUnitCard)}
-          </ScrollView>
+          </View>
           
           <TouchableOpacity
             style={[
@@ -235,7 +241,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     width: width * 0.9,
-    maxHeight: height * 0.85,
+    maxHeight: height * 0.9,
     borderWidth: 2,
     borderColor: '#FFD700',
   },
@@ -258,16 +264,14 @@ const styles = StyleSheet.create({
   unitsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     paddingBottom: 20,
   },
   unitCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     padding: 12,
-    margin: 8,
-    width: (width * 0.9 - 80) / 3,
-    minWidth: 140,
+    marginBottom: 16,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -295,10 +299,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   unitImageContainer: {
-    height: 100,
     marginBottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    // Container will adjust to sprite size automatically
   },
   statsContainer: {
     flexDirection: 'row',

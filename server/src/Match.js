@@ -101,23 +101,39 @@ class Match {
   }
   
   updateShopWithStartingUnits() {
-    // Collect all unique starting units from all players
-    const startingUnits = new Set();
+    // Each player should have their own selected units as their personal shop
+    // Instead of a global shop, we'll store each player's available units
+    this.players.forEach(player => {
+      if (player.selectedStartingUnits) {
+        // Convert selected unit names to full unit stats for this player
+        player.availableUnits = player.selectedStartingUnits.map(unitName => {
+          const unitKey = unitName.toLowerCase();
+          const unitStats = UNIT_STATS[unitKey];
+          return unitStats ? { ...unitStats } : null;
+        }).filter(Boolean); // Remove any null values
+      } else {
+        // Fallback: give all units if no selection was made
+        player.availableUnits = Object.values(UNIT_STATS);
+      }
+    });
+    
+    // For backward compatibility, still maintain a global shop with all unique units
+    // This can be used as fallback or for enemy encounters
+    const allUnits = new Set();
     this.players.forEach(player => {
       if (player.selectedStartingUnits) {
         player.selectedStartingUnits.forEach(unitName => {
-          startingUnits.add(unitName);
+          allUnits.add(unitName);
         });
       }
     });
     
-    // If we have starting units, use them as the shop
-    if (startingUnits.size > 0) {
-      this.shopUnits = Array.from(startingUnits).map(unitName => {
+    if (allUnits.size > 0) {
+      this.shopUnits = Array.from(allUnits).map(unitName => {
         const unitKey = unitName.toLowerCase();
         const unitStats = UNIT_STATS[unitKey];
         return unitStats ? { ...unitStats } : null;
-      }).filter(Boolean); // Remove any null values
+      }).filter(Boolean);
     }
   }
 
@@ -176,9 +192,13 @@ class Match {
     const player = this.players.get(playerId);
     if (!player || this.phase !== 'preparation') return;
 
-    const unitStats = this.shopUnits.find(u => u.name === unitType);
+    // Use player's personal available units instead of global shop
+    const unitStats = player.availableUnits ? 
+      player.availableUnits.find(u => u.name === unitType) :
+      this.shopUnits.find(u => u.name === unitType);
+      
     if (!unitStats) {
-      this.sendError(player.socket, 'Unit not available in shop');
+      this.sendError(player.socket, 'Unit not available for purchase');
       return;
     }
 
@@ -198,7 +218,8 @@ class Match {
       targetId: null,
       attackCooldown: 0,
       buffs: [],
-      debuffs: []
+      debuffs: [],
+      deathAnimationComplete: false
     };
 
     // Deduct gold and add unit
@@ -320,7 +341,8 @@ class Match {
       targetId: null,
       attackCooldown: 0,
       buffs: [],
-      debuffs: []
+      debuffs: [],
+      deathAnimationComplete: false
     };
 
     // Deduct gold and add unit
@@ -578,6 +600,17 @@ class Match {
       });
     });
 
+    // Heal dead units instead of removing them (they should respawn for next battle)
+    this.players.forEach(player => {
+      player.units.forEach(unit => {
+        if (unit.status === 'dead') {
+          unit.status = 'idle';
+          unit.health = unit.maxHealth; // Heal to full health
+          console.log(`Respawning unit: ${unit.name} (${unit.id}) with full health`);
+        }
+      });
+    });
+
     // Reset unit positions to initial and update grid
     this.players.forEach(player => {
       player.units.forEach(unit => {
@@ -594,13 +627,14 @@ class Match {
           // If a unit doesn't have an initial position, ensure its position is null
           unit.position = null;
         }
-        // Reset status to idle, unless it's dead
-        if (unit.status !== 'dead') {
-          unit.status = 'idle';
-        }
+        // Reset status to idle
+        unit.status = 'idle';
         // Reset any combat-specific temporary state
         unit.targetId = null;
         unit.attackCooldown = 0;
+        unit.deathAnimationComplete = false;
+        // Heal unit to full health
+        unit.health = unit.maxHealth;
       });
     });
   }
@@ -731,7 +765,7 @@ class Match {
   }
 
   broadcastGameState() {
-    const gameState = {
+    const baseGameState = {
       matchId: this.matchId,
       currentFloor: this.currentFloor,
       phase: this.phase,
@@ -748,13 +782,20 @@ class Match {
       })),
       enemyUnits: this.enemyUnits,
       grid: this.grid,
-      shopUnits: this.shopUnits,
       // Keep legacy upgradeCards for backward compatibility
       upgradeCards: this.upgradeCards || [],
       winner: this.phase === 'game-over' ? (this.currentFloor > GAME_CONFIG.MAX_FLOORS ? 'players' : 'enemies') : null
     };
     
-    this.io.to(this.matchId).emit('game-state', gameState);
+    // Send personalized game state to each player with their own available units
+    this.players.forEach(player => {
+      const personalizedGameState = {
+        ...baseGameState,
+        shopUnits: player.availableUnits || this.shopUnits // Use personal units if available, fallback to global
+      };
+      
+      player.socket.emit('game-state', personalizedGameState);
+    });
   }
 
   sendError(socket, message) {
