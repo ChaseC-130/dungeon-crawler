@@ -386,14 +386,13 @@ class Match {
 
   selectUpgrade(playerId, upgradeId, targetUnitType) {
     const player = this.players.get(playerId);
-    if (!player || this.phase !== 'post-combat') return;
+    if (!player || (this.phase !== 'post-combat' && this.phase !== 'preparation')) return;
 
     // Find upgrade in this player's individual upgrade cards
     const upgrade = player.upgradeCards.find(u => u.id === upgradeId);
     if (!upgrade) return;
 
-    // Check if player has already selected an upgrade
-    if (player.hasSelectedUpgrade) return;
+    // Players can now use multiple upgrades, no restriction on selection
 
     // Apply upgrade to units
     const unitsToUpgrade = player.units.filter(u => {
@@ -409,28 +408,19 @@ class Match {
       this.applyUpgrade(unit, upgrade);
     });
 
-    // Mark player as having selected an upgrade
-    player.hasSelectedUpgrade = true;
-    player.upgradeCards = []; // Clear this player's upgrade cards
-
-    console.log(`Player ${playerId} selected upgrade ${upgradeId}`);
-
-    // Check if all players have selected upgrades
-    const allPlayersSelected = Array.from(this.players.values()).every(p => p.hasSelectedUpgrade);
-    
-    if (allPlayersSelected) {
-      console.log('All players have selected upgrades, starting next floor');
-      // Reset upgrade selection status for all players
-      this.players.forEach(player => {
-        player.hasSelectedUpgrade = false;
-      });
-      // Start next floor only when all players have selected
-      this.startNewFloor();
-    } else {
-      console.log(`Waiting for other players to select upgrades. Selected: ${Array.from(this.players.values()).filter(p => p.hasSelectedUpgrade).length}/${this.players.size}`);
-      // Just broadcast current state without starting next floor
-      this.broadcastGameState();
+    // Remove all 4 cards from this upgrade opportunity (high-potency + 3 normal)
+    const upgradeIndex = player.upgradeCards.findIndex(u => u.id === upgradeId);
+    if (upgradeIndex !== -1) {
+      // Find the group this upgrade belongs to (every 4 cards = 1 opportunity)
+      const groupStart = Math.floor(upgradeIndex / 4) * 4;
+      // Remove the entire group of 4 cards
+      player.upgradeCards.splice(groupStart, 4);
+      console.log(`Player ${playerId} used upgrade opportunity, ${Math.ceil(player.upgradeCards.length / 4)} opportunities remaining`);
     }
+
+    // No need to check for "all players selected" - upgrades are now independent
+    // Players can use upgrades during preparation phase whenever they want
+    this.broadcastGameState();
   }
 
   applyUpgrade(unit, upgrade) {
@@ -565,30 +555,53 @@ class Match {
   }
 
   endCombat(winner) {
+    console.log(`🏁 COMBAT ENDED - Winner: ${winner}, Floor: ${this.currentFloor}`);
     if (winner === 'players') {
-      this.phase = 'post-combat';
+      // IMMEDIATELY start preparation phase with timer instead of post-combat
+      this.phase = 'preparation'; 
+      console.log(`📋 Phase changed to: ${this.phase} (immediate timer start)`);
       
-      // Reset unit positions to initial positions immediately for post-combat phase
+      // Reset unit positions to initial positions immediately for next round
       this.resetUnitsToInitialPositions();
       
-      // Generate upgrade cards
-      this.generateUpgradeCards();
-      
-      // Reset player ready status
+      // Reset player ready status but keep upgrade selection status
       this.players.forEach(player => {
         player.isReady = false;
+        // Don't reset hasSelectedUpgrade - let players accumulate upgrades
+      });
+      console.log(`🔄 Reset players ready status, keeping upgrade selection status`);
+      
+      // Generate upgrade cards for players who don't have any yet (accumulate upgrades)
+      this.generateUpgradeCards();
+      
+      // Log each player's upgrade status
+      this.players.forEach(player => {
+        console.log(`👤 Player ${player.name}: upgradeCards=${player.upgradeCards?.length || 0}, hasSelected=${player.hasSelectedUpgrade}`);
       });
       
+      // Start timer immediately for preparation phase
+      this.preparationTimeLeft = GAME_CONFIG.PREPARATION_TIME;
+      console.log(`⏰ Starting preparation timer immediately: ${this.preparationTimeLeft} seconds`);
+      this.startPreparationTimer();
+      
+      console.log(`📡 Broadcasting preparation state to all clients`);
+      console.log(`🔌 Active players with sockets: ${this.players.size}`);
+      this.players.forEach(player => {
+        console.log(`   👤 Player ${player.name} (${player.id}): Socket connected = ${player.socket.connected}`);
+      });
       this.broadcastGameState();
     } else {
       // Game over
       this.phase = 'game-over';
+      console.log(`💀 Game Over - Phase: ${this.phase}`);
       this.broadcastGameState();
       this.io.to(this.matchId).emit('game-over', 'enemies');
     }
   }
 
   resetUnitsToInitialPositions() {
+    console.log(`🔄 Resetting units to initial positions for ${this.players.size} players`);
+    
     // Clear current grid state related to player units
     this.players.forEach(player => {
       player.units.forEach(unit => {
@@ -602,21 +615,36 @@ class Match {
 
     // Heal dead units instead of removing them (they should respawn for next battle)
     this.players.forEach(player => {
+      console.log(`🏥 Checking units for player ${player.name} - Total units: ${player.units.length}`);
+      let deadCount = 0;
+      let aliveCount = 0;
+      
       player.units.forEach(unit => {
         if (unit.status === 'dead') {
+          deadCount++;
           unit.status = 'idle';
           unit.health = unit.maxHealth; // Heal to full health
-          console.log(`Respawning unit: ${unit.name} (${unit.id}) with full health`);
+          console.log(`💊 Respawning unit: ${unit.name} (${unit.id}) with full health`);
+        } else {
+          aliveCount++;
+          console.log(`✅ Unit already alive: ${unit.name} (${unit.id}) - Status: ${unit.status}`);
         }
       });
+      
+      console.log(`👤 Player ${player.name}: ${deadCount} revived, ${aliveCount} already alive`);
     });
 
     // Reset unit positions to initial and update grid
     this.players.forEach(player => {
+      let unitsWithPosition = 0;
+      let unitsWithoutPosition = 0;
+      
       player.units.forEach(unit => {
         const initialPos = player.initialUnitPositions.get(unit.id);
         if (initialPos) {
+          unitsWithPosition++;
           unit.position = { ...initialPos }; // Restore position
+          console.log(`📍 Restored position for ${unit.name} (${unit.id}) to (${initialPos.x}, ${initialPos.y})`);
           // Update the grid with the restored position
           if (this.grid[initialPos.y] && this.grid[initialPos.y][initialPos.x]) {
             this.grid[initialPos.y][initialPos.x].occupied = true;
@@ -624,8 +652,10 @@ class Match {
             this.grid[initialPos.y][initialPos.x].playerId = unit.playerId;
           }
         } else {
+          unitsWithoutPosition++;
           // If a unit doesn't have an initial position, ensure its position is null
           unit.position = null;
+          console.log(`❌ No initial position found for ${unit.name} (${unit.id}) - setting position to null`);
         }
         // Reset status to idle
         unit.status = 'idle';
@@ -636,21 +666,46 @@ class Match {
         // Heal unit to full health
         unit.health = unit.maxHealth;
       });
+      
+      console.log(`📊 Player ${player.name}: ${unitsWithPosition} units positioned, ${unitsWithoutPosition} units without position`);
     });
+    
+    console.log(`✅ Unit revival and positioning complete`);
   }
 
   generateUpgradeCards() {
+    console.log(`🎁 Generating upgrade cards for ${this.players.size} players`);
     // Generate individual upgrade cards for each player
     this.players.forEach(player => {
       this.generateUpgradeCardsForPlayer(player.id);
     });
+    
+    // Check if all players have been auto-marked as selected (no alive units)
+    const allPlayersSelected = Array.from(this.players.values()).every(p => p.hasSelectedUpgrade);
+    console.log(`🔍 Auto-selection check: ${allPlayersSelected ? 'All players auto-selected' : 'Some players need to select upgrades'}`);
+    
+    if (allPlayersSelected) {
+      console.log('⚡ All players auto-selected upgrades (no alive units), starting next floor immediately');
+      // Reset upgrade selection status for all players
+      this.players.forEach(player => {
+        player.hasSelectedUpgrade = false;
+      });
+      // Start next floor immediately
+      this.startNewFloor();
+      return; // Don't broadcast post-combat state, go straight to preparation
+    }
+    
+    console.log(`✅ Upgrade generation complete - staying in post-combat phase`);
   }
 
   generateUpgradeCardsForPlayer(playerId) {
     const player = this.players.get(playerId);
     if (!player) return;
 
-    player.upgradeCards = [];
+    // Don't clear existing upgrade cards - let them accumulate across rounds
+    if (!player.upgradeCards) {
+      player.upgradeCards = [];
+    }
     
     // Get owned unit types for this specific player
     const ownedUnitTypes = new Set();
@@ -660,9 +715,15 @@ class Match {
       }
     });
     
-    if (ownedUnitTypes.size === 0) return;
+    if (ownedUnitTypes.size === 0) {
+      // Player has no alive units, but don't auto-select if they have upgrade cards
+      if (player.upgradeCards.length === 0) {
+        player.hasSelectedUpgrade = true;
+      }
+      return;
+    }
     
-    // Generate 1 high-potency upgrade
+    // Generate 1 high-potency upgrade and add to existing cards
     const highPotencyUpgrade = {
       id: `upgrade-${playerId}-${Date.now()}-high`,
       ...UPGRADE_TEMPLATES[Math.floor(Math.random() * UPGRADE_TEMPLATES.length)],
@@ -671,7 +732,7 @@ class Match {
     };
     player.upgradeCards.push(highPotencyUpgrade);
     
-    // Generate 3 normal upgrades
+    // Generate 3 normal upgrades and add to existing cards
     for (let i = 0; i < 3; i++) {
       const normalUpgrade = {
         id: `upgrade-${playerId}-${Date.now()}-${i}`,
@@ -680,6 +741,8 @@ class Match {
       };
       player.upgradeCards.push(normalUpgrade);
     }
+    
+    console.log(`📈 Player ${player.name} now has ${player.upgradeCards.length} total upgrade cards`);
   }
 
   rerollUpgrades(playerId) {
@@ -703,13 +766,16 @@ class Match {
 
   startNewFloor() {
     this.currentFloor++;
+    console.log(`🎯 STARTING NEW FLOOR ${this.currentFloor}/${GAME_CONFIG.MAX_FLOORS}`);
     
     if (this.currentFloor > GAME_CONFIG.MAX_FLOORS) {
       // Victory!
       this.phase = 'game-over';
+      console.log(`🏆 VICTORY! Phase: ${this.phase}`);
       this.io.to(this.matchId).emit('game-over', 'players');
     } else {
       this.phase = 'preparation';
+      console.log(`📋 Phase changed to: ${this.phase}`);
       this.enemyUnits = [];
 
       // Units are already reset to initial positions in endCombat()
@@ -723,9 +789,11 @@ class Match {
       });
       
       this.preparationTimeLeft = GAME_CONFIG.PREPARATION_TIME;
+      console.log(`⏰ Timer set to: ${this.preparationTimeLeft} seconds`);
       this.startPreparationTimer();
     }
     
+    console.log(`📡 Broadcasting preparation state to all clients`);
     this.broadcastGameState();
   }
 
@@ -743,9 +811,11 @@ class Match {
     
     this.timerInterval = setInterval(() => {
       this.preparationTimeLeft--;
+      console.log(`⏰ Timer tick: ${this.preparationTimeLeft}s remaining`);
       
       // Broadcast timer update
       this.io.to(this.matchId).emit('timer-update', this.preparationTimeLeft);
+      console.log(`📡 Sent timer-update event: ${this.preparationTimeLeft}s`);
       
       if (this.preparationTimeLeft <= 0) {
         this.stopPreparationTimer();
@@ -787,6 +857,8 @@ class Match {
       winner: this.phase === 'game-over' ? (this.currentFloor > GAME_CONFIG.MAX_FLOORS ? 'players' : 'enemies') : null
     };
     
+    console.log(`📺 broadcastGameState() called - Phase: ${this.phase}, Players: ${this.players.size}`);
+    
     // Send personalized game state to each player with their own available units
     this.players.forEach(player => {
       const personalizedGameState = {
@@ -794,8 +866,11 @@ class Match {
         shopUnits: player.availableUnits || this.shopUnits // Use personal units if available, fallback to global
       };
       
+      console.log(`📤 Sending game-state to ${player.name} (${player.id}): Phase=${this.phase}, UpgradeCards=${player.upgradeCards?.length || 0}`);
       player.socket.emit('game-state', personalizedGameState);
     });
+    
+    console.log(`✅ broadcastGameState() complete`);
   }
 
   sendError(socket, message) {

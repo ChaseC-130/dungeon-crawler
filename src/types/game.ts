@@ -80,6 +80,7 @@ export interface GameState {
   matchId: string;
   currentFloor: number;
   phase: 'preparation' | 'combat' | 'post-combat' | 'game-over';
+  preparationTimeLeft: number;
   players: Player[];
   enemyUnits: Unit[];
   grid: GridCell[][];
@@ -103,6 +104,7 @@ export interface SocketEvents {
   'match-started': (matchId: string) => void;
   'floor-complete': (floor: number, gold: number) => void;
   'combat-update': (units: Unit[], enemyUnits: Unit[]) => void;
+  'timer-update': (timeLeft: number) => void;
   'game-over': (winner: 'players' | 'enemies') => void;
   'error': (message: string) => void;
 }

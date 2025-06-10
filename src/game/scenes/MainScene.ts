@@ -20,6 +20,7 @@ export default class MainScene extends Phaser.Scene {
   private lastAttackTime: Map<string, number> = new Map();
   private tooltip: UnitTooltip | null = null;
   private currentPlayerId: string | null = null;
+  private dragOverlay: Phaser.GameObjects.Graphics | null = null;
 
   constructor() {
     super({ key: 'MainScene' });
@@ -207,8 +208,18 @@ export default class MainScene extends Phaser.Scene {
         clickedSprite.setAlpha(0.8);
         clickedSprite.setDepth(1000); // Bring to front while dragging
         
-        // Add visual indicator that drag was detected
-        clickedSprite.setTint(0x00ff00); // Green tint to show drag is active
+        // Create yellow rounded box overlay
+        if (!this.dragOverlay) {
+          this.dragOverlay = this.add.graphics();
+        }
+        this.dragOverlay.clear();
+        this.dragOverlay.lineStyle(3, 0xFFD700, 1); // Golden yellow border
+        this.dragOverlay.fillStyle(0xFFD700, 0.2); // Semi-transparent yellow fill
+        this.dragOverlay.fillRoundedRect(-40, -40, 80, 80, 8);
+        this.dragOverlay.strokeRoundedRect(-40, -40, 80, 80, 8);
+        this.dragOverlay.setDepth(999); // Just below the unit sprite
+        
+        // Don't apply tint to the sprite itself, let the overlay handle the visual feedback
         
         console.log(`✅ DRAG STARTED: ${clickedUnit.name} (${clickedUnit.id})`);
         console.log(`Unit current position:`, clickedUnit.position);
@@ -240,6 +251,11 @@ export default class MainScene extends Phaser.Scene {
       const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.y);
       this.placementGhost.setPosition(worldPos.x, worldPos.y);
       
+      // Update drag overlay position for placement mode
+      if (this.dragOverlay) {
+        this.dragOverlay.setPosition(worldPos.x, worldPos.y);
+      }
+      
       // Update ghost alpha based on validity
       if (this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined)) {
         this.placementGhost.setAlpha(0.8);
@@ -247,6 +263,7 @@ export default class MainScene extends Phaser.Scene {
         this.placementGhost.setAlpha(0.3);
       }
       
+      // Grid highlighting is now disabled at the Grid level to remove green debug boxes
       this.grid.highlightCell(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
       return;
     }
@@ -256,7 +273,12 @@ export default class MainScene extends Phaser.Scene {
       // Update unit position to follow cursor
       this.selectedUnit.setPosition(worldPoint.x, worldPoint.y);
       
-      // Highlight grid cell under pointer with validity indication
+      // Update drag overlay position
+      if (this.dragOverlay) {
+        this.dragOverlay.setPosition(worldPoint.x, worldPoint.y);
+      }
+      
+      // Grid highlighting is now disabled at the Grid level to remove green debug boxes
       this.grid.highlightCell(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
       
       // Add visual feedback for valid/invalid drop zones
@@ -297,7 +319,8 @@ export default class MainScene extends Phaser.Scene {
           
           // Position tooltip at the unit's grid cell center, not mouse cursor
           const unitWorldPos = this.grid.gridToWorld(hoveredUnit.position.x, hoveredUnit.position.y);
-          this.tooltip.showForUnit(hoveredUnit, ownerName, unitWorldPos.x, unitWorldPos.y);
+          // Show owner info for placed units (units with positions)
+          this.tooltip.showForUnit(hoveredUnit, ownerName, unitWorldPos.x, unitWorldPos.y, true);
         }
         return;
       }
@@ -378,8 +401,14 @@ export default class MainScene extends Phaser.Scene {
     // Reset visual state
     this.selectedUnit.setScale(1); // Reset scale
     this.selectedUnit.setAlpha(1); // Reset transparency
-    this.selectedUnit.setTint(0xffffff); // Reset tint to white
     this.selectedUnit.setDepth(this.selectedUnit.y); // Reset depth based on Y position
+    
+    // Hide drag overlay
+    if (this.dragOverlay) {
+      this.dragOverlay.clear();
+      this.dragOverlay.setVisible(false);
+    }
+    
     this.selectedUnit = null;
     this.isDragging = false;
     this.grid.clearHighlight();
@@ -403,8 +432,13 @@ export default class MainScene extends Phaser.Scene {
     // Reset visual state
     this.selectedUnit.setScale(1);
     this.selectedUnit.setAlpha(1);
-    this.selectedUnit.setTint(0xffffff); // Reset tint to white
     this.selectedUnit.setDepth(this.selectedUnit.y);
+    
+    // Hide drag overlay
+    if (this.dragOverlay) {
+      this.dragOverlay.clear();
+      this.dragOverlay.setVisible(false);
+    }
     
     // Clear drag state
     this.selectedUnit = null;
@@ -741,10 +775,20 @@ export default class MainScene extends Phaser.Scene {
       this.placementGhost = this.add.sprite(0, 0, '__DEFAULT');
     }
     
-    this.placementGhost.setScale(0.8);
-    this.placementGhost.setAlpha(0.6);
-    this.placementGhost.setTint(0x00ff00);
+    this.placementGhost.setScale(1.1);
+    this.placementGhost.setAlpha(0.8);
     this.placementGhost.setDepth(1000);
+    
+    // Create yellow rounded box overlay for placement mode (same as grid-to-grid dragging)
+    if (!this.dragOverlay) {
+      this.dragOverlay = this.add.graphics();
+    }
+    this.dragOverlay.clear();
+    this.dragOverlay.lineStyle(3, 0xFFD700, 1); // Golden yellow border
+    this.dragOverlay.fillStyle(0xFFD700, 0.2); // Semi-transparent yellow fill
+    this.dragOverlay.fillRoundedRect(-40, -40, 80, 80, 8);
+    this.dragOverlay.strokeRoundedRect(-40, -40, 80, 80, 8);
+    this.dragOverlay.setDepth(999); // Just below the placement ghost
     
     // Disable normal unit dragging
     this.input.enabled = true;
@@ -763,6 +807,12 @@ export default class MainScene extends Phaser.Scene {
     if (this.placementGhost) {
       this.placementGhost.destroy();
       this.placementGhost = null;
+    }
+    
+    // Hide drag overlay
+    if (this.dragOverlay) {
+      this.dragOverlay.clear();
+      this.dragOverlay.setVisible(false);
     }
 
     this.grid.clearHighlight();
@@ -789,10 +839,20 @@ export default class MainScene extends Phaser.Scene {
       this.placementGhost = this.add.sprite(0, 0, '__DEFAULT');
     }
     
-    this.placementGhost.setScale(0.8);
-    this.placementGhost.setAlpha(0.6);
-    this.placementGhost.setTint(0x00ff00);
+    this.placementGhost.setScale(1.1);
+    this.placementGhost.setAlpha(0.8);
     this.placementGhost.setDepth(1000);
+    
+    // Create yellow rounded box overlay for placement mode (same as grid-to-grid dragging)
+    if (!this.dragOverlay) {
+      this.dragOverlay = this.add.graphics();
+    }
+    this.dragOverlay.clear();
+    this.dragOverlay.lineStyle(3, 0xFFD700, 1); // Golden yellow border
+    this.dragOverlay.fillStyle(0xFFD700, 0.2); // Semi-transparent yellow fill
+    this.dragOverlay.fillRoundedRect(-40, -40, 80, 80, 8);
+    this.dragOverlay.strokeRoundedRect(-40, -40, 80, 80, 8);
+    this.dragOverlay.setDepth(999); // Just below the placement ghost
     
     // Add escape key to cancel
     this.input.keyboard?.once('keydown-ESC', () => {
@@ -851,7 +911,7 @@ export default class MainScene extends Phaser.Scene {
     
     // Determine projectile texture based on unit type
     let textureKey = attacker.name.toLowerCase();
-    let projectileScale = 0.8; // Increased from 0.6 to make projectiles bigger
+    let projectileScale = 3.0; // Increased even more for better visibility of smaller Charge_1_X frames
     
     if (attacker.name.toLowerCase() === 'priest') {
       // For priest, we'll create a generic holy projectile effect
@@ -860,10 +920,10 @@ export default class MainScene extends Phaser.Scene {
       return;
     }
     
-    // For wizard, make sure we use the magic arrow frame
+    // For wizard, use the charge frame
     let initialFrame = undefined;
     if (attacker.name.toLowerCase() === 'wizard') {
-      initialFrame = 'Magic_arrow_1 #6.png';
+      initialFrame = 'Charge_1_1 #10.png';
     }
     
     // Create projectile

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  Animated,
 } from 'react-native';
 import { useGame } from '../contexts/GameContext';
 import ShopPanel from './ShopPanel';
@@ -15,6 +16,38 @@ const GameHUD: React.FC = () => {
   const { gameState, player, setReady } = useGame();
   const [showGridToggle, setShowGridToggle] = React.useState(false);
   const [showPlayerTooltip, setShowPlayerTooltip] = useState(false);
+  const [showUpgradePanel, setShowUpgradePanel] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Reset upgrade panel visibility when phase changes
+  React.useEffect(() => {
+    // Always reset panel when phase changes
+    setShowUpgradePanel(false);
+  }, [gameState?.phase]);
+
+  // Pulsing animation for upgrade button
+  React.useEffect(() => {
+    if (gameState?.phase === 'post-combat' && player?.upgradeCards && player.upgradeCards.length > 0 && !showUpgradePanel) {
+      const pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.15,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseAnimation.start();
+      return () => pulseAnimation.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [gameState?.phase, player?.upgradeCards, showUpgradePanel, pulseAnim]);
 
   if (!gameState || !player) {
     return null;
@@ -63,6 +96,15 @@ const GameHUD: React.FC = () => {
           <View style={styles.phaseContainer}>
             <Text style={styles.phaseText}>Preparation Phase</Text>
             <Text style={styles.floorText}>Floor {gameState.currentFloor}/10</Text>
+            {gameState.preparationTimeLeft > 0 && (
+              <Text style={[
+                styles.timerText,
+                gameState.preparationTimeLeft <= 10 && styles.timerTextRed,
+                gameState.preparationTimeLeft <= 30 && gameState.preparationTimeLeft > 10 && styles.timerTextOrange
+              ]}>
+                {gameState.preparationTimeLeft}s
+              </Text>
+            )}
             <TouchableOpacity
               style={[styles.readyButton, player.isReady && styles.readyButtonActive]}
               onPress={setReady}
@@ -165,8 +207,30 @@ const GameHUD: React.FC = () => {
       {/* Bottom HUD */}
       <View style={styles.bottomHUD}>
         {gameState.phase === 'preparation' && <ShopPanel />}
-        {gameState.phase === 'post-combat' && player?.upgradeCards && player.upgradeCards.length > 0 && <UpgradePanel />}
+        {gameState.phase === 'post-combat' && showUpgradePanel && player?.upgradeCards && player.upgradeCards.length > 0 && (
+          <View style={styles.compactUpgradeContainer}>
+            <UpgradePanel />
+            <TouchableOpacity
+              style={styles.closeUpgradeButton}
+              onPress={() => setShowUpgradePanel(false)}
+            >
+              <Text style={styles.closeUpgradeText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
+      
+      {/* Bottom Right Upgrade Button */}
+      {gameState.phase === 'post-combat' && player?.upgradeCards && player.upgradeCards.length > 0 && !showUpgradePanel && (
+        <Animated.View style={[styles.bottomRightUpgradeButton, { transform: [{ scale: pulseAnim }] }]}>
+          <TouchableOpacity
+            style={styles.bottomRightUpgradeButtonInner}
+            onPress={() => setShowUpgradePanel(true)}
+          >
+            <Text style={styles.upgradeAvailableText}>🎁 Upgrade Available! ({player.upgradeCards.length})</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
 
       {/* Player Info Tooltip Modal */}
       <Modal
@@ -429,6 +493,100 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  upgradeAvailableButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 25,
+    alignSelf: 'center',
+    marginVertical: 10,
+    borderWidth: 2,
+    borderColor: '#2E7D32',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    // Add pulsing animation effect
+    transform: [{ scale: 1 }],
+  },
+  upgradeAvailableText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
+  },
+  upgradeContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  compactUpgradeContainer: {
+    position: 'relative',
+    maxHeight: '60%', // Limit height to 60% of screen
+    maxWidth: '80%', // Limit width to 80% of screen
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    overflow: 'hidden',
+  },
+  closeUpgradeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+    zIndex: 1000,
+  },
+  closeUpgradeText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  bottomRightUpgradeButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+  },
+  bottomRightUpgradeButtonInner: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderRadius: 25,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  timerText: {
+    color: '#FFD700',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  timerTextOrange: {
+    color: '#FFA500',
+  },
+  timerTextRed: {
+    color: '#FF4444',
   },
 });
 

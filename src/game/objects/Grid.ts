@@ -148,8 +148,14 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   highlightCell(gridX: number, gridY: number, currentPlayerId?: string) {
+    // Disable all grid highlighting to remove green debug boxes during purchasing
     if (!this.highlightRect) return;
     
+    // Always keep highlight hidden to remove green debug visualization
+    this.highlightRect.setVisible(false);
+    return;
+    
+    /* Original highlighting logic disabled:
     if (gridX < 0 || gridX >= this.gridWidth || gridY < 0 || gridY >= this.gridHeight) {
       this.highlightRect.setVisible(false);
       return;
@@ -164,6 +170,7 @@ export default class Grid extends Phaser.GameObjects.Container {
     
     // Always use green highlighting for all players
     this.highlightRect.setStrokeStyle(3, 0x4CAF50, 1);
+    */
   }
 
   clearHighlight() {

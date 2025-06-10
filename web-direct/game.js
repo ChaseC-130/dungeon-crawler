@@ -397,9 +397,9 @@ function create() {
         }
     }
     
-    // Highlight cell for placement
+    // Highlight cell for placement - DISABLED to remove green debug boxes
     this.highlightCell = this.add.rectangle(0, 0, cellSize - 2, cellSize - 2, 0x4CAF50, 0);
-    this.highlightCell.setStrokeStyle(3, 0x4CAF50, 1);
+    this.highlightCell.setStrokeStyle(3, 0x4CAF50, 0); // Set alpha to 0 to hide stroke
     this.highlightCell.setVisible(false);
     this.gridContainer.add(this.highlightCell);
     
@@ -410,24 +410,27 @@ function create() {
     // Set up drag-and-drop for unit placement
     this.input.on('dragenter', (pointer, target) => {
         if (target.gridX !== undefined && draggedUnitType) {
-            this.highlightCell.setPosition(
-                (target.gridX - this.gridSize/2 + 0.5) * this.cellSize,
-                (target.gridY - this.gridSize/2 + 0.5) * this.cellSize
-            );
-            this.highlightCell.setVisible(true);
+            // DISABLED: Remove green debug box highlighting during purchasing
+            // this.highlightCell.setPosition(
+            //     (target.gridX - this.gridSize/2 + 0.5) * this.cellSize,
+            //     (target.gridY - this.gridSize/2 + 0.5) * this.cellSize
+            // );
+            // this.highlightCell.setVisible(true);
             
             // Check if cell is occupied
             const occupied = gameState && gameState.grid[target.gridY][target.gridX].occupied;
-            if (occupied) {
-                this.highlightCell.setStrokeStyle(3, 0xFF0000, 1);
-            } else {
-                this.highlightCell.setStrokeStyle(3, 0x4CAF50, 1);
-            }
+            // DISABLED: Remove all highlighting
+            // if (occupied) {
+            //     this.highlightCell.setStrokeStyle(3, 0xFF0000, 1);
+            // } else {
+            //     this.highlightCell.setStrokeStyle(3, 0x4CAF50, 1);
+            // }
         }
     });
     
     this.input.on('dragleave', () => {
-        this.highlightCell.setVisible(false);
+        // DISABLED: Keep highlight hidden
+        // this.highlightCell.setVisible(false);
     });
     
     this.input.on('drop', (pointer, target) => {
@@ -446,7 +449,8 @@ function create() {
                 }, 100);
             }
         }
-        this.highlightCell.setVisible(false);
+        // DISABLED: Keep highlight hidden
+        // this.highlightCell.setVisible(false);
     });
     
     // Enable drop on all grid cells
@@ -649,23 +653,26 @@ Phaser.Scene.prototype.updateGameState = function(state) {
                             const cellX = (gridX - this.gridSize/2 + 0.5) * this.cellSize;
                             const cellY = (gridY - this.gridSize/2 + 0.5) * this.cellSize;
                             
-                            this.highlightCell.setPosition(cellX, cellY);
-                            this.highlightCell.setVisible(true);
+                            // DISABLED: Remove green debug box highlighting during unit dragging
+                            // this.highlightCell.setPosition(cellX, cellY);
+                            // this.highlightCell.setVisible(true);
                             
                             // Check if cell is valid for placement
                             const occupied = state.grid[gridY][gridX].occupied;
                             const isCurrentPosition = unit.position && unit.position.x === gridX && unit.position.y === gridY;
                             
-                            if (occupied && !isCurrentPosition) {
-                                this.highlightCell.setStrokeStyle(3, 0xFF0000, 1);
-                            } else {
-                                this.highlightCell.setStrokeStyle(3, 0x4CAF50, 1);
-                            }
+                            // DISABLED: Remove all stroke highlighting
+                            // if (occupied && !isCurrentPosition) {
+                            //     this.highlightCell.setStrokeStyle(3, 0xFF0000, 1);
+                            // } else {
+                            //     this.highlightCell.setStrokeStyle(3, 0x4CAF50, 1);
+                            // }
                         }
                     });
                     
                     sprite.on('dragend', (pointer) => {
-                        this.highlightCell.setVisible(false);
+                        // DISABLED: Keep highlight hidden
+                        // this.highlightCell.setVisible(false);
                         
                         // Convert drop position to grid coordinates
                         const gridX = Math.floor((sprite.x - this.gridContainer.x + this.gridSize * this.cellSize / 2) / this.cellSize);

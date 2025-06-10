@@ -310,36 +310,96 @@
         .unit-selection-content {
             background: #1a1a2e;
             border: 2px solid #FFD700;
-            border-radius: 20px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 8px;
             width: 90vw;
-            height: 90vh;
-            max-width: 1400px;
-            max-height: 900px;
+            height: 85vh;
+            max-width: 1200px;
+            max-height: calc(100vh - 100px); /* Always leave space for buttons */
+            min-height: 200px; /* Ensure minimum usable height */
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow-y: auto; /* Allow scrolling if content is too tall */
+            position: relative;
         }
         
-        /* Ensure upgrade modal never scrolls */
+        /* Ensure upgrade modal fits on screen with buttons */
         #upgrade-modal .unit-selection-content {
-            height: calc(90vh - 100px); /* Account for fixed buttons */
-            padding: 15px;
+            height: calc(100vh - 100px); /* Account for fixed buttons and margins */
+            max-height: calc(100vh - 100px);
+            width: 95vw;
+            max-width: 1400px;
+            padding: clamp(4px, 1vw, 12px);
+            overflow-y: auto; /* Allow scrolling if content is too tall */
+        }
+        
+        /* Ensure confirm button is always visible on smaller screens */
+        @media (max-height: 800px) {
+            #upgrade-modal .unit-selection-content {
+                height: calc(100vh - 160px); /* More space for buttons */
+                max-height: 400px;
+            }
+            
+            .select-upgrade-btn {
+                bottom: 15px;
+                right: 15px;
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+        
+        @media (max-height: 650px) {
+            #upgrade-modal .unit-selection-content {
+                height: calc(100vh - 180px); /* Even more space for buttons */
+                max-height: 320px;
+            }
+            
+            .select-upgrade-btn {
+                bottom: 10px;
+                right: 10px;
+                padding: 10px 16px;
+                font-size: 12px;
+            }
+            
+            .upgrade-modal-close-btn,
+            .reroll-upgrades-btn {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+            
+            .upgrade-cards-container {
+                gap: 8px;
+                padding: 4px;
+            }
+            
+            .unit-sprite-selector {
+                max-height: 60px;
+            }
+            
+            .unit-selection-sprite {
+                min-width: 30px;
+                padding: 2px;
+            }
+            
+            .unit-sprite-container {
+                width: 20px;
+                height: 20px;
+            }
         }
         
         .unit-selection-title {
             color: #FFD700;
-            font-size: 28px;
+            font-size: clamp(14px, 2.5vh, 24px);
             font-weight: bold;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: clamp(4px, 1vh, 12px);
         }
         
         .unit-selection-subtitle {
             color: white;
-            font-size: 18px;
+            font-size: clamp(10px, 1.5vh, 16px);
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: clamp(6px, 1.5vh, 16px);
         }
         
         .units-grid {
@@ -588,8 +648,8 @@
             flex-shrink: 0;
             color: #FFD700;
             text-align: center;
-            margin: 0 0 10px 0;
-            font-size: clamp(16px, 2vw, 20px);
+            margin: 0 0 clamp(3px, 1vh, 10px) 0;
+            font-size: clamp(12px, 2vh, 18px);
         }
         
         .upgrade-cards-container {
@@ -608,61 +668,176 @@
         
         .upgrade-card {
             background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
-            border: 3px solid rgba(255, 215, 0, 0.3);
-            border-radius: 16px;
-            padding: clamp(6px, 1vh, 10px); /* Reduced responsive padding */
-            width: clamp(160px, 20vw, 220px); /* Reduced width to fit better */
-            max-width: calc(50% - 20px); /* Adjusted for better spacing */
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 6px;
+            padding: clamp(2px, 0.5vh, 8px);
+            width: clamp(100px, 15vw, 200px);
+            max-width: calc(45% - 8px);
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             position: relative;
             display: flex;
             flex-direction: column;
-            max-height: clamp(200px, 35vh, 400px); /* Ensure cards fit on screen */
-            overflow: visible; /* Allow content to show properly */
+            height: clamp(120px, 20vh, 220px);
+            overflow: hidden;
+            justify-content: space-between;
         }
         
-        /* Responsive card size for different screen heights */
+        /* Responsive scaling for smaller screens */
         @media (max-height: 700px) {
-            .upgrade-card {
-                padding: clamp(4px, 0.8vh, 8px);
-                width: clamp(150px, 18vw, 200px); /* Reduced width for smaller screens */
-                max-height: clamp(150px, 28vh, 280px);
+            #upgrade-modal .unit-selection-content {
+                height: calc(100vh - 120px);
+                max-height: 400px;
+                padding: 4px;
             }
             
-            .unit-selection-content {
-                padding: clamp(10px, 2vh, 15px);
+            .upgrade-card {
+                height: clamp(120px, 20vh, 140px);
+                width: clamp(110px, 16vw, 140px);
+                padding: 3px;
             }
             
             .unit-selection-title {
-                font-size: clamp(18px, 3vh, 22px);
-                margin-bottom: clamp(8px, 1.5vh, 10px);
+                font-size: 14px;
+                margin-bottom: 4px;
             }
             
             .unit-selection-subtitle {
-                font-size: clamp(14px, 2.5vh, 16px);
-                margin-bottom: clamp(10px, 2vh, 15px);
+                font-size: 10px;
+                margin-bottom: 6px;
             }
             
-            .upgrade-card.high-potency::before {
-                top: clamp(-6px, -0.5vh, -4px);
-                font-size: clamp(7px, 0.8vw, 9px);
-                padding: clamp(1px, 0.3vh, 3px) clamp(3px, 0.8vw, 6px);
+            .upgrade-section h3 {
+                font-size: 12px;
+                margin-bottom: 4px;
             }
         }
         
-        @media (max-height: 500px) {
-            .upgrade-card {
-                max-height: clamp(120px, 22vh, 200px);
-                padding: clamp(4px, 0.8vh, 8px);
+        @media (max-height: 600px) {
+            #upgrade-modal .unit-selection-content {
+                height: calc(100vh - 100px);
+                max-height: 350px;
+                padding: 3px;
             }
             
+            .upgrade-card {
+                height: clamp(100px, 18vh, 120px);
+                width: clamp(100px, 15vw, 130px);
+                padding: 2px;
+            }
+            
+            .upgrade-name {
+                font-size: 9px;
+                margin-bottom: 2px;
+            }
+            
+            .upgrade-description {
+                font-size: 7px;
+                min-height: 20px;
+                margin-bottom: 3px;
+            }
+            
+            .upgrade-target {
+                font-size: 7px;
+                margin-bottom: 2px;
+            }
+            
+            .upgrade-icon {
+                width: 24px;
+                height: 24px;
+                margin-bottom: 2px;
+            }
+            
+            .upgrade-icon img {
+                width: 18px;
+                height: 18px;
+            }
+        }
+        
+        /* Ultra-small screens (mobile phones in landscape, small windows) */
+        @media (max-height: 500px) {
             #upgrade-modal .unit-selection-content {
-                height: calc(95vh - 60px); /* More space on very small screens */
-                padding: clamp(8px, 1.5vh, 12px);
+                height: calc(100vh - 120px);
+                max-height: 280px;
+                padding: 2px;
+            }
+            
+            .unit-selection-title {
+                font-size: 12px;
+                margin-bottom: 2px;
+            }
+            
+            .unit-selection-subtitle {
+                font-size: 8px;
+                margin-bottom: 4px;
+            }
+            
+            .upgrade-section h3 {
+                font-size: 10px;
+                margin-bottom: 2px;
+            }
+            
+            .upgrade-card {
+                height: clamp(80px, 15vh, 100px);
+                width: clamp(80px, 12vw, 110px);
+                padding: 1px;
+            }
+            
+            .upgrade-name {
+                font-size: 8px;
+                margin-bottom: 1px;
+            }
+            
+            .upgrade-description {
+                font-size: 6px;
+                min-height: 15px;
+                margin-bottom: 2px;
+            }
+            
+            .upgrade-target {
+                font-size: 6px;
+                margin-bottom: 1px;
+            }
+            
+            .upgrade-icon {
+                width: 18px;
+                height: 18px;
+                margin-bottom: 1px;
+            }
+            
+            .upgrade-icon img {
+                width: 14px;
+                height: 14px;
+            }
+            
+            .unit-sprite-selector {
+                max-height: 45px;
+            }
+            
+            .unit-sprite-container {
+                width: 16px;
+                height: 16px;
+            }
+            
+            .unit-selection-name {
+                font-size: 6px;
+            }
+            
+            .select-upgrade-btn {
+                bottom: 5px;
+                right: 5px;
+                padding: 8px 12px;
+                font-size: 10px;
+            }
+            
+            .upgrade-modal-close-btn,
+            .reroll-upgrades-btn {
+                top: 10px;
+                padding: 6px 12px;
+                font-size: 10px;
             }
         }
         
@@ -705,46 +880,51 @@
         }
         
         .upgrade-icon {
-            width: 60px; /* Increased from 40px */
-            height: 60px; /* Increased from 40px */
-            margin: 0 auto 8px auto;
-            border-radius: 8px; /* Slightly larger radius */
+            width: clamp(24px, 4vh, 40px);
+            height: clamp(24px, 4vh, 40px);
+            margin: 0 auto clamp(2px, 0.5vh, 6px) auto;
+            border-radius: 4px;
             background: rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid rgba(255, 215, 0, 0.3);
+            border: 1px solid rgba(255, 215, 0, 0.3);
             flex-shrink: 0;
         }
         
         .upgrade-icon img {
-            width: 48px; /* Increased from 32px */
-            height: 48px; /* Increased from 32px */
-            border-radius: 6px;
+            width: clamp(18px, 3vh, 30px);
+            height: clamp(18px, 3vh, 30px);
+            border-radius: 3px;
         }
         
         .upgrade-name {
             color: #FFD700;
-            font-size: clamp(14px, 1.5vw, 18px);
+            font-size: clamp(9px, 1.2vh, 14px);
             font-weight: bold;
-            margin-bottom: 8px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            line-height: 1.2;
+            margin-bottom: clamp(2px, 0.5vh, 6px);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            line-height: 1.1;
         }
         
         .upgrade-description {
             color: #fff;
-            font-size: clamp(11px, 1.2vw, 14px);
-            margin-bottom: 10px;
-            line-height: 1.3;
+            font-size: clamp(7px, 1vh, 12px);
+            margin-bottom: clamp(3px, 0.8vh, 8px);
+            line-height: 1.2;
             flex: 1;
+            min-height: clamp(20px, 3vh, 40px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
         
         .upgrade-target {
             color: #4CAF50;
-            font-size: clamp(10px, 1vw, 12px);
+            font-size: clamp(6px, 0.9vh, 10px);
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: clamp(2px, 0.5vh, 6px);
             flex-shrink: 0;
         }
         
@@ -806,22 +986,45 @@
         
         .unit-sprite-selector {
             display: flex;
-            gap: 8px;
+            gap: clamp(2px, 0.5vh, 6px);
             flex-wrap: wrap;
             justify-content: center;
-            margin: 8px 0;
+            margin: clamp(2px, 0.5vh, 6px) 0;
+            max-height: clamp(60px, 10vh, 100px); /* Scale with viewport */
+            overflow-y: auto; /* Add scrolling if needed */
+            padding: clamp(1px, 0.3vh, 4px);
+        }
+        
+        /* Custom scrollbar for unit selector */
+        .unit-sprite-selector::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .unit-sprite-selector::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        
+        .unit-sprite-selector::-webkit-scrollbar-thumb {
+            background: rgba(255, 215, 0, 0.5);
+            border-radius: 3px;
+        }
+        
+        .unit-sprite-selector::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 215, 0, 0.8);
         }
         
         .unit-selection-sprite {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 6px;
-            border: 2px solid transparent;
-            border-radius: 6px;
+            padding: clamp(2px, 0.4vh, 5px);
+            border: 1px solid transparent;
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.3s ease;
             background: rgba(255, 255, 255, 0.05);
+            min-width: clamp(30px, 5vh, 50px);
         }
         
         .unit-selection-sprite:hover {
@@ -836,17 +1039,17 @@
         }
         
         .unit-sprite-container {
-            width: 48px; /* Increased from 36px */
-            height: 48px; /* Increased from 36px */
+            width: clamp(20px, 3vh, 32px);
+            height: clamp(20px, 3vh, 32px);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 2px;
+            margin-bottom: clamp(1px, 0.2vh, 3px);
         }
         
         .unit-selection-name {
             color: #FFD700;
-            font-size: clamp(10px, 1vw, 12px);
+            font-size: clamp(6px, 0.8vh, 10px);
             font-weight: bold;
             text-align: center;
             line-height: 1;
@@ -888,6 +1091,29 @@
         }
         
         /* Fixed position upgrade interface buttons */
+        .upgrade-modal-close-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(145deg, #FF4444, #CC3333);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.3);
+            transition: all 0.2s ease;
+        }
+        
+        .upgrade-modal-close-btn:hover {
+            background: linear-gradient(145deg, #FF6666, #FF4444);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 68, 68, 0.4);
+        }
+        
         .reroll-upgrades-btn {
             position: fixed;
             top: 20px;
@@ -934,6 +1160,9 @@
             z-index: 1001;
             box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
             transition: all 0.2s ease;
+            /* Ensure button stays within viewport */
+            max-width: calc(100vw - 40px);
+            word-wrap: break-word;
         }
         
         .select-upgrade-btn:hover:not(:disabled) {
@@ -948,6 +1177,22 @@
             opacity: 0.6;
             transform: none;
             box-shadow: none;
+        }
+        
+        /* Pulsing animation for upgrade button */
+        .select-upgrade-btn:not(.hidden) {
+            animation: upgrade-pulse 2s infinite;
+        }
+        
+        @keyframes upgrade-pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 6px 25px rgba(76, 175, 80, 0.6);
+            }
         }
         
         /* Additional responsive styles for mobile and Electron */
@@ -1234,6 +1479,11 @@
 
     <!-- Upgrade Selection Modal -->
     <div id="upgrade-modal" class="unit-selection-modal hidden">
+        <!-- Close button - top right -->
+        <button class="upgrade-modal-close-btn" onclick="closeUpgradeModal()" id="close-upgrade-btn">
+            ✕ Close
+        </button>
+        
         <!-- Fixed position reroll button - top right -->
         <button class="reroll-upgrades-btn" onclick="rerollUpgrades()" id="reroll-btn">
             🎲 Reroll Upgrades (💰 10)
@@ -1436,22 +1686,41 @@
             
             
             socket.on('game-state', (state) => {
-                console.log('Received game state:', state);
+                console.log('🎮 ===== RECEIVED GAME STATE =====');
+                console.log('📊 State phase:', state.phase);
+                console.log('⏰ Timer:', state.preparationTimeLeft);
+                console.log('👥 Players:', state.players?.length);
+                console.log('🆔 Current playerId:', playerId);
+                console.log('🆔 Socket ID:', socket.id);
                 
                 // Ensure playerId is set if we can find ourselves in the players
                 if (!playerId && state.players) {
                     const currentPlayer = state.players.find(p => p.id === socket.id);
                     if (currentPlayer) {
                         playerId = currentPlayer.id;
-                        console.log('Set playerId from game state:', playerId);
+                        console.log('✅ Set playerId from game state:', playerId);
                     }
                 }
                 
-                console.log('Current player:', state.players?.find(p => p.id === playerId));
+                const currentPlayer = state.players?.find(p => p.id === playerId);
+                console.log('👤 Current player found:', !!currentPlayer);
+                if (currentPlayer) {
+                    console.log('🎁 Player upgrade cards:', currentPlayer.upgradeCards?.length || 0);
+                    console.log('🎁 Upgrade cards detail:', currentPlayer.upgradeCards);
+                    console.log('✅ Player hasSelectedUpgrade:', currentPlayer.hasSelectedUpgrade);
+                    console.log('🏷️ Player name:', currentPlayer.name);
+                    console.log('🆔 Player ID matches:', currentPlayer.id === playerId);
+                } else {
+                    console.log('❌ Current player NOT FOUND');
+                    console.log('🔍 Available player IDs:', state.players?.map(p => p.id));
+                    console.log('🔍 Looking for playerId:', playerId);
+                }
+                
                 updateGameState(state);
             });
             
             socket.on('timer-update', (timeLeft) => {
+                console.log(`⏰ Received timer-update: ${timeLeft}s`);
                 updateTimer(timeLeft);
             });
             
@@ -2011,6 +2280,7 @@
             
             gameState = state;
             window.gameState = state; // Make accessible to Phaser scene
+            window.updateGameState = updateGameState; // Make function globally accessible
             
             // Update HUD
             const player = state.players.find(p => p.id === playerId);
@@ -2027,6 +2297,19 @@
         }
         
         function updateGameStateUI(state, player) {
+            console.log('🖥️ ===== updateGameStateUI called =====');
+            console.log('🎮 State phase:', state.phase);
+            console.log('👤 Player passed to updateGameStateUI:', !!player);
+            if (player) {
+                console.log('👤 Player details:', {
+                    name: player.name,
+                    id: player.id,
+                    gold: player.gold,
+                    upgradeCards: player.upgradeCards?.length || 0,
+                    hasSelectedUpgrade: player.hasSelectedUpgrade
+                });
+            }
+            
             if (player) {
                 document.getElementById('gold-amount').textContent = player.gold;
                 
@@ -2055,11 +2338,14 @@
             }
             
             // Update timer (show during preparation phase)
+            console.log(`🖥️ Client received game state - Phase: ${state.phase}, Timer: ${state.preparationTimeLeft}`);
             if (state.phase === 'preparation' && state.preparationTimeLeft !== undefined) {
+                console.log(`⏰ Showing timer: ${state.preparationTimeLeft}s`);
                 updateTimer(state.preparationTimeLeft);
                 document.getElementById('timer-text').style.display = 'block';
             } else {
                 // Hide timer during combat
+                console.log(`❌ Hiding timer - phase: ${state.phase}`);
                 document.getElementById('timer-text').style.display = 'none';
             }
             
@@ -2077,23 +2363,51 @@
                 shopPanel.classList.remove('active');
             }
             
-            // Show/hide upgrade modal
+            // Show/hide upgrade modal - DISABLED auto-show, let player manually open
             const upgradeModal = document.getElementById('upgrade-modal');
             const currentPlayer = state.players.find(p => p.id === playerId);
             
-            if (state.phase === 'post-combat' && currentPlayer && currentPlayer.upgradeCards && currentPlayer.upgradeCards.length > 0 && !currentPlayer.hasSelectedUpgrade) {
-                upgradeModal.classList.remove('hidden');
-                showUpgradeSelection(currentPlayer.upgradeCards, state.currentFloor, currentPlayer.gold);
+            // DISABLED: Don't automatically show upgrade panel after battle
+            // Always keep upgrade modal hidden by default - player must manually open it
+            upgradeModal.classList.add('hidden');
+            
+            // Show/hide bottom-right upgrade button
+            const upgradeButton = document.getElementById('select-upgrade-btn');
+            console.log(`🎁 ===== UPGRADE BUTTON CHECK =====`);
+            console.log(`📋 Phase: ${state.phase}`);
+            console.log(`👤 Current Player: ${currentPlayer ? 'FOUND' : 'NOT FOUND'}`);
+            console.log(`🎁 Upgrade Cards: ${currentPlayer?.upgradeCards?.length || 0}`);
+            console.log(`✅ Has Selected: ${currentPlayer?.hasSelectedUpgrade}`);
+            console.log(`🔘 Button Element: ${upgradeButton ? 'FOUND' : 'NOT FOUND'}`);
+            
+            // Show upgrade button during preparation phase if player has upgrade cards
+            if ((state.phase === 'preparation' || state.phase === 'post-combat') && currentPlayer && currentPlayer.upgradeCards && currentPlayer.upgradeCards.length > 0) {
+                console.log(`✅ ===== SHOWING UPGRADE BUTTON =====`);
+                console.log(`📝 Button text: 🎁 Upgrades Available! (${currentPlayer.upgradeCards.length})`);
+                upgradeButton.classList.remove('hidden');
+                upgradeButton.textContent = `🎁 Upgrades Available! (${currentPlayer.upgradeCards.length})`;
+                upgradeButton.style.animation = 'upgrade-pulse 2s infinite'; // Make it flash
+                upgradeButton.onclick = () => {
+                    console.log(`🖱️ Upgrade button clicked!`);
+                    upgradeModal.classList.remove('hidden');
+                    showUpgradeSelection(currentPlayer.upgradeCards, state.currentFloor, currentPlayer.gold);
+                };
             } else {
-                upgradeModal.classList.add('hidden');
+                console.log(`❌ ===== HIDING UPGRADE BUTTON =====`);
+                console.log(`🔍 Reason analysis:`);
+                console.log(`   Phase check: ${(state.phase === 'preparation' || state.phase === 'post-combat') ? 'PASS' : 'FAIL'} (${state.phase})`);
+                console.log(`   Player check: ${currentPlayer ? 'PASS' : 'FAIL'}`);
+                console.log(`   Cards check: ${currentPlayer?.upgradeCards && currentPlayer.upgradeCards.length > 0 ? 'PASS' : 'FAIL'} (${currentPlayer?.upgradeCards?.length || 0})`);
+                upgradeButton.classList.add('hidden');
+                upgradeButton.style.animation = 'none'; // Stop flashing when hidden
+            }
                 
-                // Show waiting message if player has selected but others haven't
-                if (state.phase === 'post-combat' && currentPlayer && currentPlayer.hasSelectedUpgrade) {
-                    const waitingCount = state.players.filter(p => !p.hasSelectedUpgrade).length;
-                    if (waitingCount > 0) {
-                        console.log(`Waiting for ${waitingCount} other player(s) to select upgrades...`);
-                        // Could show a waiting overlay here
-                    }
+            // Show waiting message if player has selected but others haven't
+            if (state.phase === 'post-combat' && currentPlayer && currentPlayer.hasSelectedUpgrade) {
+                const waitingCount = state.players.filter(p => !p.hasSelectedUpgrade).length;
+                if (waitingCount > 0) {
+                    console.log(`Waiting for ${waitingCount} other player(s) to select upgrades...`);
+                    // Could show a waiting overlay here
                 }
             }
             
@@ -3440,11 +3754,186 @@
         
         Phaser.Scene.prototype.updateGameState = function(state) {
             // Handle game state updates in Phaser
+            console.log(`🎯 Phaser updateGameState called - Phase: ${state.phase}`);
+            
             if (state.phase === 'combat') {
+                console.log(`⚔️ Starting combat phase`);
                 this.startCombatPhase(state);
+            } else if (state.phase === 'preparation') {
+                console.log(`🛠️ Starting preparation phase and updating UI directly`);
+                this.startPreparationPhase(state);
+                
+                // Handle upgrade button logic directly without calling main updateGameState (avoid infinite loop)
+                this.updateUpgradeButton(state);
+            } else if (state.phase === 'post-combat') {
+                console.log(`🏆 Post-combat phase - updating visuals and calling main updateGameState for UI`);
+                // For post-combat, update the visual state first
+                this.updateVisualState(state);
+                
+                // Then ensure the main updateGameState is called for UI updates (upgrade buttons, timer, etc.)
+                console.log(`📞 Calling main updateGameState function for post-combat UI updates`);
+                if (window.updateGameState) {
+                    window.updateGameState(state);
+                } else {
+                    console.error(`❌ window.updateGameState not available!`);
+                }
             } else {
+                console.log(`❓ Unknown phase: ${state.phase}, defaulting to preparation`);
                 this.startPreparationPhase(state);
             }
+        };
+        
+        Phaser.Scene.prototype.updateUpgradeButton = function(state) {
+            console.log('🎁 ===== updateUpgradeButton called =====');
+            console.log('📋 Phase:', state.phase);
+            console.log('🆔 Current playerId:', playerId);
+            
+            const currentPlayer = state.players?.find(p => p.id === playerId);
+            console.log('👤 Current player found:', !!currentPlayer);
+            if (currentPlayer) {
+                console.log('🎁 Player upgrade cards:', currentPlayer.upgradeCards?.length || 0);
+                console.log('🎁 Upgrade cards detail:', currentPlayer.upgradeCards);
+            }
+            
+            // Remove any existing custom upgrade button
+            const existingButton = document.getElementById('custom-upgrade-btn');
+            if (existingButton) {
+                existingButton.remove();
+            }
+            
+            if ((state.phase === 'preparation' || state.phase === 'post-combat') && currentPlayer && currentPlayer.upgradeCards && currentPlayer.upgradeCards.length > 0) {
+                console.log(`✅ ===== CREATING NEW UPGRADE BUTTON =====`);
+                
+                // Create a completely new button element
+                const newButton = document.createElement('button');
+                newButton.id = 'custom-upgrade-btn';
+                // Count unique upgrade opportunities (not individual cards)
+                const upgradeOpportunities = Math.ceil(currentPlayer.upgradeCards.length / 4); // 4 cards = 1 opportunity
+                newButton.textContent = `🎁 UPGRADES (${upgradeOpportunities})`;
+                
+                // Style the button directly with inline styles
+                newButton.style.cssText = `
+                    position: fixed !important;
+                    top: 100px !important;
+                    right: 20px !important;
+                    background: #FF0000 !important;
+                    border: 5px solid #FFFF00 !important;
+                    color: white !important;
+                    font-size: 18px !important;
+                    font-weight: bold !important;
+                    padding: 15px 20px !important;
+                    border-radius: 10px !important;
+                    cursor: pointer !important;
+                    z-index: 99999 !important;
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    box-shadow: 0 0 20px rgba(255, 0, 0, 0.8) !important;
+                    animation: upgrade-flash 1s infinite alternate !important;
+                `;
+                
+                // Add click handler
+                newButton.onclick = () => {
+                    console.log(`🖱️ Custom upgrade button clicked!`);
+                    const upgradeModal = document.getElementById('upgrade-modal');
+                    if (upgradeModal) {
+                        upgradeModal.classList.remove('hidden');
+                        showUpgradeSelection(currentPlayer.upgradeCards, state.currentFloor, currentPlayer.gold);
+                    }
+                };
+                
+                // Add the button to the document body
+                document.body.appendChild(newButton);
+                
+                console.log(`✅ NEW UPGRADE BUTTON CREATED AND ADDED TO DOM`);
+                console.log(`📍 Button position: top: 100px, right: 20px`);
+                console.log(`🎨 Button style: Red background, yellow border, large text`);
+                
+            } else {
+                console.log(`❌ ===== NOT SHOWING UPGRADE BUTTON =====`);
+                console.log(`🔍 Reason analysis:`);
+                console.log(`   Phase check: ${(state.phase === 'preparation' || state.phase === 'post-combat') ? 'PASS' : 'FAIL'} (${state.phase})`);
+                console.log(`   Player check: ${currentPlayer ? 'PASS' : 'FAIL'}`);
+                console.log(`   Cards check: ${currentPlayer?.upgradeCards && currentPlayer.upgradeCards.length > 0 ? 'PASS' : 'FAIL'} (${currentPlayer?.upgradeCards?.length || 0})`);
+            }
+        };
+        
+        Phaser.Scene.prototype.updateVisualState = function(state) {
+            console.log('=== Updating Visual State ===');
+            console.log('Game state:', state);
+            console.log('Player ID:', playerId);
+            
+            // Hide battle background if any
+            if (this.battleBackground) {
+                this.battleBackground.destroy();
+                this.battleBackground = null;
+                console.log('Destroyed battle background');
+            }
+            
+            // Show grid during post-combat
+            this.gridGraphics.setVisible(true);
+            console.log('Grid made visible');
+            
+            // Clear existing unit sprites
+            if (this.unitSprites) {
+                console.log(`Destroying ${this.unitSprites.length} existing unit sprites`);
+                this.unitSprites.forEach(sprite => {
+                    if (sprite) {
+                        // Clean up ownership indicators
+                        if (sprite.ownershipIndicators) {
+                            sprite.ownershipIndicators.forEach(indicator => {
+                                if (indicator && indicator.destroy) indicator.destroy();
+                            });
+                        }
+                        if (sprite.destroy) sprite.destroy();
+                    }
+                });
+            }
+            this.unitSprites = [];
+            
+            // Clear existing combat units
+            if (this.combatUnits) {
+                console.log(`Destroying ${this.combatUnits.length} existing combat units`);
+                this.combatUnits.forEach(sprite => {
+                    if (sprite && sprite.destroy) sprite.destroy();
+                });
+            }
+            this.combatUnits = [];
+            
+            // Clear any remaining sprites
+            this.children.list.forEach(child => {
+                if (child.texture && (child.texture.key.includes('goblin') || child.texture.key.includes('knight') || child.texture.key.includes('wizard'))) {
+                    console.log(`Destroying lingering sprite: ${child.texture.key}`);
+                    child.destroy();
+                }
+            });
+            
+            console.log('Looking for ALL player units...');
+            const allUnits = [];
+            if (state.players) {
+                state.players.forEach(player => {
+                    if (player.units) {
+                        allUnits.push(...player.units);
+                    }
+                });
+            }
+            
+            console.log(`Found ${allUnits.length} total units from all players`);
+            
+            // Render all units for post-combat phase
+            const unitsToRender = allUnits.filter(unit => unit.position);
+            console.log(`Rendering ${unitsToRender.length} units from all players:`, unitsToRender);
+            
+            unitsToRender.forEach((unit, index) => {
+                console.log(`Processing unit ${index + 1}/${unitsToRender.length}:`, unit);
+                const worldPos = this.gridToWorld(unit.position.x, unit.position.y);
+                console.log(`Calculated world position: (${worldPos.x}, ${worldPos.y}) from grid (${unit.position.x}, ${unit.position.y})`);
+                console.log(`Grid bounds: X=${this.gridOffsetX}, Y=${this.gridOffsetY}, CellSize=${this.cellSize}`);
+                
+                this.createUnitSprite(unit, worldPos.x, worldPos.y, state.phase);
+            });
+            
+            console.log(`Visual state update complete. Total sprites created: ${unitsToRender.length}`);
         };
         
         Phaser.Scene.prototype.startPreparationPhase = function(state) {
@@ -4215,8 +4704,77 @@
         // Upgrade system functions
         let selectedUpgrades = new Map(); // Map of upgradeId -> targetUnitType
         
+        function closeUpgradeModal() {
+            const upgradeModal = document.getElementById('upgrade-modal');
+            upgradeModal.classList.add('hidden');
+            console.log('🔒 Upgrade modal closed');
+        }
+        
+        function showUpgradeUnitTooltip(element, unitType) {
+            // Find unit stats from current game state
+            let unitStats = null;
+            if (gameState && gameState.players) {
+                const currentPlayer = gameState.players.find(p => p.id === playerId);
+                if (currentPlayer && currentPlayer.units) {
+                    const unit = currentPlayer.units.find(u => u.name === unitType && u.status !== 'dead');
+                    if (unit) {
+                        unitStats = unit;
+                    }
+                }
+            }
+            
+            // Fallback to default stats if not found
+            if (!unitStats && AVAILABLE_UNITS[unitType.toLowerCase()]) {
+                unitStats = AVAILABLE_UNITS[unitType.toLowerCase()];
+            }
+            
+            if (!unitStats) return;
+            
+            const tooltip = document.getElementById('game-tooltip');
+            tooltip.innerHTML = `
+                <div class="game-tooltip-header">${unitStats.name}</div>
+                <div class="game-tooltip-stats">
+                    <div>💚 Health: ${unitStats.health}/${unitStats.maxHealth || unitStats.health}</div>
+                    <div>⚔️ Damage: ${unitStats.damage}</div>
+                    <div>🏹 Range: ${unitStats.range}</div>
+                    <div>⚡ Attack Speed: ${unitStats.attackSpeed.toFixed(1)}</div>
+                    <div>🏃 Movement Speed: ${unitStats.movementSpeed}</div>
+                    <div>🎯 Priority: ${unitStats.priority}</div>
+                    <div>🛡️ Armor: ${unitStats.armorType}</div>
+                    <div>💥 Attack Type: ${unitStats.attackType}</div>
+                    ${unitStats.innatePassive ? `<div class="game-tooltip-passive">🌟 ${unitStats.innatePassive}</div>` : ''}
+                </div>
+            `;
+            
+            // Position tooltip
+            const rect = element.getBoundingClientRect();
+            tooltip.style.left = (rect.left + rect.width / 2 - 125) + 'px';
+            tooltip.style.top = (rect.top - 10) + 'px';
+            tooltip.style.transform = 'translateY(-100%)';
+            tooltip.classList.add('show');
+        }
+        
+        function hideUpgradeUnitTooltip() {
+            const tooltip = document.getElementById('game-tooltip');
+            tooltip.classList.remove('show');
+        }
+        
         function showUpgradeSelection(upgradeCards, currentFloor, playerGold) {
             console.log('Showing upgrade selection:', upgradeCards);
+            
+            // Check viewport size and adjust modal if needed for extreme cases only
+            const modal = document.getElementById('upgrade-modal');
+            const modalContent = modal.querySelector('.unit-selection-content');
+            
+            // Reset any previously set inline styles to let CSS handle scaling
+            modalContent.style.height = '';
+            modalContent.style.maxHeight = '';
+            
+            // Only force sizing for extremely small screens where CSS can't handle it
+            if (window.innerHeight < 400) {
+                modalContent.style.height = `${Math.max(window.innerHeight - 100, 150)}px`;
+                modalContent.style.maxHeight = `${Math.max(window.innerHeight - 100, 150)}px`;
+            }
             
             // Clear upgrade selections when showing new upgrades
             upgradeSelections.clear();
@@ -4357,7 +4915,9 @@
                         <div class="unit-selection-sprite" 
                              data-unit-type="${unitType}" 
                              data-upgrade-id="${upgradeId}"
-                             onclick="selectUnitForUpgrade('${upgradeId}', '${unitType}')">
+                             onclick="selectUnitForUpgrade('${upgradeId}', '${unitType}')"
+                             onmouseenter="showUpgradeUnitTooltip(this, '${unitType}')"
+                             onmouseleave="hideUpgradeUnitTooltip()">
                             <div class="unit-sprite-container" id="sprite-${upgradeId}-${unitKey}">
                                 <!-- Sprite will be added here by JavaScript -->
                             </div>
@@ -4468,6 +5028,8 @@
             
             if (socket && socket.connected) {
                 socket.emit('selectUpgrade', upgradeId, targetUnitType);
+                // Close the modal after confirming
+                closeUpgradeModal();
             }
         }
         
@@ -4485,6 +5047,8 @@
             // Apply upgrade to the selected unit type
             if (socket && socket.connected) {
                 socket.emit('selectUpgrade', upgradeId, selectedType);
+                // Close the modal after confirming
+                closeUpgradeModal();
             }
         }
         

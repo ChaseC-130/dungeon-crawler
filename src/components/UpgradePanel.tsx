@@ -35,6 +35,7 @@ const UpgradePanel: React.FC = () => {
   const selectedCardRef = React.useRef<string | null>(null);
   const selectedUnitTypeRef = React.useRef<string | null>(null);
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+  const [hoveredUnitType, setHoveredUnitType] = useState<string | null>(null);
   
   console.log(`UpgradePanel render - selectedCard: ${selectedCardRef.current}, upgradeCards count: ${player?.upgradeCards?.length || 0}`);
   
@@ -88,8 +89,8 @@ const UpgradePanel: React.FC = () => {
     return null;
   }
   
-  // Don't show panel if not in post-combat phase or no upgrade cards available
-  if (gameState.phase !== 'post-combat' || !upgradeCards || upgradeCards.length === 0) {
+  // Don't show panel if no upgrade cards available
+  if (!upgradeCards || upgradeCards.length === 0) {
     return null;
   }
 
@@ -164,16 +165,27 @@ const UpgradePanel: React.FC = () => {
         <View style={styles.unitTypeContainer}>
           {ownedUnitTypes.map(unitType => {
             const unitTypeWidth = Math.max(110, Math.min(180, (availableWidth - (8 * (ownedUnitTypes.length - 1))) / ownedUnitTypes.length));
+            const sampleUnit = player.units.find(u => u.name === unitType);
             return (
               <TouchableOpacity
                 key={unitType}
-                style={[styles.unitTypeButton, { width: unitTypeWidth }]}
+                style={[styles.unitTypeButton, { width: unitTypeWidth }, hoveredUnitType === unitType && styles.unitTypeButtonHover]}
                 onPress={() => handleUnitTypeSelect(unitType)}
+                onPressIn={() => setHoveredUnitType(unitType)}
+                onPressOut={() => setHoveredUnitType(null)}
               >
                 <Text style={styles.unitTypeText}>{unitType}</Text>
                 <Text style={styles.unitCount}>
                   {player.units.filter(u => u.name === unitType).length} owned
                 </Text>
+                {sampleUnit && hoveredUnitType === unitType && (
+                  <View style={styles.unitTooltip}>
+                    <Text style={styles.tooltipText}>HP: {sampleUnit.health}/{sampleUnit.maxHealth}</Text>
+                    <Text style={styles.tooltipText}>Damage: {sampleUnit.damage}</Text>
+                    <Text style={styles.tooltipText}>Attack Speed: {sampleUnit.attackSpeed.toFixed(1)}</Text>
+                    <Text style={styles.tooltipText}>Range: {sampleUnit.range}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             );
           })}
@@ -373,6 +385,27 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  unitTypeButtonHover: {
+    backgroundColor: 'rgba(76, 175, 80, 0.4)',
+    borderColor: '#81C784',
+  },
+  unitTooltip: {
+    position: 'absolute',
+    top: -120,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    zIndex: 1000,
+  },
+  tooltipText: {
+    color: '#FFF',
+    fontSize: 12,
+    marginBottom: 2,
   },
 });
 

@@ -112,7 +112,9 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     this.setDepth(y);
     
     // Make the container interactive for proper drag and drop
-    this.setInteractive(new Phaser.Geom.Rectangle(-32, -32, 64, 64), Phaser.Geom.Rectangle.Contains);
+    // Adjust hit area to cover all visual elements including health bar and upgrade icons
+    // The hit area needs to extend from y:-55 (above upgrade icons) to y:30 (below name text)
+    this.setInteractive(new Phaser.Geom.Rectangle(-32, -55, 64, 85), Phaser.Geom.Rectangle.Contains);
     
     // Store reference to this sprite on the interactive object for easier hit detection
     this.setData('isUnitSprite', true);

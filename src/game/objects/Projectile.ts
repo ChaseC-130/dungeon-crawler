@@ -74,22 +74,43 @@ export class Projectile extends Phaser.GameObjects.Container {
     
     const frameNames = this.scene.textures.get(textureKey).getFrameNames();
     
-    // Find projectile frames (e.g., Magic_arrow_1, Magic_arrow_2, etc.)
-    const projectileFrames = frameNames.filter(frame => 
+    // Find projectile frames - prioritize Charge_1_X frames for wizards, fallback to Magic_arrow
+    // Debug: check all frame names that contain 'charge'
+    const allChargeFrames = frameNames.filter(frame => frame.toLowerCase().includes('charge'));
+    console.log('All frames containing "charge":', allChargeFrames);
+    
+    const chargeFrames = frameNames.filter(frame => 
+      frame.toLowerCase().includes('charge_1_') && frame.toLowerCase().includes('.png')
+    );
+    
+    console.log('Available frame names:', frameNames.slice(0, 10)); // Debug: show first 10 frame names
+    console.log('Filtered charge frames:', chargeFrames);
+    
+    const magicArrowFrames = frameNames.filter(frame => 
       frame.toLowerCase().includes('magic_arrow') || 
       frame.toLowerCase().includes('projectile') ||
       frame.toLowerCase().includes('spell')
     );
     
+    // Use Charge_1_X frames if available, otherwise use Magic_arrow frames
+    const projectileFrames = chargeFrames.length > 0 ? chargeFrames : magicArrowFrames;
+    
     if (projectileFrames.length > 0) {
       // Sort frames properly by extracting the frame number
       projectileFrames.sort((a, b) => {
-        const matchA = a.match(/Magic_arrow_(\d+)/i);
-        const matchB = b.match(/Magic_arrow_(\d+)/i);
-        const numA = matchA ? parseInt(matchA[1]) : 0;
-        const numB = matchB ? parseInt(matchB[1]) : 0;
+        // Handle both Charge_1_X and Magic_arrow_X patterns, accounting for space and #number format
+        // Examples: "Charge_1_1 #10.png", "Magic_arrow_1 #6.png"
+        const chargeMatchA = a.match(/Charge_1_(\d+)\s*/i);
+        const chargeMatchB = b.match(/Charge_1_(\d+)\s*/i);
+        const magicMatchA = a.match(/Magic_arrow_(\d+)\s*/i);
+        const magicMatchB = b.match(/Magic_arrow_(\d+)\s*/i);
+        
+        const numA = chargeMatchA ? parseInt(chargeMatchA[1]) : (magicMatchA ? parseInt(magicMatchA[1]) : 0);
+        const numB = chargeMatchB ? parseInt(chargeMatchB[1]) : (magicMatchB ? parseInt(magicMatchB[1]) : 0);
         return numA - numB;
       });
+      
+      console.log('Sorted projectile frames:', projectileFrames);
       
       console.log('Creating projectile animation with frames:', projectileFrames);
       

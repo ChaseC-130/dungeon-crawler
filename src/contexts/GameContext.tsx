@@ -116,6 +116,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
     });
 
+    socketInstance.on('timer-update', (timeLeft: number) => {
+      // Update the timer in game state - this will trigger a re-render in GameHUD
+      setGameState(prevState => 
+        prevState ? { ...prevState, preparationTimeLeft: timeLeft } : null
+      );
+    });
+
     socketInstance.on('player-hover', (playerId: string, playerName: string, position: Position | null, playerColor: string) => {
       console.log('Received player-hover event:', { playerId, playerName, position, playerColor });
       // Update other players' hover positions
