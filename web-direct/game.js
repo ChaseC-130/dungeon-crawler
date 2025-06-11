@@ -175,17 +175,9 @@ function updateShop() {
         
         card.innerHTML = `
             <div class="unit-sprite" id="sprite-${unit.name}">
-                <canvas width="64" height="64"></canvas>
+                <canvas width="128" height="128"></canvas>
             </div>
             <div class="unit-name">${unit.name}</div>
-            <div class="unit-cost">💰 ${unit.cost}</div>
-            <div class="unit-stats">
-                <div class="stat"><span>⚔️ Damage</span><span>${unit.damage}</span></div>
-                <div class="stat"><span>❤️ Health</span><span>${unit.health}</span></div>
-                <div class="stat"><span>🏃 Speed</span><span>${unit.movementSpeed}</span></div>
-                <div class="stat"><span>🛡️ Type</span><span>${unit.armorType}</span></div>
-                ${unit.innatePassive ? `<div style="margin-top: 8px; font-style: italic; color: #4CAF50;">${unit.innatePassive}</div>` : ''}
-            </div>
         `;
         
         // Set up drag events

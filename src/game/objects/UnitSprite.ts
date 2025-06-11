@@ -314,6 +314,7 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     }
   }
 
+
   startCombat() {
     // Combat is handled by server updates
   }

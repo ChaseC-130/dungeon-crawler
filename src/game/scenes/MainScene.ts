@@ -15,12 +15,15 @@ export default class MainScene extends Phaser.Scene {
   private placementMode: boolean = false;
   private placementUnit: UnitStats | null = null;
   private placedUnit: Unit | null = null;
-  private placementGhost: Phaser.GameObjects.Sprite | null = null;
   private projectiles: Projectile[] = [];
   private lastAttackTime: Map<string, number> = new Map();
   private tooltip: UnitTooltip | null = null;
   private currentPlayerId: string | null = null;
-  private dragOverlay: Phaser.GameObjects.Graphics | null = null;
+  private dragPreview: Phaser.GameObjects.Container | null = null;
+  private sellZone: Phaser.GameObjects.Container | null = null;
+  private isOverSellZone: boolean = false;
+  private draggedUnit: Unit | null = null;
+  private dragInstruction: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super({ key: 'MainScene' });
@@ -33,7 +36,7 @@ export default class MainScene extends Phaser.Scene {
     this.placementUnit = null;
     this.placedUnit = null;
     this.selectedUnit = null;
-    this.placementGhost = null;
+    this.dragPreview = null;
     
     // Set background based on floor
     this.updateBackground();
@@ -202,24 +205,19 @@ export default class MainScene extends Phaser.Scene {
           clickedSprite) {
         this.selectedUnit = clickedSprite;
         this.isDragging = true;
+        this.draggedUnit = clickedUnit;
         
-        // Enhanced visual feedback for dragging
-        clickedSprite.setScale(1.1);
-        clickedSprite.setAlpha(0.8);
-        clickedSprite.setDepth(1000); // Bring to front while dragging
+        // Create drag preview container
+        this.createDragPreview(clickedUnit, worldPoint.x, worldPoint.y);
         
-        // Create yellow rounded box overlay
-        if (!this.dragOverlay) {
-          this.dragOverlay = this.add.graphics();
-        }
-        this.dragOverlay.clear();
-        this.dragOverlay.lineStyle(3, 0xFFD700, 1); // Golden yellow border
-        this.dragOverlay.fillStyle(0xFFD700, 0.2); // Semi-transparent yellow fill
-        this.dragOverlay.fillRoundedRect(-40, -40, 80, 80, 8);
-        this.dragOverlay.strokeRoundedRect(-40, -40, 80, 80, 8);
-        this.dragOverlay.setDepth(999); // Just below the unit sprite
+        // Hide the original unit while dragging
+        clickedSprite.setAlpha(0.3);
         
-        // Don't apply tint to the sprite itself, let the overlay handle the visual feedback
+        // Show sell zone when dragging a unit
+        this.showSellZone();
+        
+        // Show helpful instruction
+        this.showDragInstruction();
         
         console.log(`✅ DRAG STARTED: ${clickedUnit.name} (${clickedUnit.id})`);
         console.log(`Unit current position:`, clickedUnit.position);
@@ -247,21 +245,13 @@ export default class MainScene extends Phaser.Scene {
     // Don't send hover position to other players - highlighting is local only
     
     // Handle placement mode - only during preparation phase
-    if (this.placementMode && this.placementGhost && this.gameState.phase === 'preparation') {
-      const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.y);
-      this.placementGhost.setPosition(worldPos.x, worldPos.y);
+    if (this.placementMode && this.dragPreview && this.gameState.phase === 'preparation') {
+      // Update drag preview position to follow cursor
+      this.dragPreview.setPosition(worldPoint.x, worldPoint.y);
       
-      // Update drag overlay position for placement mode
-      if (this.dragOverlay) {
-        this.dragOverlay.setPosition(worldPos.x, worldPos.y);
-      }
-      
-      // Update ghost alpha based on validity
-      if (this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined)) {
-        this.placementGhost.setAlpha(0.8);
-      } else {
-        this.placementGhost.setAlpha(0.3);
-      }
+      // Add visual feedback for valid/invalid drop zones
+      const isValid = this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
+      this.updateDragPreviewValidation(isValid);
       
       // Grid highlighting is now disabled at the Grid level to remove green debug boxes
       this.grid.highlightCell(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
@@ -269,23 +259,21 @@ export default class MainScene extends Phaser.Scene {
     }
     
     // Handle unit dragging - only during preparation phase
-    if (this.isDragging && this.selectedUnit && this.gameState.phase === 'preparation') {
-      // Update unit position to follow cursor
-      this.selectedUnit.setPosition(worldPoint.x, worldPoint.y);
+    if (this.isDragging && this.selectedUnit && this.dragPreview && this.gameState.phase === 'preparation') {
+      // Update drag preview position to follow cursor
+      this.dragPreview.setPosition(worldPoint.x, worldPoint.y);
       
-      // Update drag overlay position
-      if (this.dragOverlay) {
-        this.dragOverlay.setPosition(worldPoint.x, worldPoint.y);
-      }
+      // Check if over sell zone
+      this.checkSellZoneHover(pointer.x, pointer.y);
       
       // Grid highlighting is now disabled at the Grid level to remove green debug boxes
       this.grid.highlightCell(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
       
-      // Add visual feedback for valid/invalid drop zones
-      const isValid = this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
-      this.selectedUnit.setAlpha(isValid ? 0.9 : 0.5);
+      // Add visual feedback for valid/invalid drop zones by changing the box color
+      const isValid = this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined) && !this.isOverSellZone;
+      this.updateDragPreviewValidation(isValid);
       
-      console.log(`Dragging to grid (${gridPos.x}, ${gridPos.y}), valid: ${isValid}`);
+      console.log(`Dragging to grid (${gridPos.x}, ${gridPos.y}), valid: ${isValid}, over sell zone: ${this.isOverSellZone}`);
       
       return;
     }
@@ -337,6 +325,7 @@ export default class MainScene extends Phaser.Scene {
     if (!this.isDragging || !this.selectedUnit || !this.gameState) {
       this.isDragging = false;
       this.selectedUnit = null;
+      this.hideSellZone();
       return;
     }
 
@@ -350,8 +339,15 @@ export default class MainScene extends Phaser.Scene {
     
     console.log(`🎯 Drop target: grid(${gridPos.x}, ${gridPos.y}), unit current pos:`, unit?.position);
     
+    // Check if dropped in sell zone
+    if (this.isOverSellZone && this.draggedUnit) {
+      console.log(`💰 Selling unit ${this.draggedUnit.name} for 75% refund`);
+      this.sellUnit(this.draggedUnit.id);
+      // Hide the unit sprite after selling
+      this.selectedUnit.setVisible(false);
+    }
     // Check if valid placement
-    if (this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined)) {
+    else if (this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined)) {
       // Check if position actually changed
       const positionChanged = !unit?.position || 
         unit.position.x !== gridPos.x || 
@@ -399,19 +395,151 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Reset visual state
-    this.selectedUnit.setScale(1); // Reset scale
-    this.selectedUnit.setAlpha(1); // Reset transparency
-    this.selectedUnit.setDepth(this.selectedUnit.y); // Reset depth based on Y position
+    this.selectedUnit.setAlpha(1); // Restore full visibility
     
-    // Hide drag overlay
-    if (this.dragOverlay) {
-      this.dragOverlay.clear();
-      this.dragOverlay.setVisible(false);
-    }
+    // Destroy drag preview
+    this.destroyDragPreview();
+    
+    // Hide sell zone
+    this.hideSellZone();
+    
+    // Hide drag instruction
+    this.hideDragInstruction();
     
     this.selectedUnit = null;
     this.isDragging = false;
+    this.draggedUnit = null;
     this.grid.clearHighlight();
+  }
+
+  private createDragPreview(unit: Unit, x: number, y: number) {
+    // Create drag preview container
+    this.dragPreview = this.add.container(x, y);
+    this.dragPreview.setDepth(2000); // Very high depth to appear above everything
+    
+    // Create the box background
+    const boxWidth = 80;
+    const boxHeight = 80;
+    const cornerRadius = 12;
+    
+    // Create box graphics
+    const box = this.add.graphics();
+    
+    // Box shadow (slight offset for 3D effect)
+    box.fillStyle(0x000000, 0.3);
+    box.fillRoundedRect(-boxWidth/2 + 2, -boxHeight/2 + 2, boxWidth, boxHeight, cornerRadius);
+    
+    // Main box background
+    box.fillStyle(0x2a2a2a, 0.95);
+    box.fillRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+    
+    // Golden border
+    box.lineStyle(3, 0xFFD700, 1);
+    box.strokeRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+    
+    // Inner highlight border
+    box.lineStyle(1, 0xFFFFFF, 0.3);
+    box.strokeRoundedRect(-boxWidth/2 + 4, -boxHeight/2 + 4, boxWidth - 8, boxHeight - 8, cornerRadius - 2);
+    
+    this.dragPreview.add(box);
+    
+    // Create unit sprite inside the box
+    const textureKey = unit.name.toLowerCase();
+    let unitSprite: Phaser.GameObjects.Sprite;
+    
+    if (this.textures.exists(textureKey)) {
+      const texture = this.textures.get(textureKey);
+      const frameNames = texture.getFrameNames();
+      
+      // Find idle frame or use first frame
+      const idleFrame = frameNames.find(frame => 
+        frame.toLowerCase().includes('idle')
+      ) || frameNames[0];
+      
+      unitSprite = this.add.sprite(0, -5, textureKey, idleFrame);
+    } else {
+      // Fallback sprite
+      unitSprite = this.add.sprite(0, -5, '__DEFAULT');
+    }
+    
+    unitSprite.setScale(0.6); // Slightly smaller to fit nicely in the box
+    
+    // Add unit name below the sprite
+    const nameText = this.add.text(0, 25, unit.name, {
+      fontSize: '10px',
+      color: '#FFD700',
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    nameText.setOrigin(0.5);
+    
+    this.dragPreview.add([unitSprite, nameText]);
+    
+    // Add subtle floating animation
+    this.tweens.add({
+      targets: this.dragPreview,
+      y: this.dragPreview.y - 3,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Add gentle rotation
+    this.tweens.add({
+      targets: this.dragPreview,
+      angle: { from: -2, to: 2 },
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private destroyDragPreview() {
+    if (this.dragPreview) {
+      // Stop any tweens on the drag preview
+      this.tweens.killTweensOf(this.dragPreview);
+      this.dragPreview.destroy();
+      this.dragPreview = null;
+    }
+  }
+
+  private updateDragPreviewValidation(isValid: boolean) {
+    if (!this.dragPreview) return;
+    
+    // Get the graphics object (first child)
+    const box = this.dragPreview.getAt(0) as Phaser.GameObjects.Graphics;
+    if (!box) return;
+    
+    box.clear();
+    
+    const boxWidth = 80;
+    const boxHeight = 80;
+    const cornerRadius = 12;
+    
+    // Box shadow (slight offset for 3D effect)
+    box.fillStyle(0x000000, 0.3);
+    box.fillRoundedRect(-boxWidth/2 + 2, -boxHeight/2 + 2, boxWidth, boxHeight, cornerRadius);
+    
+    // Change box color based on validity
+    if (isValid) {
+      // Valid placement - keep golden theme
+      box.fillStyle(0x2a2a2a, 0.95);
+      box.fillRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+      box.lineStyle(3, 0xFFD700, 1); // Golden border
+      box.strokeRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+      box.lineStyle(1, 0xFFFFFF, 0.3); // Inner highlight
+      box.strokeRoundedRect(-boxWidth/2 + 4, -boxHeight/2 + 4, boxWidth - 8, boxHeight - 8, cornerRadius - 2);
+    } else {
+      // Invalid placement - red theme
+      box.fillStyle(0x3a1a1a, 0.95); // Dark red background
+      box.fillRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+      box.lineStyle(3, 0xFF4444, 1); // Red border
+      box.strokeRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+      box.lineStyle(1, 0xFF8888, 0.3); // Light red inner highlight
+      box.strokeRoundedRect(-boxWidth/2 + 4, -boxHeight/2 + 4, boxWidth - 8, boxHeight - 8, cornerRadius - 2);
+    }
   }
 
   private cancelDrag() {
@@ -430,20 +558,22 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Reset visual state
-    this.selectedUnit.setScale(1);
     this.selectedUnit.setAlpha(1);
-    this.selectedUnit.setDepth(this.selectedUnit.y);
     
-    // Hide drag overlay
-    if (this.dragOverlay) {
-      this.dragOverlay.clear();
-      this.dragOverlay.setVisible(false);
-    }
+    // Destroy drag preview
+    this.destroyDragPreview();
     
     // Clear drag state
     this.selectedUnit = null;
     this.isDragging = false;
+    this.draggedUnit = null;
     this.grid.clearHighlight();
+    
+    // Hide sell zone
+    this.hideSellZone();
+    
+    // Hide drag instruction
+    this.hideDragInstruction();
 
     console.log('Drag operation cancelled');
   }
@@ -722,7 +852,13 @@ export default class MainScene extends Phaser.Scene {
           const now = this.time.now;
           
           if (now - lastAttack > 500) { // 500ms cooldown between projectiles
-            this.createProjectileForAttack(unit, allUnits);
+            if (unit.name.toLowerCase() === 'wizard') {
+              // Special handling for wizard: delay projectile creation for charging animation
+              this.handleWizardAttack(unit, allUnits);
+            } else {
+              // Immediate projectile for other ranged units
+              this.createProjectileForAttack(unit, allUnits);
+            }
             this.lastAttackTime.set(unit.id, now);
           }
         }
@@ -761,37 +897,21 @@ export default class MainScene extends Phaser.Scene {
     this.placementMode = true;
     this.placementUnit = unit;
     
-    // Create ghost sprite
-    const textureKey = unit.name.toLowerCase();
-    if (this.textures.exists(textureKey)) {
-      const frameNames = this.textures.get(textureKey).getFrameNames();
-      if (frameNames.length > 0) {
-        this.placementGhost = this.add.sprite(0, 0, textureKey, frameNames[0]);
-      } else {
-        this.placementGhost = this.add.sprite(0, 0, textureKey);
-      }
-    } else {
-      // Create a placeholder if texture is missing
-      this.placementGhost = this.add.sprite(0, 0, '__DEFAULT');
-    }
+    // Create drag preview for placement (start off-screen until first mouse move)
+    const placementUnit = {
+      id: 'placement-preview',
+      name: unit.name,
+      playerId: this.currentPlayerId || '',
+      health: unit.health,
+      maxHealth: unit.health,
+      damage: unit.damage,
+      speed: unit.speed,
+      status: 'idle' as const,
+      position: null,
+      buffs: []
+    };
     
-    this.placementGhost.setScale(1.1);
-    this.placementGhost.setAlpha(0.8);
-    this.placementGhost.setDepth(1000);
-    
-    // Create yellow rounded box overlay for placement mode (same as grid-to-grid dragging)
-    if (!this.dragOverlay) {
-      this.dragOverlay = this.add.graphics();
-    }
-    this.dragOverlay.clear();
-    this.dragOverlay.lineStyle(3, 0xFFD700, 1); // Golden yellow border
-    this.dragOverlay.fillStyle(0xFFD700, 0.2); // Semi-transparent yellow fill
-    this.dragOverlay.fillRoundedRect(-40, -40, 80, 80, 8);
-    this.dragOverlay.strokeRoundedRect(-40, -40, 80, 80, 8);
-    this.dragOverlay.setDepth(999); // Just below the placement ghost
-    
-    // Disable normal unit dragging
-    this.input.enabled = true;
+    this.createDragPreview(placementUnit, -100, -100);
     
     // Add escape key to cancel
     this.input.keyboard?.once('keydown-ESC', () => {
@@ -804,16 +924,8 @@ export default class MainScene extends Phaser.Scene {
     this.placementUnit = null;
     this.placedUnit = null;
     
-    if (this.placementGhost) {
-      this.placementGhost.destroy();
-      this.placementGhost = null;
-    }
-    
-    // Hide drag overlay
-    if (this.dragOverlay) {
-      this.dragOverlay.clear();
-      this.dragOverlay.setVisible(false);
-    }
+    // Destroy drag preview
+    this.destroyDragPreview();
 
     this.grid.clearHighlight();
   }
@@ -825,34 +937,8 @@ export default class MainScene extends Phaser.Scene {
     this.placementUnit = null; // We're placing an already purchased unit
     this.placedUnit = unit; // Store the unit to place
     
-    // Create ghost sprite
-    const textureKey = unit.name.toLowerCase();
-    if (this.textures.exists(textureKey)) {
-      const frameNames = this.textures.get(textureKey).getFrameNames();
-      if (frameNames.length > 0) {
-        this.placementGhost = this.add.sprite(0, 0, textureKey, frameNames[0]);
-      } else {
-        this.placementGhost = this.add.sprite(0, 0, textureKey);
-      }
-    } else {
-      // Create a placeholder if texture is missing
-      this.placementGhost = this.add.sprite(0, 0, '__DEFAULT');
-    }
-    
-    this.placementGhost.setScale(1.1);
-    this.placementGhost.setAlpha(0.8);
-    this.placementGhost.setDepth(1000);
-    
-    // Create yellow rounded box overlay for placement mode (same as grid-to-grid dragging)
-    if (!this.dragOverlay) {
-      this.dragOverlay = this.add.graphics();
-    }
-    this.dragOverlay.clear();
-    this.dragOverlay.lineStyle(3, 0xFFD700, 1); // Golden yellow border
-    this.dragOverlay.fillStyle(0xFFD700, 0.2); // Semi-transparent yellow fill
-    this.dragOverlay.fillRoundedRect(-40, -40, 80, 80, 8);
-    this.dragOverlay.strokeRoundedRect(-40, -40, 80, 80, 8);
-    this.dragOverlay.setDepth(999); // Just below the placement ghost
+    // Create drag preview for placement (start off-screen until first mouse move)
+    this.createDragPreview(unit, -100, -100);
     
     // Add escape key to cancel
     this.input.keyboard?.once('keydown-ESC', () => {
@@ -941,6 +1027,509 @@ export default class MainScene extends Phaser.Scene {
     this.projectiles.push(projectile);
   }
   
+  private handleWizardAttack(attacker: Unit, allUnits: Unit[]) {
+    console.log(`🧙 Wizard ${attacker.name} starting charging sequence`);
+    
+    // Find the target first
+    if (!attacker.position) return;
+    
+    const isPlayerUnit = this.gameState?.players.some(p => 
+      p.units.some(u => u.id === attacker.id)
+    ) || false;
+    
+    const enemies = allUnits.filter(u => {
+      const isEnemy = isPlayerUnit ? 
+        this.gameState?.enemyUnits.some(e => e.id === u.id) :
+        this.gameState?.players.some(p => p.units.some(pu => pu.id === u.id));
+      return isEnemy && u.status !== 'dead' && u.position;
+    });
+    
+    if (enemies.length === 0) return;
+    
+    // Find closest enemy
+    let closestEnemy: Unit | null = null;
+    let closestDistance = Infinity;
+    
+    for (const enemy of enemies) {
+      if (!enemy.position) continue;
+      const distance = Math.abs(enemy.position.x - attacker.position.x) + 
+                      Math.abs(enemy.position.y - attacker.position.y);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestEnemy = enemy;
+      }
+    }
+    
+    if (!closestEnemy || !closestEnemy.position) return;
+    
+    // Start the charging animation and delayed projectile launch
+    const attackerSprite = this.unitSprites.get(attacker.id);
+    if (attackerSprite) {
+      this.startWizardChargingAnimation(attackerSprite, attacker, closestEnemy, allUnits);
+    }
+  }
+  
+  private startWizardChargingAnimation(attackerSprite: any, attacker: Unit, target: Unit, allUnits: Unit[]) {
+    console.log(`🔮 Starting wizard charging animation for ${attacker.name}`);
+    
+    // Get wizard attack frames
+    const wizardTextureKey = attacker.name.toLowerCase();
+    if (!this.textures.exists(wizardTextureKey)) {
+      console.error(`Wizard texture ${wizardTextureKey} not found`);
+      return;
+    }
+    
+    const frameNames = this.textures.get(wizardTextureKey).getFrameNames();
+    const attackFrames = frameNames.filter(frame => 
+      frame.toLowerCase().includes('attack')
+    );
+    
+    // Sort attack frames to get proper order
+    attackFrames.sort((frameA, frameB) => {
+      const extractFrameInfo = (frameName) => {
+        const match = frameName.match(/^([a-zA-Z]+)_(\d+)(?:_(\d+))?.*?\.png$/i);
+        if (match) {
+          const mainFrame = parseInt(match[2], 10);
+          const subFrame = match[3] ? parseInt(match[3], 10) : 0;
+          return { mainFrame, subFrame };
+        }
+        const fallbackMatch = frameName.match(/(\d+)/);
+        if (fallbackMatch) {
+          return { mainFrame: parseInt(fallbackMatch[1], 10), subFrame: 0 };
+        }
+        return { mainFrame: Infinity, subFrame: Infinity };
+      };
+
+      const infoA = extractFrameInfo(frameA);
+      const infoB = extractFrameInfo(frameB);
+
+      if (infoA.mainFrame === infoB.mainFrame) {
+        return infoA.subFrame - infoB.subFrame;
+      }
+      return infoA.mainFrame - infoB.mainFrame;
+    });
+    
+    if (attackFrames.length < 9) {
+      console.error(`Not enough attack frames for wizard charging animation (need at least 9)`);
+      return;
+    }
+    
+    // Use frames 5-9 for charging loop (0-indexed: frames 4-8)
+    const chargingFrames = attackFrames.slice(4, 9);
+    console.log(`🔮 Using charging frames:`, chargingFrames);
+    
+    // Create custom charging animation
+    const chargingAnimKey = `wizard_charging_${attacker.id}`;
+    
+    if (!this.anims.exists(chargingAnimKey)) {
+      this.anims.create({
+        key: chargingAnimKey,
+        frames: this.anims.generateFrameNames(wizardTextureKey, { 
+          frames: chargingFrames 
+        }),
+        frameRate: 8, // Slower animation for charging effect
+        repeat: -1 // Loop indefinitely
+      });
+    }
+    
+    // Play charging animation
+    attackerSprite.play(chargingAnimKey);
+    
+    // Create charging effect around wizard
+    this.createChargingEffect(attackerSprite);
+    
+    // After 2.5 seconds of charging, launch the blue orb
+    console.log(`⏱️ Starting 2.5 second countdown for wizard orb launch`);
+    this.time.delayedCall(2500, () => {
+      console.log(`🚀 LAUNCHING BLUE ORB PROJECTILE NOW!`);
+      this.createBlueOrbProjectile(attacker, target, allUnits);
+      
+      // Play remaining attack animation frames (frames 10+)
+      const launchAnimKey = `wizard_launch_${attacker.id}`;
+      const launchFrames = attackFrames.slice(9); // frames 10+ (0-indexed: frames 9+)
+      
+      if (launchFrames.length > 0 && !this.anims.exists(launchAnimKey)) {
+        this.anims.create({
+          key: launchAnimKey,
+          frames: this.anims.generateFrameNames(wizardTextureKey, { 
+            frames: launchFrames 
+          }),
+          frameRate: 10,
+          repeat: 0 // Play once
+        });
+      }
+      
+      if (this.anims.exists(launchAnimKey)) {
+        attackerSprite.play(launchAnimKey);
+      } else {
+        // Fallback to normal attack animation if no launch frames
+        const normalAttackKey = `${attacker.name.toLowerCase()}_attack`;
+        if (this.anims.exists(normalAttackKey)) {
+          attackerSprite.play(normalAttackKey);
+        }
+      }
+    });
+  }
+  
+  private createChargingEffect(wizardSprite: any) {
+    console.log(`✨ Creating charging effect around wizard`);
+    
+    // Create a charging circle that grows and pulses around the wizard
+    const chargingCircle = this.add.circle(wizardSprite.x, wizardSprite.y - 10, 10, 0x4444ff, 0.3);
+    chargingCircle.setDepth(wizardSprite.depth + 1);
+    
+    // Create particle effect for charging
+    const particles = this.add.particles(wizardSprite.x, wizardSprite.y - 10, 'wizard', {
+      frame: 'Charge_1_1 #10.png', // Use existing charge frame as particle
+      scale: { start: 0.1, end: 0.3 },
+      alpha: { start: 0.8, end: 0 },
+      speed: { min: 20, max: 40 },
+      lifespan: 800,
+      quantity: 2,
+      frequency: 100
+    });
+    particles.setDepth(wizardSprite.depth + 2);
+    
+    // Animate charging circle
+    this.tweens.add({
+      targets: chargingCircle,
+      radius: { from: 10, to: 25 },
+      alpha: { from: 0.3, to: 0.8 },
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Store effects to clean them up later
+    wizardSprite.chargingEffects = {
+      circle: chargingCircle,
+      particles: particles
+    };
+    
+    // Clean up charging effects after 3 seconds
+    this.time.delayedCall(3000, () => {
+      if (wizardSprite.chargingEffects) {
+        wizardSprite.chargingEffects.circle.destroy();
+        wizardSprite.chargingEffects.particles.destroy();
+        wizardSprite.chargingEffects = null;
+      }
+    });
+  }
+  
+  private createBlueOrbProjectile(attacker: Unit, target: Unit, allUnits: Unit[]) {
+    console.log(`🔵 Creating blue orb projectile from ${attacker.name} to ${target.name}`);
+    console.log(`🎯 Attacker position:`, attacker.position, `Target position:`, target.position);
+    
+    if (!attacker.position || !target.position) {
+      console.error(`❌ Missing positions - Attacker: ${attacker.position}, Target: ${target.position}`);
+      return;
+    }
+    
+    // Get world positions
+    const startPos = this.grid.gridToWorld(attacker.position.x, attacker.position.y);
+    const targetPos = this.grid.gridToWorld(target.position.x, target.position.y);
+    
+    console.log(`🚀 Orb traveling from (${startPos.x}, ${startPos.y}) to (${targetPos.x}, ${targetPos.y})`);
+    
+    // Create container for the orb and all its effects
+    const orbContainer = this.add.container(startPos.x, startPos.y - 20);
+    orbContainer.setDepth(startPos.y + 100);
+    
+    // Create multiple orb layers for visual depth
+    const outerGlow = this.add.circle(0, 0, 25, 0x0066ff, 0.2);
+    const middleRing = this.add.circle(0, 0, 18, 0x3388ff, 0.4);
+    const innerOrb = this.add.circle(0, 0, 12, 0x88ccff, 0.8);
+    const core = this.add.circle(0, 0, 8, 0xaaccff, 1.0);
+    const center = this.add.circle(0, 0, 4, 0xffffff, 0.9);
+    
+    // Add all layers to container
+    orbContainer.add([outerGlow, middleRing, innerOrb, core, center]);
+    
+    // Create pulsing animation for each layer
+    this.tweens.add({
+      targets: outerGlow,
+      scaleX: { from: 1, to: 1.3 },
+      scaleY: { from: 1, to: 1.3 },
+      alpha: { from: 0.2, to: 0.4 },
+      duration: 400,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    this.tweens.add({
+      targets: [middleRing, innerOrb],
+      scaleX: { from: 1, to: 1.1 },
+      scaleY: { from: 1, to: 1.1 },
+      duration: 300,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    this.tweens.add({
+      targets: [core, center],
+      scaleX: { from: 1, to: 1.2 },
+      scaleY: { from: 1, to: 1.2 },
+      duration: 200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Add rotation to make it more dynamic
+    this.tweens.add({
+      targets: orbContainer,
+      rotation: { from: 0, to: Math.PI * 2 },
+      duration: 1000,
+      repeat: -1,
+      ease: 'Linear'
+    });
+    
+    // Create particle trail system
+    const trailParticles = this.add.particles(0, 0, '__DEFAULT', {
+      scale: { start: 0.3, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      tint: [0x3388ff, 0x88ccff, 0xaaccff],
+      speed: { min: 20, max: 40 },
+      lifespan: 800,
+      quantity: 3,
+      frequency: 50,
+      emitZone: { type: 'edge', source: new Phaser.Geom.Circle(0, 0, 15), quantity: 2 }
+    });
+    trailParticles.setDepth(orbContainer.depth - 1);
+    trailParticles.startFollow(orbContainer);
+    
+    // Calculate travel time based on distance
+    const distance = Phaser.Math.Distance.Between(startPos.x, startPos.y, targetPos.x, targetPos.y);
+    const travelTime = Math.max(1000, distance * 2); // Minimum 1 second, dramatic timing
+    
+    console.log(`⏱️ Orb will travel for ${travelTime}ms over distance ${distance} pixels`);
+    
+    // Animate orb to target with smooth curve
+    this.tweens.add({
+      targets: orbContainer,
+      x: targetPos.x,
+      y: targetPos.y - 20,
+      duration: travelTime,
+      ease: 'Power2.easeOut',
+      onComplete: () => {
+        console.log(`💥 Blue orb reached target at (${targetPos.x}, ${targetPos.y})`);
+        
+        // Stop particle trail
+        trailParticles.destroy();
+        
+        // Create explosion at impact point
+        this.createBlueOrbExplosion(targetPos.x, targetPos.y - 20, attacker, allUnits);
+        
+        // Destroy orb container
+        orbContainer.destroy();
+      }
+    });
+    
+    // Add a subtle trail effect by scaling the orb as it travels
+    this.tweens.add({
+      targets: orbContainer,
+      scaleX: { from: 0.8, to: 1.2 },
+      scaleY: { from: 0.8, to: 1.2 },
+      duration: travelTime * 0.5,
+      yoyo: true,
+      ease: 'Sine.easeInOut'
+    });
+  }
+  
+  private createBlueOrbExplosion(x: number, y: number, attacker: Unit, allUnits: Unit[]) {
+    console.log(`💥 Creating enhanced blue orb explosion at (${x}, ${y})`);
+    
+    // Create main explosion container
+    const explosionContainer = this.add.container(x, y);
+    explosionContainer.setDepth(y + 200);
+    
+    // Create multiple explosion rings with different animations
+    const rings = [];
+    const ringColors = [0xffffff, 0xaaccff, 0x88ccff, 0x3388ff, 0x0066ff];
+    
+    for (let i = 0; i < 5; i++) {
+      const ring = this.add.circle(0, 0, 5, ringColors[i], 0.9 - (i * 0.15));
+      rings.push(ring);
+      explosionContainer.add(ring);
+    }
+    
+    // Animate rings expanding outward in sequence
+    rings.forEach((ring, index) => {
+      this.tweens.add({
+        targets: ring,
+        scaleX: { from: 0.2, to: 12 + (index * 1.5) },
+        scaleY: { from: 0.2, to: 12 + (index * 1.5) },
+        alpha: { from: 0.9, to: 0 },
+        duration: 1000 + (index * 100),
+        ease: 'Power2.easeOut',
+        delay: index * 60
+      });
+    });
+    
+    // Create inner flash effect
+    const flash = this.add.circle(0, 0, 20, 0xffffff, 1);
+    explosionContainer.add(flash);
+    
+    this.tweens.add({
+      targets: flash,
+      scaleX: { from: 0.1, to: 6 },
+      scaleY: { from: 0.1, to: 6 },
+      alpha: { from: 1, to: 0 },
+      duration: 400,
+      ease: 'Power3.easeOut'
+    });
+    
+    // Create spectacular particle burst
+    const burstParticles = this.add.particles(x, y, '__DEFAULT', {
+      scale: { start: 1.0, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: [0x0066ff, 0x3388ff, 0x88ccff, 0xaaccff, 0xffffff],
+      speed: { min: 150, max: 350 },
+      lifespan: 1500,
+      quantity: 30,
+      frequency: -1, // Burst all at once
+      emitZone: { type: 'edge', source: new Phaser.Geom.Circle(0, 0, 8), quantity: 30 }
+    });
+    burstParticles.setDepth(y + 202);
+    burstParticles.explode(30);
+    
+    // Create secondary particle ring
+    const ringParticles = this.add.particles(x, y, '__DEFAULT', {
+      scale: { start: 0.6, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      tint: [0x3388ff, 0x88ccff],
+      speed: { min: 80, max: 150 },
+      lifespan: 1000,
+      quantity: 20,
+      frequency: -1,
+      emitZone: { type: 'edge', source: new Phaser.Geom.Circle(0, 0, 25), quantity: 20 }
+    });
+    ringParticles.setDepth(y + 201);
+    ringParticles.explode(20);
+    
+    // Add screen shake for impact
+    this.cameras.main.shake(300, 0.015);
+    
+    // Calculate area damage
+    this.calculateAreaDamage(x, y, 80, attacker, allUnits);
+    
+    // Clean up explosion effects
+    this.time.delayedCall(1200, () => {
+      explosionContainer.destroy();
+    });
+    
+    this.time.delayedCall(2000, () => {
+      if (burstParticles && burstParticles.active) burstParticles.destroy();
+      if (ringParticles && ringParticles.active) ringParticles.destroy();
+    });
+  }
+  
+  private calculateAreaDamage(explosionX: number, explosionY: number, radius: number, attacker: Unit, allUnits: Unit[]) {
+    console.log(`⚡ Calculating area damage from wizard explosion`);
+    
+    // Find all enemy units within the blast radius
+    const isPlayerUnit = this.gameState?.players.some(p => 
+      p.units.some(u => u.id === attacker.id)
+    ) || false;
+    
+    const enemies = allUnits.filter(u => {
+      const isEnemy = isPlayerUnit ? 
+        this.gameState?.enemyUnits.some(e => e.id === u.id) :
+        this.gameState?.players.some(p => p.units.some(pu => pu.id === u.id));
+      return isEnemy && u.status !== 'dead' && u.position;
+    });
+    
+    const affectedEnemies = [];
+    
+    for (const enemy of enemies) {
+      if (!enemy.position) continue;
+      
+      const enemyPos = this.grid.gridToWorld(enemy.position.x, enemy.position.y);
+      const distance = Phaser.Math.Distance.Between(explosionX, explosionY, enemyPos.x, enemyPos.y);
+      
+      if (distance <= radius) {
+        affectedEnemies.push(enemy);
+        console.log(`🎯 Enemy ${enemy.name} caught in blast (distance: ${distance.toFixed(1)})`);
+      }
+    }
+    
+    // Apply damage to all affected enemies
+    if (affectedEnemies.length > 0) {
+      console.log(`💀 Wizard explosion affecting ${affectedEnemies.length} enemies`);
+      
+      // Create damage indicators for affected enemies with cascade effect
+      affectedEnemies.forEach((enemy, index) => {
+        if (enemy.position) {
+          const enemyWorldPos = this.grid.gridToWorld(enemy.position.x, enemy.position.y);
+          
+          // Delayed damage indicators for dramatic cascade effect
+          this.time.delayedCall(index * 80, () => {
+            this.createDamageIndicator(enemyWorldPos.x, enemyWorldPos.y, attacker.damage || 4, 'magic');
+            
+            // Add individual hit effect on each enemy
+            const enemyHitEffect = this.add.circle(enemyWorldPos.x, enemyWorldPos.y, 12, 0x88ccff, 0.7);
+            enemyHitEffect.setDepth(enemyWorldPos.y + 50);
+            
+            this.tweens.add({
+              targets: enemyHitEffect,
+              scaleX: { from: 0.3, to: 4 },
+              scaleY: { from: 0.3, to: 4 },
+              alpha: { from: 0.7, to: 0 },
+              duration: 500,
+              ease: 'Power2.easeOut',
+              onComplete: () => enemyHitEffect.destroy()
+            });
+            
+            // Add small particle burst on each enemy hit
+            const hitParticles = this.add.particles(enemyWorldPos.x, enemyWorldPos.y, '__DEFAULT', {
+              scale: { start: 0.4, end: 0 },
+              alpha: { start: 0.8, end: 0 },
+              tint: [0x88ccff, 0xaaccff],
+              speed: { min: 30, max: 80 },
+              lifespan: 600,
+              quantity: 8,
+              frequency: -1
+            });
+            hitParticles.setDepth(enemyWorldPos.y + 51);
+            hitParticles.explode(8);
+            
+            this.time.delayedCall(800, () => {
+              if (hitParticles && hitParticles.active) hitParticles.destroy();
+            });
+          });
+        }
+      });
+    }
+  }
+
+  private createDamageIndicator(x: number, y: number, damage: number, type: string = 'physical') {
+    // Create damage text with appropriate color
+    const color = type === 'magic' ? '#88ccff' : type === 'heal' ? '#4CAF50' : '#ffffff';
+    const text = this.add.text(x, y - 20, `-${Math.round(damage)}`, {
+      fontSize: '16px',
+      color: color,
+      stroke: '#000000',
+      strokeThickness: 2,
+      fontStyle: 'bold'
+    });
+    text.setOrigin(0.5);
+    text.setDepth(y + 100);
+
+    // Animate damage text
+    this.tweens.add({
+      targets: text,
+      y: y - 60,
+      alpha: { from: 1, to: 0 },
+      scale: { from: 1, to: 1.2 },
+      duration: 1000,
+      ease: 'Power2.easeOut',
+      onComplete: () => text.destroy()
+    });
+  }
+  
   private createHolyProjectileEffect(startX: number, startY: number, targetX: number, targetY: number) {
     // Create a simple holy light effect for priest attacks
     const light = this.add.circle(startX, startY - 20, 8, 0xffff88, 1);
@@ -1013,5 +1602,236 @@ export default class MainScene extends Phaser.Scene {
 
   updatePlayerHover(playerId: string, playerName: string, position: Position | null, playerColor: string) {
     this.grid.updatePlayerHover(playerId, playerName, position, playerColor);
+  }
+
+  private showSellZone() {
+    if (this.sellZone) return; // Already visible
+    
+    // Create sell zone container
+    this.sellZone = this.add.container(this.cameras.main.width - 150, this.cameras.main.height / 2);
+    this.sellZone.setDepth(1900); // Below drag preview but above most things
+    
+    // Create background panel with gradient
+    const zoneHeight = 200;
+    const zoneWidth = 120;
+    const bg = this.add.graphics();
+    
+    // Draw gradient background
+    bg.fillGradientStyle(0xff0000, 0xff0000, 0xcc0000, 0xcc0000, 0.8, 0.9, 0.7, 0.8);
+    bg.fillRoundedRect(-zoneWidth/2, -zoneHeight/2, zoneWidth, zoneHeight, 16);
+    
+    // Draw border
+    bg.lineStyle(3, 0xffffff, 0.8);
+    bg.strokeRoundedRect(-zoneWidth/2, -zoneHeight/2, zoneWidth, zoneHeight, 16);
+    
+    // Add pulsing border effect
+    const pulsingBorder = this.add.graphics();
+    pulsingBorder.lineStyle(3, 0xff6666, 0.6);
+    pulsingBorder.strokeRoundedRect(-zoneWidth/2, -zoneHeight/2, zoneWidth, zoneHeight, 16);
+    
+    this.tweens.add({
+      targets: pulsingBorder,
+      alpha: { from: 0.3, to: 0.8 },
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Add sell icon
+    const sellIcon = this.add.text(0, -40, '💰', {
+      fontSize: '48px'
+    });
+    sellIcon.setOrigin(0.5);
+    
+    // Add text
+    const sellText = this.add.text(0, 10, 'SELL', {
+      fontSize: '24px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+      fontStyle: 'bold'
+    });
+    sellText.setOrigin(0.5);
+    
+    const refundText = this.add.text(0, 40, '75% Refund', {
+      fontSize: '14px',
+      color: '#ffff88',
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    refundText.setOrigin(0.5);
+    
+    // Add all elements to container
+    this.sellZone.add([bg, pulsingBorder, sellIcon, sellText, refundText]);
+    
+    // Animate sell zone sliding in
+    this.sellZone.x = this.cameras.main.width + 100;
+    this.tweens.add({
+      targets: this.sellZone,
+      x: this.cameras.main.width - 100,
+      duration: 300,
+      ease: 'Power2.easeOut'
+    });
+  }
+
+  private hideSellZone() {
+    if (!this.sellZone) return;
+    
+    // Animate sell zone sliding out
+    this.tweens.add({
+      targets: this.sellZone,
+      x: this.cameras.main.width + 100,
+      duration: 300,
+      ease: 'Power2.easeIn',
+      onComplete: () => {
+        if (this.sellZone) {
+          this.sellZone.destroy();
+          this.sellZone = null;
+        }
+      }
+    });
+    
+    this.isOverSellZone = false;
+  }
+
+  private checkSellZoneHover(pointerX: number, pointerY: number) {
+    if (!this.sellZone) {
+      this.isOverSellZone = false;
+      return;
+    }
+    
+    // Check if pointer is over sell zone
+    const sellZoneBounds = {
+      x: this.sellZone.x - 60,
+      y: this.sellZone.y - 100,
+      width: 120,
+      height: 200
+    };
+    
+    const wasOverSellZone = this.isOverSellZone;
+    this.isOverSellZone = pointerX >= sellZoneBounds.x && 
+                          pointerX <= sellZoneBounds.x + sellZoneBounds.width &&
+                          pointerY >= sellZoneBounds.y && 
+                          pointerY <= sellZoneBounds.y + sellZoneBounds.height;
+    
+    // Update visual feedback when entering/leaving sell zone
+    if (this.isOverSellZone !== wasOverSellZone) {
+      if (this.isOverSellZone) {
+        // Entering sell zone - make it glow more
+        this.tweens.add({
+          targets: this.sellZone,
+          scaleX: 1.1,
+          scaleY: 1.1,
+          duration: 200,
+          ease: 'Power2.easeOut'
+        });
+        
+        // Update drag preview to show sell indication
+        if (this.dragPreview && this.draggedUnit) {
+          const unitStats = this.getUnitStats(this.draggedUnit.name);
+          const refundAmount = Math.floor((unitStats?.cost || 0) * 0.75);
+          
+          // Add refund amount text to drag preview if not already there
+          const refundIndicator = this.add.text(0, -40, `+${refundAmount}g`, {
+            fontSize: '16px',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 3,
+            fontStyle: 'bold'
+          });
+          refundIndicator.setOrigin(0.5);
+          refundIndicator.setName('refundIndicator');
+          this.dragPreview.add(refundIndicator);
+        }
+      } else {
+        // Leaving sell zone
+        this.tweens.add({
+          targets: this.sellZone,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 200,
+          ease: 'Power2.easeOut'
+        });
+        
+        // Remove refund indicator from drag preview
+        if (this.dragPreview) {
+          const refundIndicator = this.dragPreview.getByName('refundIndicator');
+          if (refundIndicator) {
+            refundIndicator.destroy();
+          }
+        }
+      }
+    }
+  }
+
+  private sellUnit(unitId: string) {
+    // Use the game context to emit sell event
+    if ((window as any).gameContext?.socket) {
+      (window as any).gameContext.socket.emit('sell-unit', unitId);
+      
+      // Play sell sound if available
+      if (this.sound.get('purchase')) {
+        this.sound.play('purchase', { volume: 0.7, rate: 1.2 });
+      }
+    }
+  }
+
+  private getUnitStats(unitName: string): UnitStats | null {
+    // Find unit stats from shop units or a predefined list
+    if (this.gameState?.shopUnits) {
+      return this.gameState.shopUnits.find(u => u.name === unitName) || null;
+    }
+    return null;
+  }
+
+  private showDragInstruction() {
+    if (this.dragInstruction) return;
+    
+    // Create instruction container at top of screen
+    this.dragInstruction = this.add.container(this.cameras.main.centerX, 100);
+    this.dragInstruction.setDepth(2100);
+    
+    // Create background
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.8);
+    bg.fillRoundedRect(-200, -30, 400, 60, 12);
+    
+    // Create instruction text
+    const instructionText = this.add.text(0, 0, '🎯 Drag to reposition  |  💰 Drop in red zone to sell (75% refund)', {
+      fontSize: '16px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    instructionText.setOrigin(0.5);
+    
+    this.dragInstruction.add([bg, instructionText]);
+    
+    // Fade in animation
+    this.dragInstruction.setAlpha(0);
+    this.tweens.add({
+      targets: this.dragInstruction,
+      alpha: 1,
+      duration: 300,
+      ease: 'Power2.easeOut'
+    });
+  }
+
+  private hideDragInstruction() {
+    if (!this.dragInstruction) return;
+    
+    this.tweens.add({
+      targets: this.dragInstruction,
+      alpha: 0,
+      duration: 200,
+      ease: 'Power2.easeIn',
+      onComplete: () => {
+        if (this.dragInstruction) {
+          this.dragInstruction.destroy();
+          this.dragInstruction = null;
+        }
+      }
+    });
   }
 }

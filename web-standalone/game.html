@@ -157,6 +157,41 @@
             background: rgba(255, 215, 0, 0.5);
         }
         
+        /* Sell Area Styles */
+        .sell-area {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(139, 69, 19, 0.95);
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            max-width: 85vw;
+            z-index: 101;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 69, 0, 0.7);
+            text-align: center;
+        }
+        
+        .sell-area.active {
+            display: block;
+        }
+        
+        .sell-area-content {
+            color: #FFD700;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        
+        .sell-area-hint {
+            color: #FFA500;
+            font-size: 14px;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
         .unit-card {
             background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
             border: 2px solid rgba(255, 215, 0, 0.3);
@@ -211,8 +246,10 @@
         }
         
         .unit-card.disabled {
-            opacity: 0.6;
+            opacity: 0.4;
             cursor: not-allowed;
+            pointer-events: none;
+            filter: grayscale(0.8);
         }
         
         .unit-name {
@@ -300,37 +337,40 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.7);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            backdrop-filter: blur(4px);
         }
         
         .unit-selection-content {
-            background: #1a1a2e;
-            border: 2px solid #FFD700;
-            border-radius: 12px;
-            padding: 8px;
-            width: 90vw;
-            height: 85vh;
-            max-width: 1200px;
-            max-height: calc(100vh - 100px); /* Always leave space for buttons */
-            min-height: 200px; /* Ensure minimum usable height */
+            background: rgba(26, 26, 46, 0.85);
+            border: 2px solid rgba(255, 215, 0, 0.8);
+            border-radius: 16px;
+            padding: 15px;
+            width: 70vw;
+            height: auto;
+            max-width: 750px;
+            max-height: 70vh;
+            min-height: 350px;
             display: flex;
-            flex-direction: column;
-            overflow-y: auto; /* Allow scrolling if content is too tall */
             position: relative;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
         
         /* Ensure upgrade modal fits on screen with buttons */
         #upgrade-modal .unit-selection-content {
-            height: calc(100vh - 100px); /* Account for fixed buttons and margins */
-            max-height: calc(100vh - 100px);
-            width: 95vw;
-            max-width: 1400px;
-            padding: clamp(4px, 1vw, 12px);
-            overflow-y: auto; /* Allow scrolling if content is too tall */
+            height: auto;
+            max-height: 70vh;
+            width: 85vw;
+            max-width: 1000px;
+            padding: 20px;
+            overflow-y: auto;
+            background: rgba(20, 20, 35, 0.9);
         }
         
         /* Ensure confirm button is always visible on smaller screens */
@@ -389,17 +429,19 @@
         
         .unit-selection-title {
             color: #FFD700;
-            font-size: clamp(14px, 2.5vh, 24px);
+            font-size: 28px;
             font-weight: bold;
             text-align: center;
-            margin-bottom: clamp(4px, 1vh, 12px);
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
         
         .unit-selection-subtitle {
-            color: white;
-            font-size: clamp(10px, 1.5vh, 16px);
+            color: #ddd;
+            font-size: 16px;
             text-align: center;
-            margin-bottom: clamp(6px, 1.5vh, 16px);
+            margin-bottom: 20px;
+            opacity: 0.8;
         }
         
         .units-grid {
@@ -414,16 +456,17 @@
         .unit-selection-card {
             background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
             border: 2px solid rgba(255, 215, 0, 0.3);
-            border-radius: 16px;
-            padding: 12px;
+            border-radius: 8px;
+            padding: 2px;
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
             width: 200px;
-            height: 280px;
+            height: 220px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
+            align-items: center;
             position: relative;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
@@ -447,26 +490,26 @@
         
         .unit-selection-name {
             color: #FFD700;
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
-            margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
             text-transform: capitalize;
         }
         
         .unit-sprite-container {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 10px auto;
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
-            border: 2px solid rgba(255, 215, 0, 0.3);
-            border-radius: 12px;
+            width: 196px;
+            height: 190px;
+            margin: 0;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
-            overflow: hidden;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+            overflow: visible;
+            flex: 1;
         }
         
         .unit-sprite-canvas {
@@ -645,115 +688,117 @@
         }
         
         .upgrade-section h3 {
-            flex-shrink: 0;
             color: #FFD700;
             text-align: center;
-            margin: 0 0 clamp(3px, 1vh, 10px) 0;
-            font-size: clamp(12px, 2vh, 18px);
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
         }
         
         .upgrade-cards-container {
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 12px;
             flex-wrap: wrap;
-            flex: 1;
-            overflow: visible; /* Allow cards to show their borders properly */
-            padding: 8px; /* Increased padding to accommodate borders */
-            align-items: flex-start;
-            align-content: flex-start;
+            padding: 5px;
+            margin-bottom: 15px;
         }
         
         /* Scrollbar styles removed - no scrolling allowed in upgrade panel */
         
         .upgrade-card {
-            background: linear-gradient(145deg, rgba(45, 45, 80, 0.9), rgba(30, 30, 60, 0.9));
-            border: 2px solid rgba(255, 215, 0, 0.3);
-            border-radius: 6px;
-            padding: clamp(2px, 0.5vh, 8px);
-            width: clamp(100px, 15vw, 200px);
-            max-width: calc(45% - 8px);
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            border-radius: 8px;
+            padding: 8px;
+            width: 150px;
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             position: relative;
             display: flex;
             flex-direction: column;
-            height: clamp(120px, 20vh, 220px);
-            overflow: hidden;
-            justify-content: space-between;
+            height: auto;
+            min-height: 160px;
+            justify-content: center;
+            align-items: center;
         }
         
         /* Responsive scaling for smaller screens */
         @media (max-height: 700px) {
             #upgrade-modal .unit-selection-content {
-                height: calc(100vh - 120px);
-                max-height: 400px;
-                padding: 4px;
+                max-height: 65vh;
+                padding: 10px;
             }
             
             .upgrade-card {
-                height: clamp(120px, 20vh, 140px);
-                width: clamp(110px, 16vw, 140px);
-                padding: 3px;
+                width: 130px;
+                min-height: 140px;
+                padding: 6px;
             }
             
             .unit-selection-title {
+                font-size: 24px;
+            }
+            
+            .upgrade-icon {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .upgrade-icon img {
+                width: 32px;
+                height: 32px;
+            }
+            
+            .upgrade-name {
                 font-size: 14px;
-                margin-bottom: 4px;
             }
             
-            .unit-selection-subtitle {
-                font-size: 10px;
-                margin-bottom: 6px;
-            }
-            
-            .upgrade-section h3 {
+            .upgrade-description {
                 font-size: 12px;
-                margin-bottom: 4px;
             }
         }
         
         @media (max-height: 600px) {
             #upgrade-modal .unit-selection-content {
-                height: calc(100vh - 100px);
-                max-height: 350px;
-                padding: 3px;
+                max-height: 65vh;
+                padding: 10px;
             }
             
             .upgrade-card {
-                height: clamp(100px, 18vh, 120px);
-                width: clamp(100px, 15vw, 130px);
-                padding: 2px;
+                width: 150px;
+                min-height: 160px;
+                padding: 10px;
             }
             
-            .upgrade-name {
-                font-size: 9px;
-                margin-bottom: 2px;
-            }
-            
-            .upgrade-description {
-                font-size: 7px;
-                min-height: 20px;
-                margin-bottom: 3px;
-            }
-            
-            .upgrade-target {
-                font-size: 7px;
-                margin-bottom: 2px;
+            .unit-selection-title {
+                font-size: 20px;
             }
             
             .upgrade-icon {
-                width: 24px;
-                height: 24px;
-                margin-bottom: 2px;
+                width: 35px;
+                height: 35px;
             }
             
             .upgrade-icon img {
-                width: 18px;
-                height: 18px;
+                width: 28px;
+                height: 28px;
+            }
+            
+            .upgrade-name {
+                font-size: 13px;
+            }
+            
+            .upgrade-description {
+                font-size: 11px;
+            }
+            
+            .select-upgrade-btn {
+                padding: 10px 20px;
+                font-size: 14px;
             }
         }
         
@@ -842,23 +887,23 @@
         }
         
         .upgrade-card.high-potency {
-            border-color: #FF6B6B;
-            background: linear-gradient(145deg, rgba(80, 45, 45, 0.9), rgba(60, 30, 30, 0.9));
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.1);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
         }
         
         .upgrade-card.high-potency::before {
             content: "×3 EFFECT";
             position: absolute;
-            top: clamp(-8px, -1vh, -4px); /* Responsive positioning to prevent cutoff */
-            right: clamp(5px, 1vw, 10px);
-            background: #FF6B6B;
-            color: white;
-            padding: clamp(2px, 0.5vh, 4px) clamp(4px, 1vw, 8px);
-            border-radius: clamp(6px, 1.5vw, 12px);
-            font-size: clamp(8px, 1vw, 10px);
+            top: 8px;
+            right: 8px;
+            background: #FFD700;
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
             font-weight: bold;
             z-index: 1;
-            white-space: nowrap;
         }
         
         .upgrade-card:hover {
@@ -880,52 +925,46 @@
         }
         
         .upgrade-icon {
-            width: clamp(24px, 4vh, 40px);
-            height: clamp(24px, 4vh, 40px);
-            margin: 0 auto clamp(2px, 0.5vh, 6px) auto;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.1);
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 10px auto;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            flex-shrink: 0;
+            border: 1px solid rgba(255, 215, 0, 0.2);
         }
         
         .upgrade-icon img {
-            width: clamp(18px, 3vh, 30px);
-            height: clamp(18px, 3vh, 30px);
-            border-radius: 3px;
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            image-rendering: pixelated;
         }
         
         .upgrade-name {
             color: #FFD700;
-            font-size: clamp(9px, 1.2vh, 14px);
+            font-size: 16px;
             font-weight: bold;
-            margin-bottom: clamp(2px, 0.5vh, 6px);
+            margin-bottom: 8px;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-            line-height: 1.1;
         }
         
         .upgrade-description {
-            color: #fff;
-            font-size: clamp(7px, 1vh, 12px);
-            margin-bottom: clamp(3px, 0.8vh, 8px);
-            line-height: 1.2;
-            flex: 1;
-            min-height: clamp(20px, 3vh, 40px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
+            color: #ddd;
+            font-size: 13px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            opacity: 0.9;
         }
         
         .upgrade-target {
             color: #4CAF50;
-            font-size: clamp(6px, 0.9vh, 10px);
+            font-size: 11px;
             font-weight: bold;
-            margin-bottom: clamp(2px, 0.5vh, 6px);
-            flex-shrink: 0;
+            margin-top: 5px;
+            font-style: italic;
         }
         
         .unit-type-selector {
@@ -986,32 +1025,11 @@
         
         .unit-sprite-selector {
             display: flex;
-            gap: clamp(2px, 0.5vh, 6px);
+            gap: 8px;
             flex-wrap: wrap;
             justify-content: center;
-            margin: clamp(2px, 0.5vh, 6px) 0;
-            max-height: clamp(60px, 10vh, 100px); /* Scale with viewport */
-            overflow-y: auto; /* Add scrolling if needed */
-            padding: clamp(1px, 0.3vh, 4px);
-        }
-        
-        /* Custom scrollbar for unit selector */
-        .unit-sprite-selector::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .unit-sprite-selector::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-        
-        .unit-sprite-selector::-webkit-scrollbar-thumb {
-            background: rgba(255, 215, 0, 0.5);
-            border-radius: 3px;
-        }
-        
-        .unit-sprite-selector::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 215, 0, 0.8);
+            margin: 10px 0;
+            padding: 5px;
         }
         
         .unit-selection-sprite {
@@ -1092,19 +1110,18 @@
         
         /* Fixed position upgrade interface buttons */
         .upgrade-modal-close-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: linear-gradient(145deg, #FF4444, #CC3333);
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 68, 68, 0.8);
             border: none;
             color: white;
-            padding: 12px 20px;
-            border-radius: 15px;
-            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
-            z-index: 1001;
-            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.3);
+            z-index: 10;
             transition: all 0.2s ease;
         }
         
@@ -1115,19 +1132,18 @@
         }
         
         .reroll-upgrades-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(145deg, #FF6B35, #FF5722);
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 152, 0, 0.8);
             border: none;
             color: white;
-            padding: 12px 20px;
-            border-radius: 15px;
-            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
-            z-index: 1001;
-            box-shadow: 0 4px 15px rgba(255, 87, 34, 0.3);
+            z-index: 10;
             transition: all 0.2s ease;
         }
         
@@ -1146,23 +1162,20 @@
         }
         
         .select-upgrade-btn {
-            position: fixed;
+            position: absolute;
             bottom: 20px;
             right: 20px;
             background: linear-gradient(145deg, #4CAF50, #388E3C);
             border: none;
             color: white;
-            padding: 15px 25px;
-            border-radius: 20px;
-            font-size: 16px;
+            padding: 12px 24px;
+            border-radius: 16px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
-            z-index: 1001;
+            z-index: 10;
             box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
             transition: all 0.2s ease;
-            /* Ensure button stays within viewport */
-            max-width: calc(100vw - 40px);
-            word-wrap: break-word;
         }
         
         .select-upgrade-btn:hover:not(:disabled) {
@@ -1195,24 +1208,35 @@
             }
         }
         
-        /* Additional responsive styles for mobile and Electron */
+        /* Additional responsive styles for mobile */
         @media (max-width: 768px) {
-            .shop-panel {
+            #upgrade-modal .unit-selection-content {
+                width: 90vw;
+                padding: 15px;
+            }
+            
+            .upgrade-cards-container {
+                gap: 10px;
+            }
+            
+            .upgrade-card {
+                width: 140px;
+                min-height: 170px;
+            }
+            
+            .select-upgrade-btn {
+                bottom: 10px;
+                right: 10px;
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+            
+            .upgrade-modal-close-btn,
+            .reroll-upgrades-btn {
+                top: 10px;
+                padding: 10px 15px;
                 font-size: 12px;
             }
-            
-            .unit-card {
-                padding: 6px;
-                width: 100px;
-                min-width: 100px;
-            }
-            
-            .shop-units {
-                gap: 6px;
-            }
-            
-            .unit-name {
-                font-size: 12px;
             }
             
             .unit-stats {
@@ -1426,6 +1450,16 @@
                 <!-- Units will be populated here -->
             </div>
         </div>
+        
+        <div class="sell-area" id="sell-area">
+            <div class="sell-area-content">
+                🔥 SELL UNIT 🔥<br>
+                <span id="sell-value">Get 0 gold</span>
+            </div>
+            <div class="sell-area-hint">
+                Drop unit here to sell for 75% of purchase price
+            </div>
+        </div>
     </div>
 
     <!-- Lobby Modal -->
@@ -1479,21 +1513,6 @@
 
     <!-- Upgrade Selection Modal -->
     <div id="upgrade-modal" class="unit-selection-modal hidden">
-        <!-- Close button - top right -->
-        <button class="upgrade-modal-close-btn" onclick="closeUpgradeModal()" id="close-upgrade-btn">
-            ✕ Close
-        </button>
-        
-        <!-- Fixed position reroll button - top right -->
-        <button class="reroll-upgrades-btn" onclick="rerollUpgrades()" id="reroll-btn">
-            🎲 Reroll Upgrades (💰 10)
-        </button>
-        
-        <!-- Fixed position select upgrade button - bottom right -->
-        <button class="select-upgrade-btn hidden" id="select-upgrade-btn" onclick="confirmSelectedUpgrade()">
-            ✅ Select This Upgrade
-        </button>
-        
         <div class="unit-selection-content">
             <h2 class="unit-selection-title">Choose Your Upgrades</h2>
             <p class="unit-selection-subtitle">Floor <span id="upgrade-floor">1</span> Complete!</p>
@@ -1515,6 +1534,19 @@
             <p style="color: #FFD700; margin-top: 20px; font-style: italic; font-size: 14px; text-align: center;">
                 Click any upgrade card to select it and continue to the next floor
             </p>
+            
+            <!-- Buttons positioned within the modal content -->
+            <button class="upgrade-modal-close-btn" onclick="closeUpgradeModal()" id="close-upgrade-btn">
+                ✕ Close
+            </button>
+            
+            <button class="reroll-upgrades-btn" onclick="rerollUpgrades()" id="reroll-btn">
+                🎲 Reroll Upgrades (💰 10)
+            </button>
+            
+            <button class="select-upgrade-btn hidden" id="select-upgrade-btn" onclick="confirmSelectedUpgrade()">
+                ✅ Select This Upgrade
+            </button>
         </div>
     </div>
 
@@ -1603,7 +1635,7 @@
                 cost: 12, 
                 damage: 4, 
                 health: 18, // Reduced by another 50% for much faster combat
-                attackSpeed: 1.0,
+                attackSpeed: 0.25, // Significantly reduced: 1 attack every 4 seconds instead of every second
                 movementSpeed: 30, // Reduced by 50% for slower tactical movement
                 range: 50,
                 priority: 3,
@@ -2130,21 +2162,13 @@
                     <div class="unit-sprite-container" id="unit-select-${unitName}">
                         <!-- Animated sprite will be added here -->
                     </div>
-                    <div class="unit-selection-stats">
-                        <span>⚔️ ${Math.round(stats.damage * stats.attackSpeed * 10) / 10 % 1 === 0 ? Math.round(stats.damage * stats.attackSpeed) : (stats.damage * stats.attackSpeed).toFixed(1)} DPS</span>
-                        <span>❤️ ${stats.health}</span>
-                        <span>🏃 ${stats.movementSpeed}</span>
-                    </div>
-                    <div style="font-size: 10px; color: #aaa; margin-top: 5px;">
-                        ${stats.attackType} | ${stats.armorType}
-                    </div>
                 `;
                 
                 // Add animated sprite using our universal function
                 setTimeout(() => {
                     const container = document.getElementById(`unit-select-${unitName}`);
                     if (container) {
-                        createAnimatedUnitSprite(container, unitName, 120, 120, 400);
+                        createAnimatedUnitSprite(container, unitName, 196, 190, 400);
                     }
                 }, 100);
                 
@@ -2349,6 +2373,22 @@
                 document.getElementById('timer-text').style.display = 'none';
             }
             
+            // Show/hide ready button based on phase
+            const readyBtn = document.getElementById('ready-btn');
+            if (state.phase === 'preparation') {
+                readyBtn.style.display = 'block';
+                // Show battle background preview during preparation
+                if (window.gameScene && window.gameScene.showPreparationBackground) {
+                    window.gameScene.showPreparationBackground(state.currentFloor || 1);
+                }
+            } else {
+                readyBtn.style.display = 'none';
+                // Hide background preview during combat
+                if (window.gameScene && window.gameScene.hidePreparationBackground) {
+                    window.gameScene.hidePreparationBackground();
+                }
+            }
+            
             // Show/hide shop
             const shopPanel = document.getElementById('shop-panel');
             if (state.phase === 'preparation') {
@@ -2358,7 +2398,11 @@
                     name,
                     ...stats
                 }));
-                updateShop(shopUnits, player?.gold || 50);
+                // Get current player's gold from state
+                const currentPlayer = state.players?.find(p => p.id === playerId);
+                const playerGold = currentPlayer?.gold ?? 0;
+                console.log('Current player gold:', playerGold, 'for player:', playerId);
+                updateShop(shopUnits, playerGold);
             } else {
                 shopPanel.classList.remove('active');
             }
@@ -2368,8 +2412,10 @@
             const currentPlayer = state.players.find(p => p.id === playerId);
             
             // DISABLED: Don't automatically show upgrade panel after battle
-            // Always keep upgrade modal hidden by default - player must manually open it
-            upgradeModal.classList.add('hidden');
+            // Only hide modal if player has already selected an upgrade (to prevent forced closure during selection)
+            if (currentPlayer && currentPlayer.hasSelectedUpgrade) {
+                upgradeModal.classList.add('hidden');
+            }
             
             // Show/hide bottom-right upgrade button
             const upgradeButton = document.getElementById('select-upgrade-btn');
@@ -2383,9 +2429,9 @@
             // Show upgrade button during preparation phase if player has upgrade cards
             if ((state.phase === 'preparation' || state.phase === 'post-combat') && currentPlayer && currentPlayer.upgradeCards && currentPlayer.upgradeCards.length > 0) {
                 console.log(`✅ ===== SHOWING UPGRADE BUTTON =====`);
-                console.log(`📝 Button text: 🎁 Upgrades Available! (${currentPlayer.upgradeCards.length})`);
+                console.log(`📝 Button text: Select Upgrade`);
                 upgradeButton.classList.remove('hidden');
-                upgradeButton.textContent = `🎁 Upgrades Available! (${currentPlayer.upgradeCards.length})`;
+                upgradeButton.textContent = `Select Upgrade`;
                 upgradeButton.style.animation = 'upgrade-pulse 2s infinite'; // Make it flash
                 upgradeButton.onclick = () => {
                     console.log(`🖱️ Upgrade button clicked!`);
@@ -2553,14 +2599,9 @@
                 
                 unitCard.innerHTML = `
                     <div class="unit-name">${unit.name}</div>
+                    <div class="unit-cost">💰 ${unit.cost}</div>
                     <div class="shop-unit-sprite-container" id="shop-sprite-${unit.name.toLowerCase()}-${index}">
                         <!-- Animated sprite will be added here -->
-                    </div>
-                    <div class="unit-cost">💰 ${unit.cost}</div>
-                    <div class="unit-stats">
-                        <span>⚔️ ${Math.round(unit.damage * unit.attackSpeed * 10) / 10 % 1 === 0 ? Math.round(unit.damage * unit.attackSpeed) : (unit.damage * unit.attackSpeed).toFixed(1)} DPS</span>
-                        <span>❤️ ${unit.health}</span>
-                        <span>🏃 ${unit.movementSpeed}</span>
                     </div>
                 `;
                 
@@ -2596,6 +2637,7 @@
         // Universal drag system for desktop and mobile
         function setupUniversalDrag(element, unitName) {
             let isDragging = false;
+            let isMouseDown = false;
             let dragClone = null;
             let startX, startY;
             
@@ -2607,11 +2649,23 @@
             
             function startDrag(e) {
                 e.preventDefault();
-                isDragging = true;
+                console.log(`🖱️ Mouse down on shop unit: ${unitName}`);
+                isMouseDown = true;
+                isDragging = false; // Don't start dragging immediately
                 
                 const touch = e.touches ? e.touches[0] : e;
                 startX = touch.clientX;
                 startY = touch.clientY;
+                
+                // Add move and end listeners immediately
+                document.addEventListener('mousemove', handleDrag);
+                document.addEventListener('mouseup', endDrag);
+                document.addEventListener('touchmove', handleDrag, { passive: false });
+                document.addEventListener('touchend', endDrag);
+            }
+            
+            function createDragClone(currentX, currentY) {
+                console.log(`🎨 Creating drag clone for ${unitName} at (${currentX}, ${currentY})`);
                 
                 // Create a sprite-only visual for dragging
                 dragClone = document.createElement('div');
@@ -2622,8 +2676,8 @@
                 dragClone.style.width = '48px';
                 dragClone.style.height = '48px';
                 dragClone.style.borderRadius = '8px';
-                dragClone.style.left = (startX - 24) + 'px';
-                dragClone.style.top = (startY - 24) + 'px';
+                dragClone.style.left = (currentX - 24) + 'px';
+                dragClone.style.top = (currentY - 24) + 'px';
                 
                 // Create canvas for the drag sprite
                 const dragCanvas = document.createElement('canvas');
@@ -2643,26 +2697,80 @@
                 }
                 
                 element.classList.add('dragging');
-                
-                // Add move and end listeners
-                document.addEventListener('mousemove', handleDrag);
-                document.addEventListener('mouseup', endDrag);
-                document.addEventListener('touchmove', handleDrag, { passive: false });
-                document.addEventListener('touchend', endDrag);
             }
             
             function handleDrag(e) {
-                if (!isDragging || !dragClone) return;
+                if (!isMouseDown) return;
                 e.preventDefault();
                 
                 const touch = e.touches ? e.touches[0] : e;
                 
+                // Check if we should start dragging (minimum distance threshold)
+                if (!isDragging) {
+                    const deltaX = Math.abs(touch.clientX - startX);
+                    const deltaY = Math.abs(touch.clientY - startY);
+                    
+                    // Start dragging if moved more than 5 pixels
+                    if (deltaX > 5 || deltaY > 5) {
+                        console.log(`🔄 Starting drag for ${unitName} (moved ${deltaX}, ${deltaY})`);
+                        isDragging = true;
+                        createDragClone(touch.clientX, touch.clientY);
+                    } else {
+                        // Still within click threshold, don't do anything
+                        return;
+                    }
+                }
+                
+                // Update drag clone position if we're dragging
+                if (!isDragging || !dragClone) return;
+                
                 dragClone.style.left = (touch.clientX - 24) + 'px';
                 dragClone.style.top = (touch.clientY - 24) + 'px';
+                
+                // Check if mouse is over game canvas and show/hide grid highlights
+                const gameCanvas = document.querySelector('#phaser-game canvas');
+                if (gameCanvas && window.gameScene) {
+                    const rect = gameCanvas.getBoundingClientRect();
+                    const isOverCanvas = touch.clientX >= rect.left && touch.clientX <= rect.right && 
+                                        touch.clientY >= rect.top && touch.clientY <= rect.bottom;
+                    
+                    if (isOverCanvas) {
+                        // Show grid preview when over canvas
+                        const localX = touch.clientX - rect.left;
+                        const localY = touch.clientY - rect.top;
+                        if (window.gameScene.showDropZonePreview) {
+                            window.gameScene.showDropZonePreview(localX, localY, window.gameScene.currentPlayerId);
+                        }
+                    } else {
+                        // Clear grid preview when off canvas
+                        if (window.gameScene.clearDropZonePreview) {
+                            window.gameScene.clearDropZonePreview();
+                        }
+                    }
+                }
             }
             
             function endDrag(e) {
-                if (!isDragging) return;
+                console.log(`🔻 End drag/click for ${unitName}. isDragging: ${isDragging}, isMouseDown: ${isMouseDown}`);
+                
+                // Always clean up event listeners
+                document.removeEventListener('mousemove', handleDrag);
+                document.removeEventListener('mouseup', endDrag);
+                document.removeEventListener('touchmove', handleDrag);
+                document.removeEventListener('touchend', endDrag);
+                
+                // Handle simple click case (no drag occurred)
+                if (isMouseDown && !isDragging) {
+                    console.log(`👆 Simple click detected on ${unitName} - no purchase will occur`);
+                    isMouseDown = false;
+                    return; // Exit early - no purchase for clicks
+                }
+                
+                // Only proceed if we were actually dragging
+                if (!isDragging) {
+                    isMouseDown = false;
+                    return;
+                }
                 
                 const touch = e.changedTouches ? e.changedTouches[0] : e;
                 const dropX = touch.clientX;
@@ -2675,8 +2783,10 @@
                     const rect = gameCanvas.getBoundingClientRect();
                     console.log(`Drop coordinates: (${dropX}, ${dropY}), Canvas rect:`, rect);
                     
-                    if (dropX >= rect.left && dropX <= rect.right && 
-                        dropY >= rect.top && dropY <= rect.bottom) {
+                    // More strict bounds checking - ensure drop is well within the canvas
+                    const margin = 5; // 5px margin to ensure we're actually over the canvas
+                    if (dropX >= (rect.left + margin) && dropX <= (rect.right - margin) && 
+                        dropY >= (rect.top + margin) && dropY <= (rect.bottom - margin)) {
                         
                         // Calculate grid position
                         const localX = dropX - rect.left;
@@ -2690,10 +2800,20 @@
                             
                             console.log(`Grid position: (${gridPos.x}, ${gridPos.y}), Grid size: ${gridWidth}x${gridHeight}`);
                             
-                            if (gridPos.x >= 0 && gridPos.x < gridWidth && 
+                            // Ensure we have valid, integer grid coordinates
+                            if (Number.isInteger(gridPos.x) && Number.isInteger(gridPos.y) &&
+                                gridPos.x >= 0 && gridPos.x < gridWidth && 
                                 gridPos.y >= 0 && gridPos.y < gridHeight) {
-                                console.log(`Valid position! Placing ${unitName} at grid position:`, gridPos);
-                                purchaseAndPlaceUnit(unitName, gridPos);
+                                
+                                // Additional check: make sure we're actually over the grid area
+                                const gridBounds = window.gameScene.getGridBounds ? window.gameScene.getGridBounds() : null;
+                                if (!gridBounds || (localX >= gridBounds.left && localX <= gridBounds.right && 
+                                                   localY >= gridBounds.top && localY <= gridBounds.bottom)) {
+                                    console.log(`Valid position! Placing ${unitName} at grid position:`, gridPos);
+                                    purchaseAndPlaceUnit(unitName, gridPos);
+                                } else {
+                                    console.log(`Drop outside grid area bounds`);
+                                }
                             } else {
                                 console.log(`Invalid grid position: (${gridPos.x}, ${gridPos.y})`);
                             }
@@ -2701,10 +2821,15 @@
                             console.error('gameScene or worldToGrid not available');
                         }
                     } else {
-                        console.log('Drop outside canvas bounds');
+                        console.log('Drop outside canvas bounds (with margin)');
                     }
                 } else {
                     console.error('Game canvas not found!');
+                }
+                
+                // Clear any remaining grid highlights
+                if (window.gameScene && window.gameScene.clearDropZonePreview) {
+                    window.gameScene.clearDropZonePreview();
                 }
                 
                 // Cleanup
@@ -2715,12 +2840,9 @@
                 
                 element.classList.remove('dragging');
                 isDragging = false;
+                isMouseDown = false;
                 
-                // Remove event listeners
-                document.removeEventListener('mousemove', handleDrag);
-                document.removeEventListener('mouseup', endDrag);
-                document.removeEventListener('touchmove', handleDrag);
-                document.removeEventListener('touchend', endDrag);
+                // Event listeners already removed at start of function
             }
         }
         
@@ -2866,6 +2988,29 @@
             // Set up the game scene
             this.cameras.main.setBackgroundColor('#1a1a2e');
             
+            // Add mouse leave event to clear drop zone previews
+            this.game.canvas.addEventListener('mouseleave', () => {
+                console.log('🖱️ Mouse left game canvas, clearing drop zone previews');
+                if (this.clearDropZonePreview) {
+                    this.clearDropZonePreview();
+                    console.log('✅ Drop zone preview cleared on mouse leave');
+                } else {
+                    console.log('❌ clearDropZonePreview method not available');
+                }
+            });
+            
+            // Also add mouseleave to the entire phaser game container to catch UI overlays
+            const phaserGameDiv = document.getElementById('phaser-game');
+            if (phaserGameDiv) {
+                phaserGameDiv.addEventListener('mouseleave', () => {
+                    console.log('🖱️ Mouse left entire game area, clearing drop zone previews');
+                    if (this.clearDropZonePreview) {
+                        this.clearDropZonePreview();
+                        console.log('✅ Drop zone preview cleared on game area leave');
+                    }
+                });
+            }
+            
             // Create grid first - wider and shorter to avoid UI overlap
             this.gridGraphics = this.add.graphics();
             this.gridWidth = 20;
@@ -2879,6 +3024,7 @@
             this.combatUnits = {};
             this.unitPreviews = {};
             this.battleBackground = null;
+            this.preparationBackground = null;
             
             // Fix TexturePacker atlases before creating animations
             console.log('Fixing texture atlases...');
@@ -3345,36 +3491,67 @@
                 // Reset sprite scale
                 sprite.setScale(sprite.scaleX / 1.1, sprite.scaleY / 1.1);
                 
-                // Create drag clone similar to shop
+                // Show sell area when dragging placed units
+                const sellArea = document.getElementById('sell-area');
+                const shopPanel = document.getElementById('shop-panel');
+                if (sellArea && shopPanel) {
+                    // Calculate sell value (75% of unit cost)
+                    const unitStats = window.AVAILABLE_UNITS[unit.name.toLowerCase()];
+                    const sellValue = unitStats ? Math.ceil(unitStats.cost * 0.75) : 0;
+                    document.getElementById('sell-value').textContent = `Get ${sellValue} gold`;
+                    
+                    // Hide shop and show sell area
+                    shopPanel.classList.remove('active');
+                    sellArea.classList.add('active');
+                }
+                
+                // Create drag clone with animated sprite
+                console.log(`📦 Creating drag clone DOM element at position (${clientX - 40}, ${clientY - 40})`);
                 dragData.dragClone = document.createElement('div');
                 dragData.dragClone.style.position = 'fixed';
                 dragData.dragClone.style.pointerEvents = 'none';
-                dragData.dragClone.style.zIndex = '9999';
-                dragData.dragClone.style.opacity = '0.8';
-                dragData.dragClone.style.width = '64px';
-                dragData.dragClone.style.height = '64px';
-                dragData.dragClone.style.borderRadius = '8px';
-                dragData.dragClone.style.border = '2px solid #FFD700';
-                dragData.dragClone.style.background = 'rgba(0, 0, 0, 0.7)';
-                dragData.dragClone.style.left = (clientX - 32) + 'px';
-                dragData.dragClone.style.top = (clientY - 32) + 'px';
+                dragData.dragClone.style.zIndex = '10000';
+                dragData.dragClone.style.opacity = '0.9';
+                dragData.dragClone.style.width = '80px';
+                dragData.dragClone.style.height = '80px';
+                dragData.dragClone.style.borderRadius = '12px';
+                dragData.dragClone.style.border = '3px solid #FFD700';
+                dragData.dragClone.style.background = 'linear-gradient(145deg, rgba(255, 215, 0, 0.3), rgba(255, 215, 0, 0.1))';
+                dragData.dragClone.style.backdropFilter = 'blur(4px)';
+                dragData.dragClone.style.boxShadow = '0 8px 25px rgba(255, 215, 0, 0.4)';
+                dragData.dragClone.style.left = (clientX - 40) + 'px';
+                dragData.dragClone.style.top = (clientY - 40) + 'px';
+                dragData.dragClone.style.display = 'flex';
+                dragData.dragClone.style.alignItems = 'center';
+                dragData.dragClone.style.justifyContent = 'center';
                 
-                // Create canvas for the drag sprite
-                const dragCanvas = document.createElement('canvas');
-                dragCanvas.width = 64;
-                dragCanvas.height = 64;
-                dragCanvas.style.width = '100%';
-                dragCanvas.style.height = '100%';
-                dragCanvas.style.imageRendering = 'pixelated';
+                // Add a data attribute to help debug
+                dragData.dragClone.setAttribute('data-debug', `drag-clone-${unit.name}`);
+                console.log(`✅ Drag clone created with all styles applied`);
                 
-                dragData.dragClone.appendChild(dragCanvas);
+                // Create sprite container for the drag clone
+                const spriteContainer = document.createElement('div');
+                spriteContainer.style.width = '64px';
+                spriteContainer.style.height = '64px';
+                spriteContainer.style.position = 'relative';
+                spriteContainer.style.overflow = 'visible';
+                
+                dragData.dragClone.appendChild(spriteContainer);
                 document.body.appendChild(dragData.dragClone);
+                console.log(`🏗️ Drag clone added to document body. Total children: ${document.body.children.length}`);
                 
-                // Draw sprite to canvas
+                // Draw animated sprite to the drag clone
+                console.log(`🎨 Creating animated sprite for drag clone: ${unit.name.toLowerCase()}`);
                 if (window.gameScene) {
+                    console.log(`✅ GameScene available, creating sprite with createAnimatedUnitSprite`);
                     setTimeout(() => {
-                        createAnimatedUnitSprite(dragCanvas.parentElement, unit.name.toLowerCase(), 64, 64);
+                        console.log(`🔥 Actually calling createAnimatedUnitSprite for ${unit.name.toLowerCase()}`);
+                        createAnimatedUnitSprite(spriteContainer, unit.name.toLowerCase(), 64, 64, 300);
                     }, 10);
+                } else {
+                    console.log(`❌ GameScene not available for animated sprite creation`);
+                    // Fallback: create a simple colored div to show the drag is working
+                    spriteContainer.innerHTML = `<div style="width: 64px; height: 64px; background: #FF6B6B; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">${unit.name}</div>`;
                 }
                 
                 // Add visual effects to original sprite
@@ -3393,8 +3570,11 @@
             
             const updateDragVisual = (clientX, clientY) => {
                 if (dragData.dragClone) {
-                    dragData.dragClone.style.left = (clientX - 32) + 'px';
-                    dragData.dragClone.style.top = (clientY - 32) + 'px';
+                    const newLeft = clientX - 40;
+                    const newTop = clientY - 40;
+                    dragData.dragClone.style.left = newLeft + 'px';
+                    dragData.dragClone.style.top = newTop + 'px';
+                    console.log(`🖱️ Updating drag position to (${newLeft}, ${newTop})`);
                     
                     // Update drop zone preview - convert DOM to canvas coords
                     const gameCanvas = document.querySelector('#phaser-game canvas');
@@ -3412,8 +3592,11 @@
                 
                 // Clean up drag clone
                 if (dragData.dragClone) {
+                    console.log(`🧹 Cleaning up drag clone for ${unit.name}`);
                     dragData.dragClone.remove();
                     dragData.dragClone = null;
+                } else {
+                    console.log(`⚠️ No drag clone to clean up for ${unit.name}`);
                 }
                 
                 // Reset sprite visual
@@ -3423,6 +3606,32 @@
                 
                 // Clear drop zone preview
                 this.clearDropZonePreview();
+                
+                // Hide sell area and restore shop
+                const sellArea = document.getElementById('sell-area');
+                const shopPanel = document.getElementById('shop-panel');
+                if (sellArea && shopPanel) {
+                    sellArea.classList.remove('active');
+                    shopPanel.classList.add('active');
+                }
+                
+                // Check if dropped on sell area
+                const sellAreaElement = document.getElementById('sell-area');
+                if (sellAreaElement) {
+                    const sellRect = sellAreaElement.getBoundingClientRect();
+                    const isOverSellArea = clientX >= sellRect.left && clientX <= sellRect.right &&
+                                         clientY >= sellRect.top && clientY <= sellRect.bottom;
+                    
+                    if (isOverSellArea) {
+                        console.log(`💰 Selling unit ${unit.name}`);
+                        // Send sell request to server
+                        if (socket && socket.connected) {
+                            socket.emit('sellUnit', unit.id);
+                        }
+                        dragData.isDragging = false;
+                        return;
+                    }
+                }
                 
                 // Check if dropped on game canvas
                 const gameCanvas = document.querySelector('#phaser-game canvas');
@@ -3564,6 +3773,42 @@
         Phaser.Scene.prototype.clearDropZonePreview = function() {
             if (this.dropZonePreview) {
                 this.dropZonePreview.clear();
+            }
+        };
+        
+        Phaser.Scene.prototype.showPreparationBackground = function(floor) {
+            // Remove existing preparation background
+            if (this.preparationBackground) {
+                this.preparationBackground.destroy();
+                this.preparationBackground = null;
+            }
+            
+            // Determine which background to show for next battle
+            let backgroundKey = 'battle1';
+            if (floor <= 3) {
+                backgroundKey = 'battle1';
+            } else if (floor <= 6) {
+                backgroundKey = 'battle2';
+            } else if (floor <= 8) {
+                backgroundKey = 'battle3';
+            } else {
+                backgroundKey = 'battle4';
+            }
+            
+            // Add transparent background preview
+            this.preparationBackground = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, backgroundKey);
+            this.preparationBackground.setOrigin(0.5, 0.5);
+            this.preparationBackground.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+            this.preparationBackground.setAlpha(0.3); // Make it transparent
+            this.preparationBackground.setDepth(-1); // Behind everything except grid
+            
+            console.log(`Showing preparation background: ${backgroundKey} for floor ${floor}`);
+        };
+        
+        Phaser.Scene.prototype.hidePreparationBackground = function() {
+            if (this.preparationBackground) {
+                this.preparationBackground.destroy();
+                this.preparationBackground = null;
             }
         };
         
@@ -3809,7 +4054,7 @@
                 newButton.id = 'custom-upgrade-btn';
                 // Count unique upgrade opportunities (not individual cards)
                 const upgradeOpportunities = Math.ceil(currentPlayer.upgradeCards.length / 4); // 4 cards = 1 opportunity
-                newButton.textContent = `🎁 UPGRADES (${upgradeOpportunities})`;
+                newButton.textContent = `Select Upgrade`;
                 
                 // Style the button directly with inline styles
                 newButton.style.cssText = `
@@ -4899,7 +5144,10 @@
                 const unitKey = targetUnitType.toLowerCase();
                 return `
                     <div class="unit-type-selector high-potency-target">
-                        <div class="unit-selection-sprite selected" data-unit-type="${targetUnitType}">
+                        <div class="unit-selection-sprite selected" 
+                             data-unit-type="${targetUnitType}"
+                             onmouseenter="showUpgradeUnitTooltip(this, '${targetUnitType}')"
+                             onmouseleave="hideUpgradeUnitTooltip()">
                             <div class="unit-sprite-container" id="sprite-${upgradeId}-${unitKey}">
                                 <!-- Target unit sprite will be added here -->
                             </div>
@@ -4951,23 +5199,32 @@
             // Store the selected upgrade
             selectedUpgrade = { upgrade, isHighPotency };
             
-            // Show the global select button
+            // Show the global select button only during preparation phase
             const selectBtn = document.getElementById('select-upgrade-btn');
-            selectBtn.classList.remove('hidden');
-            
-            // For normal upgrades, check if a unit type is selected
-            if (!isHighPotency) {
-                const hasUnitSelection = upgradeSelections.has(upgrade.id);
-                selectBtn.disabled = !hasUnitSelection;
+            if (gameState && gameState.phase === 'preparation') {
+                selectBtn.classList.remove('hidden');
+                
+                // For normal upgrades, check if a unit type is selected
+                if (!isHighPotency) {
+                    const hasUnitSelection = upgradeSelections.has(upgrade.id);
+                    selectBtn.disabled = !hasUnitSelection;
+                } else {
+                    selectBtn.disabled = false;
+                }
             } else {
-                selectBtn.disabled = false;
+                selectBtn.classList.add('hidden');
             }
         }
         
         function confirmSelectedUpgrade() {
-            if (!selectedUpgrade) return;
+            console.log('confirmSelectedUpgrade called, selectedUpgrade:', selectedUpgrade);
+            if (!selectedUpgrade) {
+                console.error('No upgrade selected');
+                return;
+            }
             
             const { upgrade, isHighPotency } = selectedUpgrade;
+            console.log('Processing upgrade:', upgrade.id, 'isHighPotency:', isHighPotency);
             
             if (isHighPotency) {
                 confirmUpgrade(upgrade.id, upgrade.targetUnitType);
@@ -5027,8 +5284,14 @@
             console.log(`Confirming high potency upgrade ${upgradeId} for ${targetUnitType}`);
             
             if (socket && socket.connected) {
+                console.log('Sending selectUpgrade to server:', { upgradeId, targetUnitType });
                 socket.emit('selectUpgrade', upgradeId, targetUnitType);
                 // Close the modal after confirming
+                console.log('Closing upgrade modal after high potency upgrade');
+                closeUpgradeModal();
+            } else {
+                console.error('Socket not connected, cannot send upgrade selection');
+                // Still close modal to prevent stuck interface
                 closeUpgradeModal();
             }
         }
@@ -5038,7 +5301,9 @@
             const selectedType = upgradeSelections.get(upgradeId);
             
             if (!selectedType) {
-                console.log('No unit type selected');
+                console.error('No unit type selected for upgrade:', upgradeId);
+                console.log('Available selections:', upgradeSelections);
+                // Close modal since user needs to select a unit type first
                 return;
             }
             
@@ -5046,8 +5311,14 @@
             
             // Apply upgrade to the selected unit type
             if (socket && socket.connected) {
+                console.log('Sending selectUpgrade to server:', { upgradeId, selectedType });
                 socket.emit('selectUpgrade', upgradeId, selectedType);
                 // Close the modal after confirming
+                console.log('Closing upgrade modal after normal upgrade');
+                closeUpgradeModal();
+            } else {
+                console.error('Socket not connected, cannot send upgrade selection');
+                // Still close modal to prevent stuck interface
                 closeUpgradeModal();
             }
         }

@@ -411,20 +411,18 @@ class CombatEngine {
     const armorMod = ARMOR_DAMAGE_MODIFIERS[target.armorType][attacker.attackType];
     let damage = attacker.damage * armorMod;
 
+    // Special handling for wizard area attack
+    if (attacker.name && attacker.name.toLowerCase() === 'wizard') {
+      this.performWizardAreaAttack(attacker, target);
+      return;
+    }
+
     // Apply damage
     const oldHealth = target.health;
     target.health -= damage;
     
     // Debug logging for damage verification
     console.log(`${attacker.name} (${attacker.id}) attacked ${target.name} (${target.id}) for ${damage.toFixed(1)} damage. Health: ${oldHealth.toFixed(1)} -> ${target.health.toFixed(1)}`);
-
-    // Emit projectile event for ranged units (wizards)
-    if (attacker.name && attacker.name.toLowerCase() === 'wizard') {
-      this.match.io.to(this.match.matchId).emit('wizard-attack', {
-        attackerId: attacker.id,
-        targetId: target.id
-      });
-    }
 
     // Check for death
     if (target.health <= 0) {
@@ -451,6 +449,71 @@ class CombatEngine {
 
     // Apply on-hit effects
     this.applyOnHitEffects(attacker, target, damage);
+  }
+
+  performWizardAreaAttack(attacker, target) {
+    // Calculate base damage
+    const armorMod = ARMOR_DAMAGE_MODIFIERS[target.armorType][attacker.attackType];
+    let baseDamage = attacker.damage * armorMod;
+
+    // Debug logging for wizard attack
+    console.log(`🔮 ${attacker.name} (${attacker.id}) casting area spell targeting ${target.name} (${target.id})`);
+
+    // Emit wizard attack event for visual effects
+    this.match.io.to(this.match.matchId).emit('wizard-attack', {
+      attackerId: attacker.id,
+      targetId: target.id
+    });
+
+    // Find all enemies within range of the target
+    const allEnemyUnits = attacker.id.startsWith('enemy-') ? 
+      this.match.getAllPlayerUnits() : 
+      this.match.enemyUnits;
+    
+    const enemiesInRange = allEnemyUnits.filter(enemy => {
+      if (enemy.status === 'dead' || !enemy.position || !target.position) return false;
+      const distance = this.getDistance(enemy.position, target.position);
+      return distance <= 30; // 30 pixel radius for area damage
+    });
+
+    console.log(`⚡ Wizard area attack affecting ${enemiesInRange.length} enemies`);
+
+    // Apply damage to all enemies in range
+    enemiesInRange.forEach(enemy => {
+      const enemyArmorMod = ARMOR_DAMAGE_MODIFIERS[enemy.armorType][attacker.attackType];
+      const damage = baseDamage * enemyArmorMod;
+      
+      const oldHealth = enemy.health;
+      enemy.health -= damage;
+      
+      console.log(`💥 Wizard area damage: ${enemy.name} (${enemy.id}) took ${damage.toFixed(1)} damage. Health: ${oldHealth.toFixed(1)} -> ${enemy.health.toFixed(1)}`);
+
+      // Check for death
+      if (enemy.health <= 0) {
+        enemy.health = 0;
+        enemy.status = 'dead';
+        enemy.deathAnimationComplete = false;
+        
+        console.log(`${enemy.name} (${enemy.id}) has died from wizard area attack!`);
+        
+        // Award gold bounty
+        const bounty = Math.ceil(enemy.cost * GAME_CONFIG.KILL_BOUNTY_RATE);
+        this.match.players.forEach(player => {
+          player.gold += bounty;
+        });
+
+        // Apply death effects
+        this.applyDeathEffects(enemy);
+        
+        // Set a timer to mark death animation as complete
+        setTimeout(() => {
+          enemy.deathAnimationComplete = true;
+        }, 2000);
+      }
+
+      // Apply on-hit effects
+      this.applyOnHitEffects(attacker, enemy, damage);
+    });
   }
 
   applyOnHitEffects(attacker, target, damage) {

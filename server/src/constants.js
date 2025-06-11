@@ -83,7 +83,7 @@ const UNIT_STATS = {
     name: 'Wizard',
     cost: 12,
     damage: 4,
-    attackSpeed: 1.00,
+    attackSpeed: 0.25, // Significantly reduced: 1 attack every 4 seconds instead of every second
     attackType: 'Magical',
     health: 18, // Reduced by another 50% for much faster combat
     range: 50,

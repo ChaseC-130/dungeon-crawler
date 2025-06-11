@@ -214,7 +214,7 @@ const GameHUD: React.FC = () => {
               style={styles.closeUpgradeButton}
               onPress={() => setShowUpgradePanel(false)}
             >
-              <Text style={styles.closeUpgradeText}>✕</Text>
+              <Text style={styles.closeUpgradeText}>Close</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -227,7 +227,7 @@ const GameHUD: React.FC = () => {
             style={styles.bottomRightUpgradeButtonInner}
             onPress={() => setShowUpgradePanel(true)}
           >
-            <Text style={styles.upgradeAvailableText}>🎁 Upgrade Available! ({player.upgradeCards.length})</Text>
+            <Text style={styles.upgradeAvailableText}>Select Upgrade</Text>
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -538,10 +538,10 @@ const styles = StyleSheet.create({
   closeUpgradeButton: {
     position: 'absolute',
     top: 10,
-    right: 10,
+    left: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    width: 30,
-    height: 30,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',

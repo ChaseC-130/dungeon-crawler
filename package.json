@@ -18,10 +18,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.21.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "cors": "^2.8.5"
+    "typescript": "^5.8.3"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

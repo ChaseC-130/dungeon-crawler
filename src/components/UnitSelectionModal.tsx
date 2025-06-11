@@ -111,6 +111,7 @@ const { width, height } = Dimensions.get('window');
 
 const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComplete }) => {
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+  const [hoveredUnit, setHoveredUnit] = useState<string | null>(null);
   const maxUnits = 5;
 
   const allUnits = Object.entries(UNIT_STATS).map(([name, stats]) => ({
@@ -118,12 +119,12 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
     ...stats
   }));
   
-  // Calculate responsive grid layout
+  // Calculate responsive grid layout for 20+ cards
   const containerPadding = 40;
-  const cardMargin = 16;
+  const cardMargin = 12;
   const availableWidth = width * 0.9 - containerPadding;
-  const cardsPerRow = Math.min(3, Math.max(2, Math.floor(width / 200))); // 2-3 cards per row based on screen size
-  const cardWidth = (availableWidth - (cardMargin * (cardsPerRow - 1))) / cardsPerRow;
+  const cardsPerRow = Math.min(6, Math.max(3, Math.floor(width / 200))); // 3-6 cards per row for larger cards
+  const cardWidth = Math.min(240, (availableWidth - (cardMargin * (cardsPerRow - 1))) / cardsPerRow);
 
   const toggleUnit = (unitName: string) => {
     if (selectedUnits.includes(unitName)) {
@@ -142,54 +143,41 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
   const renderUnitCard = (unit: UnitStats & { name: string }) => {
     const isSelected = selectedUnits.includes(unit.name);
     const canSelect = selectedUnits.length < maxUnits || isSelected;
+    const isHovered = hoveredUnit === unit.name;
 
     return (
-      <TouchableOpacity
-        key={unit.name}
-        style={[
-          styles.unitCard,
-          isSelected && styles.unitCardSelected,
-          !canSelect && styles.unitCardDisabled,
-          { width: cardWidth }
-        ]}
-        onPress={() => toggleUnit(unit.name)}
-        disabled={!canSelect}
-      >
-        <View style={styles.unitHeader}>
+      <View key={unit.name} style={styles.cardContainer}>
+        <TouchableOpacity
+          style={[
+            styles.unitCard,
+            isSelected && styles.unitCardSelected,
+            !canSelect && styles.unitCardDisabled,
+            { width: cardWidth }
+          ]}
+          onPress={() => toggleUnit(unit.name)}
+          onPressIn={() => setHoveredUnit(unit.name)}
+          onPressOut={() => setHoveredUnit(null)}
+          disabled={!canSelect}
+        >
           <Text style={styles.unitName}>{unit.name}</Text>
           {isSelected && <Text style={styles.checkmark}>✓</Text>}
-        </View>
-        
-        <View style={styles.unitImageContainer}>
-          {Platform.OS === 'web' ? (
-            <UnifiedUnitSprite unitName={unit.name} width={100} height={100} />
-          ) : (
-            <UnitSpriteSimple unitName={unit.name} width={100} height={100} useGridCellSize={true} />
-          )}
-        </View>
-        
-        <View style={styles.statsContainer}>
-          <View style={styles.statRow}>
-            <Text style={styles.statIcon}>⚔️</Text>
-            <Text style={styles.statText}>{unit.damage}</Text>
-          </View>
           
-          <View style={styles.statRow}>
-            <Text style={styles.statIcon}>❤️</Text>
-            <Text style={styles.statText}>{unit.health}</Text>
+          <View style={styles.unitImageContainer}>
+            {Platform.OS === 'web' ? (
+              <UnifiedUnitSprite unitName={unit.name} width={360} height={360} />
+            ) : (
+              <UnitSpriteSimple unitName={unit.name} width={360} height={360} useGridCellSize={true} />
+            )}
           </View>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statIcon}>🏃</Text>
-            <Text style={styles.statText}>{unit.movementSpeed}</Text>
-          </View>
-        </View>
+        </TouchableOpacity>
         
-        <View style={styles.typeContainer}>
-          <Text style={styles.typeText}>{unit.attackType}</Text>
-          <Text style={styles.typeText}>{unit.armorType}</Text>
-        </View>
-      </TouchableOpacity>
+        {isHovered && (
+          <View style={styles.tooltip}>
+            <Text style={styles.tooltipTitle}>{unit.name}</Text>
+            <Text style={styles.tooltipPassive}>{unit.innatePassive}</Text>
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -207,9 +195,9 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
             Select {maxUnits} units ({selectedUnits.length}/{maxUnits})
           </Text>
           
-          <View style={styles.unitsGrid}>
+          <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.unitsGrid}>
             {allUnits.map(renderUnitCard)}
-          </View>
+          </ScrollView>
           
           <TouchableOpacity
             style={[
@@ -240,7 +228,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a2e',
     borderRadius: 20,
     padding: 20,
-    width: width * 0.9,
+    width: width * 0.95,
     maxHeight: height * 0.9,
     borderWidth: 2,
     borderColor: '#FFD700',
@@ -261,19 +249,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
+  scrollContainer: {
+    maxHeight: height * 0.65,
+  },
   unitsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     paddingBottom: 20,
+  },
+  cardContainer: {
+    position: 'relative',
   },
   unitCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 2,
+    borderRadius: 16,
+    padding: 16,
+    margin: 6,
+    borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 440,
   },
   unitCardSelected: {
     borderColor: '#FFD700',
@@ -282,56 +279,51 @@ const styles = StyleSheet.create({
   unitCardDisabled: {
     opacity: 0.5,
   },
-  unitHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
   unitName: {
     color: '#FFF',
-    fontSize: 14,
+    fontSize: 24,
     fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 16,
   },
   checkmark: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
     color: '#FFD700',
-    fontSize: 20,
+    fontSize: 36,
     fontWeight: 'bold',
   },
   unitImageContainer: {
-    marginBottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    // Container will adjust to sprite size automatically
+    flex: 1,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 8,
-  },
-  statRow: {
-    alignItems: 'center',
-  },
-  statIcon: {
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  statText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  typeText: {
-    color: '#AAA',
-    fontSize: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  tooltip: {
+    position: 'absolute',
+    top: -150,
+    left: '50%',
+    transform: [{ translateX: -120 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
     borderRadius: 8,
+    padding: 12,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    zIndex: 1000,
+    width: 240,
+  },
+  tooltipTitle: {
+    color: '#FFD700',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  tooltipPassive: {
+    color: '#AAA',
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   confirmButton: {
     backgroundColor: '#4CAF50',

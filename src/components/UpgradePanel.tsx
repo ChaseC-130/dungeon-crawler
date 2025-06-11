@@ -60,8 +60,11 @@ const UpgradePanel: React.FC = () => {
     forceUpdate();
   };
   
-  // Get player's upgrade cards
-  const upgradeCards = player?.upgradeCards || [];
+  // Get player's upgrade cards - limit to 1 high-potency and up to 3 normal upgrades
+  const allUpgradeCards = player?.upgradeCards || [];
+  const highPotencyCards = allUpgradeCards.filter(card => card.isHighPotency).slice(0, 1);
+  const normalCards = allUpgradeCards.filter(card => !card.isHighPotency).slice(0, 3);
+  const upgradeCards = [...highPotencyCards, ...normalCards];
   
   // Create a stable identifier for the upgrade cards to prevent unnecessary clears
   const upgradeCardIds = upgradeCards.map(card => card.id).sort().join(',');
@@ -207,14 +210,14 @@ const UpgradePanel: React.FC = () => {
   return (
     <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>CHOOSE UPGRADE</Text>
+        <Text style={styles.title}>Choose Your Upgrades</Text>
         <TouchableOpacity
           style={[styles.rerollButton, !canAffordReroll && styles.rerollButtonDisabled]}
           onPress={rerollShop}
           disabled={!canAffordReroll}
         >
           <Text style={styles.rerollIcon}>🎲</Text>
-          <Text style={styles.rerollText}>Reroll (10g)</Text>
+          <Text style={styles.rerollText}>Reroll Upgrades (10)</Text>
         </TouchableOpacity>
       </View>
       
