@@ -38,13 +38,16 @@ const GameHUD: React.FC = () => {
       cardCountDecreased: currentCount < prevUpgradeCardCount.current
     });
     
-    if (showUpgradePanel && currentCount < prevUpgradeCardCount.current) {
+    if (
+      showUpgradePanel &&
+      (currentCount < prevUpgradeCardCount.current || player?.hasSelectedUpgrade)
+    ) {
       // An upgrade was applied, close the panel
-      console.log('GameHUD: Closing upgrade panel due to card count decrease');
+      console.log('GameHUD: Closing upgrade panel after upgrade selection');
       setShowUpgradePanel(false);
     }
     prevUpgradeCardCount.current = currentCount;
-  }, [player?.upgradeCards?.length, showUpgradePanel]);
+  }, [player?.upgradeCards?.length, player?.hasSelectedUpgrade, showUpgradePanel]);
 
   // Force close upgrade panel function
   const forceCloseUpgradePanel = React.useCallback(() => {
@@ -54,7 +57,13 @@ const GameHUD: React.FC = () => {
 
   // Pulsing animation for upgrade button
   React.useEffect(() => {
-    if (gameState?.phase === 'post-combat' && player?.upgradeCards && player.upgradeCards.length > 0 && !showUpgradePanel) {
+    if (
+      gameState?.phase === 'post-combat' &&
+      player?.upgradeCards &&
+      player.upgradeCards.length > 0 &&
+      !player?.hasSelectedUpgrade &&
+      !showUpgradePanel
+    ) {
       const pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -74,7 +83,7 @@ const GameHUD: React.FC = () => {
     } else {
       pulseAnim.setValue(1);
     }
-  }, [gameState?.phase, player?.upgradeCards, showUpgradePanel, pulseAnim]);
+  }, [gameState?.phase, player?.upgradeCards, player?.hasSelectedUpgrade, showUpgradePanel, pulseAnim]);
 
   if (!gameState || !player) {
     return null;
@@ -248,7 +257,11 @@ const GameHUD: React.FC = () => {
       </View>
       
       {/* Bottom Right Upgrade Button */}
-      {gameState.phase === 'post-combat' && player?.upgradeCards && player.upgradeCards.length > 0 && !showUpgradePanel && (
+      {gameState.phase === 'post-combat' &&
+        player?.upgradeCards &&
+        player.upgradeCards.length > 0 &&
+        !player.hasSelectedUpgrade &&
+        !showUpgradePanel && (
         <Animated.View style={[styles.bottomRightUpgradeButton, { transform: [{ scale: pulseAnim }] }]}>
           <TouchableOpacity
             style={styles.bottomRightUpgradeButtonInner}
