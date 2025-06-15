@@ -216,14 +216,9 @@ export default class MainScene extends Phaser.Scene {
         clickedSprite.setDepth(2000);
         
         // Add enhanced visual effects to show it's being picked up
-        this.tweens.add({
-          targets: clickedSprite,
-          scaleX: 1.2,
-          scaleY: 1.2,
-          y: clickedSprite.y - 15, // Lift the unit up
-          duration: 200,
-          ease: 'Back.easeOut'
-        });
+        if ((clickedSprite as any).pickup) {
+          (clickedSprite as any).pickup();
+        }
         
         // Add a pulsing glow effect around the unit
         const glowEffect = this.add.circle(clickedSprite.x, clickedSprite.y, 40, 0xffffff, 0.3);
@@ -469,14 +464,9 @@ export default class MainScene extends Phaser.Scene {
     }
     
     // Restore original scale and position with animation
-    this.tweens.add({
-      targets: this.selectedUnit,
-      scaleX: 1,
-      scaleY: 1,
-      y: this.selectedUnit.y + 15, // Lower the unit back down
-      duration: 200,
-      ease: 'Back.easeIn'
-    });
+    if ((this.selectedUnit as any).drop) {
+      (this.selectedUnit as any).drop();
+    }
     
     // Restore original depth based on y position
     this.selectedUnit.setDepth(this.selectedUnit.y);
@@ -655,14 +645,9 @@ export default class MainScene extends Phaser.Scene {
     }
     
     // Restore original scale and position
-    this.tweens.add({
-      targets: this.selectedUnit,
-      scaleX: 1,
-      scaleY: 1,
-      y: this.selectedUnit.y + 15, // Lower back down
-      duration: 200,
-      ease: 'Back.easeIn'
-    });
+    if ((this.selectedUnit as any).drop) {
+      (this.selectedUnit as any).drop();
+    }
     
     // Destroy drag preview
     this.destroyDragPreview();
@@ -1119,77 +1104,34 @@ export default class MainScene extends Phaser.Scene {
     const targetPos = this.grid.gridToWorld(closestEnemy.position.x, closestEnemy.position.y);
     
     console.log(`🚀 Creating projectile from (${startPos.x}, ${startPos.y}) to (${targetPos.x}, ${targetPos.y})`);
-    
-    // Create a bright, visible blue circle projectile
-    const projectile = this.add.circle(startPos.x, startPos.y - 20, 15, 0x3366ff, 1);
-    projectile.setDepth(1000); // High depth to ensure visibility
-    
-    // Add bright glow effect
-    const glowCircle = this.add.circle(startPos.x, startPos.y - 20, 25, 0x6699ff, 0.7);
-    glowCircle.setDepth(999);
-    
-    // Add white core for better visibility
-    const coreCircle = this.add.circle(startPos.x, startPos.y - 20, 8, 0xffffff, 1);
-    coreCircle.setDepth(1001);
-    
-    console.log(`✨ Created wizard projectile visual elements`);
-    
-    // Play wizard sound effect if available
-    if (this.sound.get('wizardSound')) {
-      this.sound.play('wizardSound', { volume: 0.4 });
-      console.log(`🔊 Playing wizard sound`);
-    } else {
-      console.log(`🔇 Wizard sound not available`);
-    }
-    
-    // Animate projectile to target
-    const distance = Phaser.Math.Distance.Between(startPos.x, startPos.y, targetPos.x, targetPos.y);
-    const duration = Math.max(500, distance * 3); // Slower for better visibility
-    
-    console.log(`⏱️ Projectile will travel ${distance} pixels in ${duration}ms`);
-    
-    this.tweens.add({
-      targets: [projectile, glowCircle, coreCircle],
-      x: targetPos.x,
-      y: targetPos.y - 20,
-      duration: duration,
-      ease: 'Power2',
+
+    const projectile = new Projectile(this, {
+      startX: startPos.x,
+      startY: startPos.y - 20,
+      targetX: targetPos.x,
+      targetY: targetPos.y - 20,
+      texture: 'wizard',
+      frame: 'Charge_1_1 #10.png',
+      speed: 400,
+      scale: 1.2,
       onComplete: () => {
-        console.log(`💥 Wizard projectile reached target`);
-        
-        // Create bright impact effect
-        const impact = this.add.circle(targetPos.x, targetPos.y - 20, 10, 0xffffff, 1);
+        const impact = this.add.circle(targetPos.x, targetPos.y - 20, 12, 0x3366ff, 0.9);
         impact.setDepth(1002);
-        
-        // Create expanding ring effect
-        const ring = this.add.circle(targetPos.x, targetPos.y - 20, 5, 0x3366ff, 0.8);
-        ring.setDepth(1001);
-        
         this.tweens.add({
           targets: impact,
-          scale: 4,
+          scale: 3,
           alpha: 0,
-          duration: 400,
+          duration: 300,
           onComplete: () => impact.destroy()
         });
-        
-        this.tweens.add({
-          targets: ring,
-          scale: 6,
-          alpha: 0,
-          duration: 600,
-          onComplete: () => ring.destroy()
-        });
-        
-        // Clean up projectile
-        projectile.destroy();
-        glowCircle.destroy();
-        coreCircle.destroy();
-        
-        console.log(`🧹 Cleaned up wizard projectile`);
       }
     });
-    
+
+    if (this.sound.get('wizardSound')) {
+      this.sound.play('wizardSound', { volume: 0.4 });
+    }
+
+    this.projectiles.push(projectile);
     console.log(`🧙 Wizard projectile creation complete`);
   }
   

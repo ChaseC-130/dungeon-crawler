@@ -115,6 +115,7 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     // Adjust hit area to cover all visual elements including health bar and upgrade icons
     // The hit area needs to extend from y:-55 (above upgrade icons) to y:30 (below name text)
     this.setInteractive(new Phaser.Geom.Rectangle(-32, -55, 64, 85), Phaser.Geom.Rectangle.Contains);
+    this.sprite.setInteractive(new Phaser.Geom.Rectangle(-16, -32, 32, 64), Phaser.Geom.Rectangle.Contains);
     
     // Store reference to this sprite on the interactive object for easier hit detection
     this.setData('isUnitSprite', true);
@@ -194,6 +195,30 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     if (this.active) {
       this.setDepth(this.y);
     }
+  }
+
+  // Visual feedback when picking up the unit for dragging
+  pickup() {
+    this.scene.tweens.add({
+      targets: this,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      y: this.y - 15,
+      duration: 200,
+      ease: 'Back.easeOut'
+    });
+  }
+
+  // Restore visual state when dropping the unit
+  drop() {
+    this.scene.tweens.add({
+      targets: this,
+      scaleX: 1,
+      scaleY: 1,
+      y: this.y + 15,
+      duration: 200,
+      ease: 'Back.easeIn'
+    });
   }
 
   private updateHealthBar() {

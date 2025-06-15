@@ -250,6 +250,24 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ onClose }) => {
         >
           <Text style={styles.cancelText}>CANCEL</Text>
         </TouchableOpacity>
+
+        {selectedCardRef.current && selectedUnitTypeRef.current && (
+          <TouchableOpacity
+            style={styles.confirmButton}
+            onPress={() => {
+              if (selectedCardRef.current) {
+                selectUpgrade(selectedCardRef.current, selectedUnitTypeRef.current || undefined);
+                setSelectedCard(null);
+                setSelectedUnitType(null);
+                if (onClose) {
+                  onClose();
+                }
+              }
+            }}
+          >
+            <Text style={styles.confirmText}>SELECT UPGRADE</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     );
   }
@@ -437,6 +455,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   cancelText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  confirmButton: {
+    backgroundColor: 'rgba(76, 175, 80, 0.3)',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 10,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    alignSelf: 'center',
+    paddingHorizontal: 30,
+  },
+  confirmText: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
