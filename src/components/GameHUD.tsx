@@ -25,6 +25,33 @@ const GameHUD: React.FC = () => {
     setShowUpgradePanel(false);
   }, [gameState?.phase]);
 
+  // Close upgrade panel when an upgrade is successfully applied (card count decreases)
+  const prevUpgradeCardCount = useRef(player?.upgradeCards?.length || 0);
+  React.useEffect(() => {
+    const currentCount = player?.upgradeCards?.length || 0;
+    
+    // Debug logging
+    console.log('GameHUD: Upgrade card count change detected', {
+      currentCount,
+      previousCount: prevUpgradeCardCount.current,
+      showUpgradePanel,
+      cardCountDecreased: currentCount < prevUpgradeCardCount.current
+    });
+    
+    if (showUpgradePanel && currentCount < prevUpgradeCardCount.current) {
+      // An upgrade was applied, close the panel
+      console.log('GameHUD: Closing upgrade panel due to card count decrease');
+      setShowUpgradePanel(false);
+    }
+    prevUpgradeCardCount.current = currentCount;
+  }, [player?.upgradeCards?.length, showUpgradePanel]);
+
+  // Force close upgrade panel function
+  const forceCloseUpgradePanel = React.useCallback(() => {
+    console.log('GameHUD: Force closing upgrade panel');
+    setShowUpgradePanel(false);
+  }, []);
+
   // Pulsing animation for upgrade button
   React.useEffect(() => {
     if (gameState?.phase === 'post-combat' && player?.upgradeCards && player.upgradeCards.length > 0 && !showUpgradePanel) {
@@ -209,10 +236,10 @@ const GameHUD: React.FC = () => {
         {gameState.phase === 'preparation' && <ShopPanel />}
         {gameState.phase === 'post-combat' && showUpgradePanel && player?.upgradeCards && player.upgradeCards.length > 0 && (
           <View style={styles.compactUpgradeContainer}>
-            <UpgradePanel />
+            <UpgradePanel onClose={forceCloseUpgradePanel} />
             <TouchableOpacity
               style={styles.closeUpgradeButton}
-              onPress={() => setShowUpgradePanel(false)}
+              onPress={forceCloseUpgradePanel}
             >
               <Text style={styles.closeUpgradeText}>Close</Text>
             </TouchableOpacity>
@@ -225,7 +252,10 @@ const GameHUD: React.FC = () => {
         <Animated.View style={[styles.bottomRightUpgradeButton, { transform: [{ scale: pulseAnim }] }]}>
           <TouchableOpacity
             style={styles.bottomRightUpgradeButtonInner}
-            onPress={() => setShowUpgradePanel(true)}
+            onPress={() => {
+              console.log('GameHUD: Opening upgrade panel', { upgradeCardsCount: player?.upgradeCards?.length });
+              setShowUpgradePanel(true);
+            }}
           >
             <Text style={styles.upgradeAvailableText}>Select Upgrade</Text>
           </TouchableOpacity>

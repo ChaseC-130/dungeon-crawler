@@ -12,6 +12,8 @@ import { useGame } from '../contexts/GameContext';
 import { UpgradeCard } from '../types/game';
 
 const { width, height } = Dimensions.get('window');
+const isSmallScreen = width < 768;
+const isMediumScreen = width >= 768 && width < 1024;
 
 // Map upgrade names to icon files
 const UPGRADE_ICONS: { [key: string]: any } = {
@@ -28,7 +30,11 @@ const UPGRADE_ICONS: { [key: string]: any } = {
   'Slowing Aura': require('../../assets/upgradeicons/slowing_aura.png'),
 };
 
-const UpgradePanel: React.FC = () => {
+interface UpgradePanelProps {
+  onClose?: () => void;
+}
+
+const UpgradePanel: React.FC<UpgradePanelProps> = ({ onClose }) => {
   const { gameState, player, selectUpgrade, rerollShop } = useGame();
   
   // Use refs to persist state across re-renders
@@ -78,15 +84,24 @@ const UpgradePanel: React.FC = () => {
     }
   }, [upgradeCardIds]); // Use card IDs instead of the array reference
   
-  // Calculate card dimensions based on screen size
+  // Calculate responsive card dimensions based on screen size
   const numberOfCards = upgradeCards.length || 3;
-  const cardMargin = 8;
-  const containerPadding = 20;
-  const availableWidth = width - containerPadding;
-  const maxCardWidth = 200;
-  const minCardWidth = 140;
+  const cardMargin = isSmallScreen ? 4 : 8;
+  const containerPadding = isSmallScreen ? 10 : 20;
+  const availableWidth = width - containerPadding * 2;
+  
+  // Adjust card sizes based on screen size
+  const maxCardWidth = isSmallScreen ? 150 : isMediumScreen ? 180 : 200;
+  const minCardWidth = isSmallScreen ? 100 : isMediumScreen ? 120 : 140;
+  
   const calculatedWidth = (availableWidth - (cardMargin * (numberOfCards - 1))) / numberOfCards;
   const cardWidth = Math.min(maxCardWidth, Math.max(minCardWidth, calculatedWidth));
+  
+  // Calculate responsive font sizes
+  const titleFontSize = isSmallScreen ? 18 : 24;
+  const cardNameFontSize = isSmallScreen ? 13 : 15;
+  const cardDescFontSize = isSmallScreen ? 11 : 13;
+  const iconSize = isSmallScreen ? 45 : 60;
 
   if (!gameState || !player) {
     return null;
@@ -101,20 +116,48 @@ const UpgradePanel: React.FC = () => {
   const ownedUnitTypes = Array.from(new Set(player.units.map(u => u.name)));
 
   const handleUpgradeSelect = (card: UpgradeCard) => {
+    console.log('UpgradePanel: handleUpgradeSelect called', { 
+      cardId: card.id, 
+      cardName: card.name,
+      isHighPotency: card.isHighPotency,
+      targetUnitType: card.targetUnitType,
+      upgradeCardsCount: player?.upgradeCards?.length 
+    });
+    
     if (card.isHighPotency) {
       // High potency upgrades are auto-assigned
+      console.log('UpgradePanel: Selecting high-potency upgrade directly');
       selectUpgrade(card.id);
+      // Force close the panel after selecting high-potency upgrade
+      if (onClose) {
+        console.log('UpgradePanel: Calling onClose for high-potency upgrade');
+        onClose();
+      }
     } else {
       // Normal upgrades need unit type selection
+      console.log('UpgradePanel: Setting card for unit type selection');
       setSelectedCard(card.id);
     }
   };
 
   const handleUnitTypeSelect = (unitType: string) => {
+    console.log('UpgradePanel: handleUnitTypeSelect called', { 
+      selectedCard: selectedCardRef.current, 
+      unitType,
+      upgradeCardsCount: player?.upgradeCards?.length 
+    });
+    
     if (selectedCardRef.current) {
+      console.log('UpgradePanel: Calling selectUpgrade', { upgradeId: selectedCardRef.current, unitType });
       selectUpgrade(selectedCardRef.current, unitType);
+      // Clear selection immediately to prevent re-renders
       setSelectedCard(null);
       setSelectedUnitType(null);
+      // Force close the panel after selecting unit type
+      if (onClose) {
+        console.log('UpgradePanel: Calling onClose to close panel');
+        onClose();
+      }
     }
   };
 
@@ -141,13 +184,13 @@ const UpgradePanel: React.FC = () => {
         {UPGRADE_ICONS[card.name] && (
           <Image 
             source={UPGRADE_ICONS[card.name]} 
-            style={styles.upgradeIcon}
+            style={[styles.upgradeIcon, { width: iconSize, height: iconSize }]}
             resizeMode="contain"
           />
         )}
         
-        <Text style={styles.upgradeName}>{card.name}</Text>
-        <Text style={styles.upgradeDescription}>{card.description}</Text>
+        <Text style={[styles.upgradeName, { fontSize: cardNameFontSize }]}>{card.name}</Text>
+        <Text style={[styles.upgradeDescription, { fontSize: cardDescFontSize }]}>{card.description}</Text>
         
         {card.targetUnitType && (
           <View style={styles.targetContainer}>
@@ -161,7 +204,11 @@ const UpgradePanel: React.FC = () => {
 
   if (selectedCardRef.current && !upgradeCards.find(c => c.id === selectedCardRef.current)?.isHighPotency) {
     return (
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
+      <ScrollView 
+        style={styles.scrollContainer} 
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}>
         <Text style={styles.title}>SELECT UNIT TYPE</Text>
         <Text style={styles.subtitle}>Choose which unit type to upgrade</Text>
         
@@ -208,9 +255,13 @@ const UpgradePanel: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
+    <ScrollView 
+      style={styles.scrollContainer} 
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.title}>Choose Your Upgrades</Text>
+        <Text style={[styles.title, { fontSize: titleFontSize }]}>Choose Your Upgrades</Text>
         <TouchableOpacity
           style={[styles.rerollButton, !canAffordReroll && styles.rerollButtonDisabled]}
           onPress={rerollShop}
@@ -230,7 +281,7 @@ const UpgradePanel: React.FC = () => {
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    maxHeight: Math.min(height * 0.4, 300),
+    maxHeight: Math.min(height * 0.45, 350),
   },
   container: {
     padding: 10,
@@ -288,6 +339,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     marginRight: 8,
+    marginBottom: 8,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',

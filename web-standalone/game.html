@@ -1769,12 +1769,8 @@
                 }
             });
             
-            socket.on('wizard-attack', (data) => {
-                // Show wizard projectile
-                if (window.gameScene) {
-                    window.gameScene.createWizardProjectile(data.attackerId, data.targetId);
-                }
-            });
+            // Note: Wizard projectiles are handled client-side in MainScene.ts
+            // No need for server-side wizard-attack events
             
             socket.on('matchStarted', (matchId) => {
                 console.log('Match started:', matchId);

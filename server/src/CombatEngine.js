@@ -459,11 +459,8 @@ class CombatEngine {
     // Debug logging for wizard attack
     console.log(`🔮 ${attacker.name} (${attacker.id}) casting area spell targeting ${target.name} (${target.id})`);
 
-    // Emit wizard attack event for visual effects
-    this.match.io.to(this.match.matchId).emit('wizard-attack', {
-      attackerId: attacker.id,
-      targetId: target.id
-    });
+    // Note: Wizard projectile visuals are handled client-side in MainScene.ts
+    // The client detects wizard attack status changes and creates the visual projectiles
 
     // Find all enemies within range of the target
     const allEnemyUnits = attacker.id.startsWith('enemy-') ? 
