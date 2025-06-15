@@ -922,15 +922,15 @@ export default class MainScene extends Phaser.Scene {
       
       const sprite = this.unitSprites.get(unit.id);
       if (sprite && sprite.active && !sprite.getData('destroying')) {
-        // Update position with smooth interpolation
         const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
-        
-        // Calculate distance for dynamic duration
-        const distance = Phaser.Math.Distance.Between(sprite.x, sprite.y, worldPos.x, worldPos.y);
-        const duration = Math.min(500, Math.max(200, distance * 2)); // 200-500ms based on distance
-        
-        // Smooth movement to new position (only if sprite is still active)
-        if (sprite.active) {
+
+        // Skip automatic position tween if this unit is currently being dragged
+        const isCurrentlyDragged = this.isDragging && this.selectedUnit && this.selectedUnit.unitId === unit.id;
+
+        if (!isCurrentlyDragged) {
+          const distance = Phaser.Math.Distance.Between(sprite.x, sprite.y, worldPos.x, worldPos.y);
+          const duration = Math.min(500, Math.max(200, distance * 2));
+
           this.tweens.add({
             targets: sprite,
             x: worldPos.x,
@@ -1066,131 +1066,45 @@ export default class MainScene extends Phaser.Scene {
   }
 
   private createWizardProjectile(attacker: Unit, allUnits: Unit[]) {
-    console.log(`🧙 Creating wizard projectile for ${attacker.name} (${attacker.id})`);
-    
-    // Check if attacker has a valid position
-    if (!attacker.position) {
-      console.log(`❌ Wizard ${attacker.id} has no position`);
-      return;
-    }
-    
-    // Find the closest enemy unit as the target
-    const isPlayerUnit = this.gameState?.players.some(p => 
-      p.units.some(u => u.id === attacker.id)
-    ) || false;
-    
+    // Validate attacker position
+    if (!attacker.position) return;
+
+    // Find closest enemy target
+    const isPlayerUnit = this.gameState?.players.some(p => p.units.some(u => u.id === attacker.id)) || false;
     const enemies = allUnits.filter(u => {
-      const isEnemy = isPlayerUnit ? 
-        this.gameState?.enemyUnits.some(e => e.id === u.id) :
-        this.gameState?.players.some(p => p.units.some(pu => pu.id === u.id));
+      const isEnemy = isPlayerUnit
+        ? this.gameState?.enemyUnits.some(e => e.id === u.id)
+        : this.gameState?.players.some(p => p.units.some(pu => pu.id === u.id));
       return isEnemy && u.status !== 'dead' && u.position;
     });
-    
-    console.log(`🎯 Found ${enemies.length} potential targets for wizard`);
-    
-    if (enemies.length === 0) {
-      console.log(`❌ No valid targets for wizard projectile`);
-      return;
-    }
-    
-    // Find closest enemy
+    if (enemies.length === 0) return;
+
     let closestEnemy: Unit | null = null;
     let closestDistance = Infinity;
-    
     for (const enemy of enemies) {
       if (!enemy.position) continue;
-      const distance = Math.abs(enemy.position.x - attacker.position.x) + 
-                      Math.abs(enemy.position.y - attacker.position.y);
-      if (distance < closestDistance) {
-        closestDistance = distance;
+      const d = Math.abs(enemy.position.x - attacker.position.x) + Math.abs(enemy.position.y - attacker.position.y);
+      if (d < closestDistance) {
+        closestDistance = d;
         closestEnemy = enemy;
       }
     }
-    
-    if (!closestEnemy || !closestEnemy.position) {
-      console.log(`❌ No closest enemy found for wizard projectile`);
-      return;
-    }
-    
-    console.log(`🎯 Wizard targeting ${closestEnemy.name} at (${closestEnemy.position.x}, ${closestEnemy.position.y})`);
-    
-    // Get world positions
+    if (!closestEnemy || !closestEnemy.position) return;
+
     const startPos = this.grid.gridToWorld(attacker.position.x, attacker.position.y);
     const targetPos = this.grid.gridToWorld(closestEnemy.position.x, closestEnemy.position.y);
-    
-    console.log(`🚀 Creating projectile from (${startPos.x}, ${startPos.y}) to (${targetPos.x}, ${targetPos.y})`);
-    
-    // Create a bright, visible blue circle projectile
-    const projectile = this.add.circle(startPos.x, startPos.y - 20, 15, 0x3366ff, 1);
-    projectile.setDepth(1000); // High depth to ensure visibility
-    
-    // Add bright glow effect
-    const glowCircle = this.add.circle(startPos.x, startPos.y - 20, 25, 0x6699ff, 0.7);
-    glowCircle.setDepth(999);
-    
-    // Add white core for better visibility
-    const coreCircle = this.add.circle(startPos.x, startPos.y - 20, 8, 0xffffff, 1);
-    coreCircle.setDepth(1001);
-    
-    console.log(`✨ Created wizard projectile visual elements`);
-    
-    // Play wizard sound effect if available
-    if (this.sound.get('wizardSound')) {
-      this.sound.play('wizardSound', { volume: 0.4 });
-      console.log(`🔊 Playing wizard sound`);
-    } else {
-      console.log(`🔇 Wizard sound not available`);
-    }
-    
-    // Animate projectile to target
-    const distance = Phaser.Math.Distance.Between(startPos.x, startPos.y, targetPos.x, targetPos.y);
-    const duration = Math.max(500, distance * 3); // Slower for better visibility
-    
-    console.log(`⏱️ Projectile will travel ${distance} pixels in ${duration}ms`);
-    
+
+    // Simple blue orb projectile
+    const orb = this.add.circle(startPos.x, startPos.y - 20, 8, 0x3399ff, 1);
+    orb.setDepth(1000);
+
     this.tweens.add({
-      targets: [projectile, glowCircle, coreCircle],
+      targets: orb,
       x: targetPos.x,
       y: targetPos.y - 20,
-      duration: duration,
-      ease: 'Power2',
-      onComplete: () => {
-        console.log(`💥 Wizard projectile reached target`);
-        
-        // Create bright impact effect
-        const impact = this.add.circle(targetPos.x, targetPos.y - 20, 10, 0xffffff, 1);
-        impact.setDepth(1002);
-        
-        // Create expanding ring effect
-        const ring = this.add.circle(targetPos.x, targetPos.y - 20, 5, 0x3366ff, 0.8);
-        ring.setDepth(1001);
-        
-        this.tweens.add({
-          targets: impact,
-          scale: 4,
-          alpha: 0,
-          duration: 400,
-          onComplete: () => impact.destroy()
-        });
-        
-        this.tweens.add({
-          targets: ring,
-          scale: 6,
-          alpha: 0,
-          duration: 600,
-          onComplete: () => ring.destroy()
-        });
-        
-        // Clean up projectile
-        projectile.destroy();
-        glowCircle.destroy();
-        coreCircle.destroy();
-        
-        console.log(`🧹 Cleaned up wizard projectile`);
-      }
+      duration: 400,
+      onComplete: () => orb.destroy()
     });
-    
-    console.log(`🧙 Wizard projectile creation complete`);
   }
   
   private createProjectileForAttack(attacker: Unit, allUnits: Unit[]) {

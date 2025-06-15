@@ -215,6 +215,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const selectUpgrade = (upgradeId: string, targetUnitType?: string) => {
     if (socket && isConnected) {
       socket.emit('select-upgrade', upgradeId, targetUnitType);
+
+      // Optimistically remove the selected upgrade card so the UI updates
+      setPlayer(prev => {
+        if (!prev || !prev.upgradeCards) return prev;
+        const filtered = prev.upgradeCards.filter(c => c.id !== upgradeId);
+        return { ...prev, upgradeCards: filtered };
+      });
     }
   };
 
