@@ -385,12 +385,25 @@ class Match {
   }
 
   selectUpgrade(playerId, upgradeId, targetUnitType) {
+    console.log(`selectUpgrade called:`, { playerId, upgradeId, targetUnitType, phase: this.phase });
+    
     const player = this.players.get(playerId);
-    if (!player || (this.phase !== 'post-combat' && this.phase !== 'preparation')) return;
+    if (!player) {
+      console.log(`Player ${playerId} not found`);
+      return;
+    }
+    
+    if (this.phase !== 'post-combat' && this.phase !== 'preparation') {
+      console.log(`Invalid phase for upgrade selection: ${this.phase}`);
+      return;
+    }
 
     // Find upgrade in this player's individual upgrade cards
     const upgrade = player.upgradeCards.find(u => u.id === upgradeId);
-    if (!upgrade) return;
+    if (!upgrade) {
+      console.log(`Upgrade ${upgradeId} not found in player's upgrade cards`);
+      return;
+    }
 
     // Players can now use multiple upgrades, no restriction on selection
 
@@ -404,6 +417,7 @@ class Match {
       return false;
     });
 
+    console.log(`Applying upgrade ${upgrade.name} to ${unitsToUpgrade.length} units of type ${targetUnitType || upgrade.targetUnitType}`);
     unitsToUpgrade.forEach(unit => {
       this.applyUpgrade(unit, upgrade);
     });
@@ -413,9 +427,17 @@ class Match {
     if (upgradeIndex !== -1) {
       // Find the group this upgrade belongs to (every 4 cards = 1 opportunity)
       const groupStart = Math.floor(upgradeIndex / 4) * 4;
+      const cardsBeforeRemoval = player.upgradeCards.length;
       // Remove the entire group of 4 cards
       player.upgradeCards.splice(groupStart, 4);
-      console.log(`Player ${playerId} used upgrade opportunity, ${Math.ceil(player.upgradeCards.length / 4)} opportunities remaining`);
+      console.log(`Player ${playerId} used upgrade opportunity:`, {
+        selectedUpgradeId: upgradeId,
+        selectedUpgradeName: upgrade.name,
+        targetUnitType: targetUnitType || upgrade.targetUnitType,
+        cardsBeforeRemoval,
+        cardsAfterRemoval: player.upgradeCards.length,
+        opportunitiesRemaining: Math.ceil(player.upgradeCards.length / 4)
+      });
     }
 
     // No need to check for "all players selected" - upgrades are now independent
@@ -425,6 +447,13 @@ class Match {
 
   applyUpgrade(unit, upgrade) {
     const multiplier = upgrade.isHighPotency ? 3 : 1;
+    
+    // Ensure unit has buffs array
+    if (!unit.buffs) {
+      unit.buffs = [];
+    }
+
+    console.log(`Applying upgrade effect ${upgrade.effect} to unit ${unit.name} with multiplier ${multiplier}`);
 
     switch (upgrade.effect) {
       case 'health':

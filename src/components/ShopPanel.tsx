@@ -27,7 +27,7 @@ const ShopPanel: React.FC = () => {
 
   const canAffordReroll = player.gold >= 10;
 
-  const handleDragStart = (unit: UnitStats, event: any) => {
+  const handleDragStart = React.useCallback((unit: UnitStats, event: any) => {
     if (player.gold < unit.cost) return;
     
     draggedUnitRef.current = unit;
@@ -64,14 +64,14 @@ const ShopPanel: React.FC = () => {
         scene.enterPlacementMode(unit);
       }
     }
-  };
+  }, [player.gold]);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = React.useCallback(() => {
     draggedUnitRef.current = null;
     setDraggedUnit(null);
-  };
+  }, []);
 
-  const renderUnitCard = (unit: UnitStats) => {
+  const renderUnitCard = React.useCallback((unit: UnitStats) => {
     const canAfford = player.gold >= unit.cost;
     
     return Platform.OS === 'web' ? (
@@ -205,7 +205,7 @@ const ShopPanel: React.FC = () => {
         )}
       </TouchableOpacity>
     );
-  };
+  }, [player.gold, handleDragStart, handleDragEnd, purchaseUnit]);
 
   return (
     <View style={styles.container}>

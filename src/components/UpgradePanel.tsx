@@ -129,10 +129,13 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ onClose }) => {
       console.log('UpgradePanel: Selecting high-potency upgrade directly');
       selectUpgrade(card.id);
       // Force close the panel after selecting high-potency upgrade
-      if (onClose) {
-        console.log('UpgradePanel: Calling onClose for high-potency upgrade');
-        onClose();
-      }
+      // Add a small delay to ensure the upgrade is processed
+      setTimeout(() => {
+        if (onClose) {
+          console.log('UpgradePanel: Calling onClose for high-potency upgrade');
+          onClose();
+        }
+      }, 100);
     } else {
       // Normal upgrades need unit type selection
       console.log('UpgradePanel: Setting card for unit type selection');
@@ -154,10 +157,13 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ onClose }) => {
       setSelectedCard(null);
       setSelectedUnitType(null);
       // Force close the panel after selecting unit type
-      if (onClose) {
-        console.log('UpgradePanel: Calling onClose to close panel');
-        onClose();
-      }
+      // Add a small delay to ensure the upgrade is processed
+      setTimeout(() => {
+        if (onClose) {
+          console.log('UpgradePanel: Calling onClose to close panel');
+          onClose();
+        }
+      }, 100);
     }
   };
 

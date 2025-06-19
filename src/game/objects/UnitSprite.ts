@@ -13,6 +13,11 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
   private lastStatus: string = 'idle';
   private lastSoundTime: number = 0;
 
+  private isRangedUnit(): boolean {
+    const rangedUnitTypes = ['wizard', 'priest', 'druidess', 'storms'];
+    return rangedUnitTypes.includes(this.unit.name.toLowerCase());
+  }
+
   constructor(scene: Phaser.Scene, x: number, y: number, unit: Unit) {
     super(scene, x, y);
     
@@ -175,9 +180,19 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
         this.playAnimation('walk');
         break;
       case 'attacking':
+        console.log(`🎬 UnitSprite: ${this.unit.name} (${this.unit.id}) entering attacking state. Status changed: ${statusChanged}`);
         this.playAnimation('attack');
         if (statusChanged) {
           this.playAttackSound();
+          
+          // Emit event for ranged units starting attack (for projectile creation)
+          if (this.isRangedUnit()) {
+            console.log(`🎯 EMITTING EVENT: Ranged unit ${this.unit.name} starting attack`);
+            this.scene.events.emit('rangedUnitAttack', this.unit);
+            console.log(`🎯 Event emitted for ranged unit attack`);
+          } else {
+            console.log(`🗡️ Melee unit ${this.unit.name} attacking - no projectile needed`);
+          }
         }
         break;
       case 'dead':
@@ -230,6 +245,10 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     // Safety check - don't play animations if sprite is being destroyed or unit is null
     if (!this.active || this.getData('destroying') || !this.unit || !this.sprite) {
       return;
+    }
+    
+    if (animKey === 'attack') {
+      console.log(`🎬 UnitSprite.playAnimation(${animKey}) called for ${this.unit.name} (${this.unit.id})`);
     }
     
     // Check if animation exists for this unit

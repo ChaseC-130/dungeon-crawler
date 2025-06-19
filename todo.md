@@ -1,5 +1,1 @@
-# The upgrade panel isn't working. When a player toggles and upgrade then presses "Select Upgrade" it simply re-renders the upgrade panel. It doesn't close, it doesn't grant the player the upgrade, and the upgrade available button doesn't dissapear as it should.
-
-# The wizards' attack projectile isn't working. They should have a distinct projectile (Use anything necessary, such as a simple blue circle using Phaser capabilities) or preferably Charge_1_X.png from assets\units\wizard\wizard.json
-
-# There is no animation or indication currently present to players' client when they are moving a unit from grid cell to another grid cell. We should "Pick up" the unit sprite to indicate to the player they are moving when they click + drag. There may be an implementation in code already, but it's not working.
+The background of the grid/battle area needs to stretch to meet the full width of the screen. Currently, it does not. Additionally, the grid isn't resizing properly when the user resizes their game window. This phaser/react-native game will eventually be deployed via react-native/electron to mobile and desktop devices. Let's make sure the experience is nice for all screen sizes. Get rid of the red border on the grid

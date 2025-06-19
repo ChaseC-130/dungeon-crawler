@@ -15,8 +15,6 @@ import UnitSelectionModal from '../components/UnitSelectionModal';
 
 type GameScreenProps = StackScreenProps<RootStackParamList, 'Game'>;
 
-const { width, height } = Dimensions.get('window');
-
 const Game: React.FC = () => {
   const route = useRoute<GameScreenProps['route']>();
   const { gameState, player, placeUnit, moveUnit, purchaseUnit, purchaseAndPlaceUnit, selectStartingUnits } = useGame();
@@ -24,6 +22,44 @@ const Game: React.FC = () => {
   const containerRef = useRef<View>(null);
   const [showUnitSelection, setShowUnitSelection] = useState(true);
   const [hasSelectedUnits, setHasSelectedUnits] = useState(false);
+  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({window}) => {
+      setDimensions(window);
+      
+      // Trigger game resize if game exists
+      if (gameRef.current && Platform.OS === 'web') {
+        gameRef.current.resize(window.width, window.height);
+      }
+    });
+
+    // Add web-specific resize listener
+    const handleWebResize = () => {
+      if (Platform.OS === 'web') {
+        const newDimensions = {
+          width: window.innerWidth,
+          height: window.innerHeight
+        };
+        setDimensions(newDimensions);
+        
+        if (gameRef.current) {
+          gameRef.current.resize(newDimensions.width, newDimensions.height);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      window.addEventListener('resize', handleWebResize);
+    }
+
+    return () => {
+      subscription?.remove();
+      if (Platform.OS === 'web') {
+        window.removeEventListener('resize', handleWebResize);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (Platform.OS === 'web' && containerRef.current) {
@@ -31,8 +67,8 @@ const Game: React.FC = () => {
       const container = containerRef.current as any;
       gameRef.current = new PhaserGame(
         container,
-        width,
-        height
+        dimensions.width,
+        dimensions.height
       );
       
       // Add touch and drag support to the container
@@ -143,6 +179,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+    backgroundColor: '#000',
   },
 });
 

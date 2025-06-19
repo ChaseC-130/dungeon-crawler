@@ -20,7 +20,7 @@ interface UnitSpriteProps {
   useGridCellSize?: boolean; // If true, calculate size like grid cells
 }
 
-const UnitSprite: React.FC<UnitSpriteProps> = ({ unitName, width, height, useGridCellSize = false }) => {
+const UnitSprite: React.FC<UnitSpriteProps> = React.memo(({ unitName, width, height, useGridCellSize = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
 
@@ -154,7 +154,7 @@ const UnitSprite: React.FC<UnitSpriteProps> = ({ unitName, width, height, useGri
       }} />
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -26,12 +26,49 @@ export default class MainScene extends Phaser.Scene {
   private dragInstruction: Phaser.GameObjects.Container | null = null;
   private originalDragPosition: Phaser.Math.Vector2 | null = null;
   private dragShadow: Phaser.GameObjects.Ellipse | null = null;
+  private cellSize: number = 0;
 
   constructor() {
     super({ key: 'MainScene' });
   }
 
   create() {
+    console.log('=== MAINSCENE CREATE CALLED ===');
+    console.log('Scene object:', this);
+    console.log('Scene cameras:', this.cameras);
+    console.log('Scene add:', this.add);
+    
+    
+    console.log('=== SCENE CREATE DEBUG ===');
+    console.log('Scene dimensions:', {
+      width: this.cameras.main.width,
+      height: this.cameras.main.height,
+      centerX: this.cameras.main.centerX,
+      centerY: this.cameras.main.centerY
+    });
+    
+    // Debug wizard texture loading
+    console.log('🧙 Checking wizard texture at scene create...');
+    if (this.textures.exists('wizard')) {
+      const wizardTexture = this.textures.get('wizard');
+      const frameNames = wizardTexture.getFrameNames();
+      console.log(`🧙 Wizard texture loaded with ${frameNames.length} frames`);
+      const chargeFrames = frameNames.filter(f => f.includes('Charge_1_'));
+      console.log(`🧙 Found ${chargeFrames.length} Charge_1_X frames:`, chargeFrames.slice(0, 5));
+      
+      // Test rendering a Charge frame
+      if (chargeFrames.length > 0) {
+        const testSprite = this.add.sprite(100, 100, 'wizard', chargeFrames[0]);
+        testSprite.setScale(3);
+        testSprite.setDepth(10000);
+        console.log(`🧙 Test sprite created with frame: ${chargeFrames[0]}`);
+        // Remove after 5 seconds
+        this.time.delayedCall(5000, () => testSprite.destroy());
+      }
+    } else {
+      console.error(`❌ Wizard texture not loaded!`);
+    }
+    
     // Initialize all state variables to prevent random highlighting
     this.isDragging = false;
     this.placementMode = false;
@@ -44,21 +81,7 @@ export default class MainScene extends Phaser.Scene {
     this.updateBackground();
     
     // Create grid - 20 columns x 8 rows
-    const gridWidth = 20;
-    const gridHeight = 8;
-    const cellSize = Math.min(
-      (this.cameras.main.width * 0.9) / gridWidth,
-      (this.cameras.main.height * 0.7) / gridHeight
-    );
-    
-    this.grid = new Grid(
-      this,
-      this.cameras.main.centerX,
-      this.cameras.main.centerY,
-      gridWidth,
-      gridHeight,
-      cellSize
-    );
+    this.createGrid();
 
     // Ensure highlight starts cleared and placement mode is disabled
     this.grid.clearHighlight();
@@ -79,9 +102,19 @@ export default class MainScene extends Phaser.Scene {
         this.currentPlayerId = player.id;
       }
     }
+    
+    // Expose test functions for debugging  
+    (window as any).testWizardAttack = () => this.testWizardAttack();
+    (window as any).addTestWizard = () => this.addTestWizard();
+
+    // Listen for ranged unit attacks from UnitSprites
+    this.events.on('rangedUnitAttack', this.handleRangedUnitAttack.bind(this));
 
     // Setup input
     this.setupInput();
+    
+    // Listen for resize events
+    this.scale.on('resize', this.onResize, this);
     
     // Start background music
     this.playBackgroundMusic();
@@ -95,6 +128,105 @@ export default class MainScene extends Phaser.Scene {
     
     // Add keyboard support for canceling drag
     this.input.keyboard?.on('keydown-ESC', this.cancelDrag, this);
+  }
+
+  private createGrid() {
+    const gridWidth = 20;
+    const gridHeight = 8;
+    
+    console.log('=== GRID CREATION DEBUG ===');
+    console.log('Camera dimensions:', {
+      width: this.cameras.main.width,
+      height: this.cameras.main.height,
+      ratio: this.cameras.main.width / this.cameras.main.height
+    });
+    console.log('Game config dimensions:', {
+      width: this.game.config.width,
+      height: this.game.config.height
+    });
+    console.log('Canvas element:', this.game.canvas);
+    console.log('Canvas computed style:', this.game.canvas ? window.getComputedStyle(this.game.canvas) : 'No canvas');
+    
+    // Calculate cell size to fit the grid nicely within the camera
+    // Reserve bottom 25% for HUD panels
+    const hudHeight = this.cameras.main.height * 0.25;
+    const availableHeight = this.cameras.main.height - hudHeight;
+    
+    const maxGridWidth = this.cameras.main.width * 0.95; // Use 95% of screen width
+    const maxGridHeight = availableHeight * 0.8; // Use 80% of available height (excluding HUD)
+    
+    const cellSizeByWidth = maxGridWidth / gridWidth;
+    const cellSizeByHeight = maxGridHeight / gridHeight;
+    const cellSize = Math.min(cellSizeByWidth, cellSizeByHeight);
+    this.cellSize = cellSize; // Store cell size for resize handling
+    
+    console.log('Grid sizing calculation:');
+    console.log('Cell size:', cellSize);
+    console.log('Grid dimensions:', {
+      pixelWidth: cellSize * gridWidth,
+      pixelHeight: cellSize * gridHeight
+    });
+    
+    // Position grid to align bottom with HUD top
+    const gridPixelHeight = cellSize * gridHeight;
+    const gridY = (availableHeight - gridPixelHeight) / 2 + (gridPixelHeight / 2);
+    
+    this.grid = new Grid(
+      this,
+      this.cameras.main.centerX,
+      gridY,
+      gridWidth,
+      gridHeight,
+      cellSize
+    );
+    
+    console.log('Grid created at position:', {
+      x: this.cameras.main.centerX,
+      y: gridY
+    });
+  }
+
+  private onResize(gameSize: Phaser.Structs.Size) {
+    const width = gameSize.width;
+    const height = gameSize.height;
+
+    this.cameras.resize(width, height);
+    
+    // Update background to fill new dimensions
+    this.updateBackground();
+    
+    // Update grid background size instead of recreating
+    if (this.grid) {
+      this.grid.updateBackgroundSize();
+      
+      // Optionally recreate grid if cells need resizing
+      const gridWidth = 20;
+      const gridHeight = 8;
+      const hudHeight = height * 0.25;
+      const availableHeight = height - hudHeight;
+      const maxGridWidth = width * 0.95;
+      const maxGridHeight = availableHeight * 0.8;
+      const cellSizeByWidth = maxGridWidth / gridWidth;
+      const cellSizeByHeight = maxGridHeight / gridHeight;
+      const newCellSize = Math.min(cellSizeByWidth, cellSizeByHeight);
+      
+      // Get current cell size (approximation based on grid dimensions)
+      const currentCellSize = this.cellSize;
+      
+      // Only recreate if cell size changed significantly
+      if (!currentCellSize || Math.abs(newCellSize - currentCellSize) > 5) {
+        const currentGridState = this.gameState ? this.gameState.grid : null;
+        this.cellSize = newCellSize; // Update stored cell size
+        this.grid.destroy();
+        this.createGrid();
+        
+        // Restore grid state
+        if (currentGridState) {
+          this.grid.updateGrid(currentGridState);
+          this.updateUnits();
+        }
+      }
+    }
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer) {
@@ -774,6 +906,11 @@ export default class MainScene extends Phaser.Scene {
       ...this.gameState.enemyUnits
     ];
     
+    // Use the consolidated updateUnitsInternal method
+    this.updateUnitsInternal(allUnits, false); // false indicates this is not a combat update
+  }
+
+  private updateUnitsInternal(allUnits: Unit[], isCombatUpdate: boolean) {
     // Remove sprites for units that no longer exist
     for (const [id, sprite] of this.unitSprites) {
       if (!allUnits.find(u => u.id === id)) {
@@ -787,6 +924,11 @@ export default class MainScene extends Phaser.Scene {
       // Skip units without positions during preparation phase
       if (!unit.position) {
         continue;
+      }
+      
+      // Debug wizards
+      if (unit.name.toLowerCase() === 'wizard') {
+        console.log(`🧙 Found wizard unit in updateUnitsInternal: ${unit.name} (${unit.id}) at (${unit.position.x}, ${unit.position.y})`);
       }
       
       let sprite = this.unitSprites.get(unit.id);
@@ -808,21 +950,82 @@ export default class MainScene extends Phaser.Scene {
           }
         });
       } else if (unit.position) {
-        // Update position if unit has moved
+        // Handle position updates differently for combat vs non-combat updates
         const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
-        const distanceThreshold = 1; // Only update if moved significantly
-        const dx = Math.abs(sprite.x - worldPos.x);
-        const dy = Math.abs(sprite.y - worldPos.y);
         
-        if (dx > distanceThreshold || dy > distanceThreshold) {
-          console.log(`Moving sprite ${unit.id} from (${sprite.x}, ${sprite.y}) to (${worldPos.x}, ${worldPos.y})`);
-          sprite.setPosition(worldPos.x, worldPos.y);
+        if (isCombatUpdate) {
+          // During combat updates, use smooth movement with tweens
+          const distance = Phaser.Math.Distance.Between(sprite.x, sprite.y, worldPos.x, worldPos.y);
+          const duration = Math.min(500, Math.max(200, distance * 2)); // 200-500ms based on distance
+          
+          // Only create tween if sprite is still active and position has changed significantly
+          if (sprite.active && distance > 1) {
+            this.tweens.add({
+              targets: sprite,
+              x: worldPos.x,
+              y: worldPos.y,
+              duration: duration,
+              ease: 'Power2.InOut'
+            });
+          }
+        } else {
+          // During regular updates, use immediate position updates for units that have moved
+          const distanceThreshold = 1; // Only update if moved significantly
+          const dx = Math.abs(sprite.x - worldPos.x);
+          const dy = Math.abs(sprite.y - worldPos.y);
+          
+          if (dx > distanceThreshold || dy > distanceThreshold) {
+            console.log(`Moving sprite ${unit.id} from (${sprite.x}, ${sprite.y}) to (${worldPos.x}, ${worldPos.y})`);
+            sprite.setPosition(worldPos.x, worldPos.y);
+          }
         }
       }
       
       // Update sprite state only if sprite still exists and is active
       if (sprite && sprite.active && !sprite.getData('destroying')) {
+        // Store old unit data for combat-specific logic
+        const oldUnit = isCombatUpdate ? { ...sprite.unit } : null;
+        
+        // Update unit data (health, status, etc.) - this has its own safety checks
         sprite.updateUnit(unit);
+        
+        // Combat-specific logic for projectile creation
+        if (isCombatUpdate && oldUnit) {
+          // Check if unit just started attacking (for projectile creation)
+          const justStartedAttacking = oldUnit.status !== 'attacking' && unit.status === 'attacking';
+          
+          // Debug logging for all ranged units
+          if (unit.status === 'attacking' && this.isRangedUnit(unit)) {
+            console.log(`🎯 ${unit.name} is attacking, old status: ${oldUnit.status}, new status: ${unit.status}, just started: ${justStartedAttacking}`);
+          }
+          
+          // Create projectile for ranged attackers
+          if (justStartedAttacking && this.isRangedUnit(unit)) {
+            console.log(`🚀 RANGED UNIT STARTED ATTACKING: ${unit.name} (ID: ${unit.id})`);
+            
+            // Check cooldown to avoid duplicate projectiles
+            const lastAttack = this.lastAttackTime.get(unit.id) || 0;
+            const now = this.time.now;
+            
+            // Wizard needs longer cooldown due to charging time
+            const cooldownTime = unit.name.toLowerCase() === 'wizard' ? 3000 : 500;
+            
+            console.log(`⏰ Cooldown check for ${unit.name}: now=${now}, lastAttack=${lastAttack}, cooldownTime=${cooldownTime}, timeSince=${now - lastAttack}`);
+            
+            if (now - lastAttack > cooldownTime) { // Different cooldown for wizard vs other ranged
+              console.log(`🎯 Creating projectile for ${unit.name} (${unit.id})`);
+              
+              if (unit.name.toLowerCase() === 'wizard') {
+                console.log(`🧙 WIZARD ATTACK DETECTED! Calling createProjectileForAttack`);
+              }
+              
+              this.createProjectileForAttack(unit, allUnits);
+              this.lastAttackTime.set(unit.id, now);
+            } else {
+              console.log(`⏰ Projectile on cooldown for ${unit.name}, last attack: ${now - lastAttack}ms ago`);
+            }
+          }
+        }
       }
     }
   }
@@ -911,85 +1114,35 @@ export default class MainScene extends Phaser.Scene {
   }
 
   updateCombatUnits(playerUnits: Unit[], enemyUnits: Unit[]) {
+    console.log(`🎮 updateCombatUnits called with ${playerUnits.length} player units and ${enemyUnits.length} enemy units`);
     const allUnits = [...playerUnits, ...enemyUnits];
     
-    // Update existing units with new combat data
-    for (const unit of allUnits) {
-      // Skip units without positions
-      if (!unit.position) {
-        continue;
-      }
-      
-      const sprite = this.unitSprites.get(unit.id);
-      if (sprite && sprite.active && !sprite.getData('destroying')) {
-        // Update position with smooth interpolation
-        const worldPos = this.grid.gridToWorld(unit.position.x, unit.position.y);
-        
-        // Calculate distance for dynamic duration
-        const distance = Phaser.Math.Distance.Between(sprite.x, sprite.y, worldPos.x, worldPos.y);
-        const duration = Math.min(500, Math.max(200, distance * 2)); // 200-500ms based on distance
-        
-        // Smooth movement to new position (only if sprite is still active)
-        if (sprite.active) {
-          this.tweens.add({
-            targets: sprite,
-            x: worldPos.x,
-            y: worldPos.y,
-            duration: duration,
-            ease: 'Power2.InOut'
-          });
-        }
-        
-        // Check if unit just started attacking (for projectile creation)
-        const oldUnit = sprite.unit;
-        const justStartedAttacking = oldUnit && oldUnit.status !== 'attacking' && unit.status === 'attacking';
-        
-        // Debug logging
-        if (unit.status === 'attacking' && this.isRangedUnit(unit)) {
-          console.log(`${unit.name} is attacking, old status: ${oldUnit ? oldUnit.status : 'unknown'}, new status: ${unit.status}`);
-        }
-        
-        // Update unit data (health, status, etc.) - this has its own safety checks
-        sprite.updateUnit(unit);
-        
-        // Create projectile for ranged attackers
-        if (justStartedAttacking && this.isRangedUnit(unit)) {
-          // Check cooldown to avoid duplicate projectiles
-          const lastAttack = this.lastAttackTime.get(unit.id) || 0;
-          const now = this.time.now;
-          
-          if (now - lastAttack > 500) { // 500ms cooldown between projectiles
-            console.log(`🎯 Creating projectile for ${unit.name} (${unit.id})`);
-            if (unit.name.toLowerCase() === 'wizard') {
-              // Create enhanced blue orb projectile for wizard
-              console.log(`🧙 Creating wizard projectile for ${unit.name}`);
-              this.createWizardProjectile(unit, allUnits);
-            } else {
-              // Immediate projectile for other ranged units
-              console.log(`🏹 Creating standard projectile for ${unit.name}`);
-              this.createProjectileForAttack(unit, allUnits);
-            }
-            this.lastAttackTime.set(unit.id, now);
-          } else {
-            console.log(`⏰ Projectile on cooldown for ${unit.name}, last attack: ${now - lastAttack}ms ago`);
-          }
-        }
-      }
+    // Test: Create a visible rectangle every time this is called
+    const testRect = this.add.rectangle(
+      100 + Math.random() * 600, 
+      100 + Math.random() * 400, 
+      20, 
+      20, 
+      0xff00ff
+    );
+    testRect.setDepth(10000);
+    this.time.delayedCall(1000, () => testRect.destroy());
+    
+    // Log any wizards found
+    const wizards = allUnits.filter(u => u.name.toLowerCase() === 'wizard');
+    console.log(`🧙 Found ${wizards.length} wizards:`, wizards.map(w => ({
+      name: w.name,
+      id: w.id,
+      status: w.status,
+      position: w.position
+    })));
+    if (wizards.length > 0) {
+      console.log(`🧙 Found ${wizards.length} wizard(s) in combat update:`);
+      wizards.forEach(w => console.log(`  - ${w.name} (${w.id}): status=${w.status}, position=${w.position ? `(${w.position.x},${w.position.y})` : 'null'}`));
     }
     
-    // Remove sprites for units that are no longer in the state (e.g. sold)
-    // Dead units' sprites are removed by the 'death_animation_complete' event.
-    for (const [id, sprite] of this.unitSprites) {
-      const unitIsStillInState = allUnits.find(u => u.id === id);
-      if (!unitIsStillInState) {
-        // Unit is gone for reasons other than ongoing death animation (e.g., sold during prep, or some other removal logic)
-        // Or if it's a unit that was part of a previous state but not in `allUnits` from combat update.
-        sprite.destroy();
-        this.unitSprites.delete(id);
-      }
-      // If unitIsStillInState and is dead, its sprite.updateUnit() call from the previous loop
-      // would have started the death animation. The event listener will handle its removal.
-    }
+    // Use the consolidated updateUnitsInternal method to avoid duplicate processing
+    this.updateUnitsInternal(allUnits, true); // true indicates this is a combat update
   }
 
   shutdown() {
@@ -1060,142 +1213,22 @@ export default class MainScene extends Phaser.Scene {
   
   private isRangedUnit(unit: Unit): boolean {
     const rangedUnitTypes = ['wizard', 'priest', 'druidess', 'storms'];
-    const isRanged = rangedUnitTypes.includes(unit.name.toLowerCase());
-    console.log(`Checking if ${unit.name} is ranged: ${isRanged}`);
+    const unitNameLower = unit.name.toLowerCase();
+    const isRanged = rangedUnitTypes.includes(unitNameLower);
+    console.log(`Checking if ${unit.name} (normalized: "${unitNameLower}") is ranged: ${isRanged}`);
+    console.log(`Available ranged types:`, rangedUnitTypes);
     return isRanged;
   }
 
-  private createWizardProjectile(attacker: Unit, allUnits: Unit[]) {
-    console.log(`🧙 Creating wizard projectile for ${attacker.name} (${attacker.id})`);
+  
+  private createProjectileForAttack(attacker: Unit, allUnits: Unit[]) {
+    console.log(`📍 createProjectileForAttack called for ${attacker.name}`);
     
     // Check if attacker has a valid position
     if (!attacker.position) {
-      console.log(`❌ Wizard ${attacker.id} has no position`);
+      console.log(`❌ Attacker ${attacker.name} has no position`);
       return;
     }
-    
-    // Find the closest enemy unit as the target
-    const isPlayerUnit = this.gameState?.players.some(p => 
-      p.units.some(u => u.id === attacker.id)
-    ) || false;
-    
-    const enemies = allUnits.filter(u => {
-      const isEnemy = isPlayerUnit ? 
-        this.gameState?.enemyUnits.some(e => e.id === u.id) :
-        this.gameState?.players.some(p => p.units.some(pu => pu.id === u.id));
-      return isEnemy && u.status !== 'dead' && u.position;
-    });
-    
-    console.log(`🎯 Found ${enemies.length} potential targets for wizard`);
-    
-    if (enemies.length === 0) {
-      console.log(`❌ No valid targets for wizard projectile`);
-      return;
-    }
-    
-    // Find closest enemy
-    let closestEnemy: Unit | null = null;
-    let closestDistance = Infinity;
-    
-    for (const enemy of enemies) {
-      if (!enemy.position) continue;
-      const distance = Math.abs(enemy.position.x - attacker.position.x) + 
-                      Math.abs(enemy.position.y - attacker.position.y);
-      if (distance < closestDistance) {
-        closestDistance = distance;
-        closestEnemy = enemy;
-      }
-    }
-    
-    if (!closestEnemy || !closestEnemy.position) {
-      console.log(`❌ No closest enemy found for wizard projectile`);
-      return;
-    }
-    
-    console.log(`🎯 Wizard targeting ${closestEnemy.name} at (${closestEnemy.position.x}, ${closestEnemy.position.y})`);
-    
-    // Get world positions
-    const startPos = this.grid.gridToWorld(attacker.position.x, attacker.position.y);
-    const targetPos = this.grid.gridToWorld(closestEnemy.position.x, closestEnemy.position.y);
-    
-    console.log(`🚀 Creating projectile from (${startPos.x}, ${startPos.y}) to (${targetPos.x}, ${targetPos.y})`);
-    
-    // Create a bright, visible blue circle projectile
-    const projectile = this.add.circle(startPos.x, startPos.y - 20, 15, 0x3366ff, 1);
-    projectile.setDepth(1000); // High depth to ensure visibility
-    
-    // Add bright glow effect
-    const glowCircle = this.add.circle(startPos.x, startPos.y - 20, 25, 0x6699ff, 0.7);
-    glowCircle.setDepth(999);
-    
-    // Add white core for better visibility
-    const coreCircle = this.add.circle(startPos.x, startPos.y - 20, 8, 0xffffff, 1);
-    coreCircle.setDepth(1001);
-    
-    console.log(`✨ Created wizard projectile visual elements`);
-    
-    // Play wizard sound effect if available
-    if (this.sound.get('wizardSound')) {
-      this.sound.play('wizardSound', { volume: 0.4 });
-      console.log(`🔊 Playing wizard sound`);
-    } else {
-      console.log(`🔇 Wizard sound not available`);
-    }
-    
-    // Animate projectile to target
-    const distance = Phaser.Math.Distance.Between(startPos.x, startPos.y, targetPos.x, targetPos.y);
-    const duration = Math.max(500, distance * 3); // Slower for better visibility
-    
-    console.log(`⏱️ Projectile will travel ${distance} pixels in ${duration}ms`);
-    
-    this.tweens.add({
-      targets: [projectile, glowCircle, coreCircle],
-      x: targetPos.x,
-      y: targetPos.y - 20,
-      duration: duration,
-      ease: 'Power2',
-      onComplete: () => {
-        console.log(`💥 Wizard projectile reached target`);
-        
-        // Create bright impact effect
-        const impact = this.add.circle(targetPos.x, targetPos.y - 20, 10, 0xffffff, 1);
-        impact.setDepth(1002);
-        
-        // Create expanding ring effect
-        const ring = this.add.circle(targetPos.x, targetPos.y - 20, 5, 0x3366ff, 0.8);
-        ring.setDepth(1001);
-        
-        this.tweens.add({
-          targets: impact,
-          scale: 4,
-          alpha: 0,
-          duration: 400,
-          onComplete: () => impact.destroy()
-        });
-        
-        this.tweens.add({
-          targets: ring,
-          scale: 6,
-          alpha: 0,
-          duration: 600,
-          onComplete: () => ring.destroy()
-        });
-        
-        // Clean up projectile
-        projectile.destroy();
-        glowCircle.destroy();
-        coreCircle.destroy();
-        
-        console.log(`🧹 Cleaned up wizard projectile`);
-      }
-    });
-    
-    console.log(`🧙 Wizard projectile creation complete`);
-  }
-  
-  private createProjectileForAttack(attacker: Unit, allUnits: Unit[]) {
-    // Check if attacker has a valid position
-    if (!attacker.position) return;
     
     // Find the closest enemy unit as the target
     const isPlayerUnit = this.gameState?.players.some(p => 
@@ -1246,20 +1279,21 @@ export default class MainScene extends Phaser.Scene {
       return;
     }
     
-    // For wizard, use the charge frame
-    let initialFrame = undefined;
+    // For wizard, handle special charging sequence
     if (attacker.name.toLowerCase() === 'wizard') {
-      initialFrame = 'Charge_1_1 #10.png';
+      console.log(`🧙 Wizard attack detected, starting charging sequence`);
+      this.handleWizardAttack(attacker, allUnits);
+      return;
     }
     
-    // Create projectile
+    // Create standard projectile for other units
     const projectile = new Projectile(this, {
       startX: startPos.x,
-      startY: startPos.y - 20, // Start from unit's upper body
+      startY: startPos.y - 20,
       targetX: targetPos.x,
       targetY: targetPos.y - 20,
       texture: textureKey,
-      frame: initialFrame,
+      frame: undefined,
       speed: 600,
       scale: projectileScale
     });
@@ -1267,9 +1301,99 @@ export default class MainScene extends Phaser.Scene {
     this.projectiles.push(projectile);
   }
   
+  private createWizardProjectile(attacker: Unit, target: Unit, startPos: { x: number, y: number }, targetPos: { x: number, y: number }) {
+    console.log(`🧙 Creating wizard projectile from (${startPos.x}, ${startPos.y}) to (${targetPos.x}, ${targetPos.y})`);
+    console.log(`🧙 Scene active: ${this.scene.isActive()}, cameras: ${this.cameras ? 'OK' : 'NULL'}`);
+    
+    // Create a simple, guaranteed-visible projectile first
+    console.log(`🧙 Creating simple visible projectile for debugging`);
+    
+    // Create a simple wizard projectile without complex animations
+    console.log(`🧙 Creating simple wizard projectile without animation conflicts`);
+    
+    // Calculate angle for rotation
+    const angle = Phaser.Math.Angle.Between(startPos.x, startPos.y, targetPos.x, targetPos.y);
+    
+    // Create a single sprite directly instead of using the complex Projectile class
+    const projectileSprite = this.add.sprite(startPos.x, startPos.y - 20, 'wizard', 'Charge_1_1 #10.png');
+    projectileSprite.setScale(1.5);
+    projectileSprite.setRotation(angle);
+    projectileSprite.setOrigin(0.5, 0.5);
+    projectileSprite.setDepth(startPos.y + 100);
+    
+    // Disable texture smoothing to prevent artifacts
+    if (projectileSprite.texture && projectileSprite.texture.source) {
+      projectileSprite.texture.source[0].setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
+    
+    // Move the projectile manually
+    const distance = Phaser.Math.Distance.Between(startPos.x, startPos.y, targetPos.x, targetPos.y);
+    const duration = (distance / 400) * 1000; // speed of 400 pixels per second
+    
+    this.tweens.add({
+      targets: projectileSprite,
+      x: targetPos.x,
+      y: targetPos.y - 20,
+      duration: duration,
+      ease: 'Linear',
+      onComplete: () => {
+        projectileSprite.destroy();
+        console.log(`💥 Wizard projectile reached target`);
+        this.createWizardImpactEffect(targetPos.x, targetPos.y - 20);
+      }
+    });
+  }
+  
+  private createManualWizardProjectile(startPos: { x: number, y: number }, targetPos: { x: number, y: number }) {
+    console.log(`🔧 Creating manual wizard projectile`);
+    
+    // Create a bright, visible circle projectile
+    const projectile = this.add.graphics();
+    projectile.fillStyle(0x00ffff, 1.0); // Bright cyan
+    projectile.fillCircle(0, 0, 20); // Large radius for visibility
+    projectile.lineStyle(4, 0xffffff, 1.0); // Thick white outline
+    projectile.strokeCircle(0, 0, 20);
+    
+    // Add inner core
+    projectile.fillStyle(0xffffff, 0.8);
+    projectile.fillCircle(0, 0, 10);
+    
+    projectile.x = startPos.x;
+    projectile.y = startPos.y - 20;
+    projectile.setDepth(9999); // Very high depth
+    
+    console.log(`🔧 Manual projectile created at (${projectile.x}, ${projectile.y}) with depth ${projectile.depth}`);
+    
+    // Calculate travel time
+    const distance = Phaser.Math.Distance.Between(startPos.x, startPos.y, targetPos.x, targetPos.y);
+    const travelTime = Math.max(1000, (distance / 200) * 1000); // Slower for visibility
+    
+    // Animate to target
+    this.tweens.add({
+      targets: projectile,
+      x: targetPos.x,
+      y: targetPos.y - 20,
+      duration: travelTime,
+      ease: 'Linear',
+      onUpdate: () => {
+        // Rotate while moving
+        projectile.rotation += 0.1;
+      },
+      onComplete: () => {
+        console.log(`🔧 Manual projectile reached target`);
+        projectile.destroy();
+        this.createWizardImpactEffect(targetPos.x, targetPos.y - 20);
+      }
+    });
+    
+    console.log(`🔧 Manual projectile animation started, travel time: ${travelTime}ms`);
+  }
+  
   private handleWizardAttack(attacker: Unit, allUnits: Unit[]) {
     console.log(`🧙 Wizard ${attacker.name} starting charging sequence`);
     console.log(`🧙 Attacker details:`, { id: attacker.id, position: attacker.position, health: attacker.health });
+    console.log(`🧙 handleWizardAttack CALLED! Scene active: ${this.scene.isActive()}`);
+    console.log(`🧙 Unit sprites map size: ${this.unitSprites.size}`);
     
     // Find the target first
     if (!attacker.position) return;
@@ -1317,10 +1441,12 @@ export default class MainScene extends Phaser.Scene {
     const wizardTextureKey = attacker.name.toLowerCase();
     if (!this.textures.exists(wizardTextureKey)) {
       console.error(`Wizard texture ${wizardTextureKey} not found`);
+      console.log(`Available textures:`, this.textures.list);
       return;
     }
     
     const frameNames = this.textures.get(wizardTextureKey).getFrameNames();
+    console.log(`🔮 All frame names for wizard (first 20):`, frameNames.slice(0, 20));
     const attackFrames = frameNames.filter(frame => 
       frame.toLowerCase().includes('attack')
     );
@@ -1355,74 +1481,57 @@ export default class MainScene extends Phaser.Scene {
       return;
     }
     
-    // Use frames 5-9 for charging loop (0-indexed: frames 4-8)
-    const chargingFrames = attackFrames.slice(4, 9);
-    console.log(`🔮 Using charging frames:`, chargingFrames);
+    console.log(`🔮 Total attack frames found: ${attackFrames.length}`);
+    console.log(`🔮 All attack frames:`, attackFrames);
     
-    // Create custom charging animation
-    const chargingAnimKey = `wizard_charging_${attacker.id}`;
+    // Calculate total animation duration first
+    const totalFrames = attackFrames.length;
+    const frameRate = 8;
+    const animationDuration = (totalFrames / frameRate) * 1000; // Convert to milliseconds
     
-    if (!this.anims.exists(chargingAnimKey)) {
+    console.log(`🎬 Starting complete wizard attack animation sequence`);
+    console.log(`⏱️ Full attack animation will take ${animationDuration}ms (${totalFrames} frames at ${frameRate}fps)`);
+    
+    // Play wizard sound effect at start of animation
+    if (this.sound.get('wizardSound')) {
+      this.sound.play('wizardSound', { volume: 0.6 });
+    }
+    
+    // Create charging effect around wizard for the duration of the animation
+    this.createChargingEffect(attackerSprite, animationDuration + 100);
+    
+    // Create the complete attack animation using ALL attack frames
+    const fullAttackAnimKey = `wizard_full_attack_${attacker.id}`;
+    
+    if (!this.anims.exists(fullAttackAnimKey)) {
       this.anims.create({
-        key: chargingAnimKey,
+        key: fullAttackAnimKey,
         frames: this.anims.generateFrameNames(wizardTextureKey, { 
-          frames: chargingFrames 
+          frames: attackFrames // Use ALL attack frames
         }),
-        frameRate: 8, // Slower animation for charging effect
-        repeat: -1 // Loop indefinitely
+        frameRate: frameRate, // Consistent frame rate
+        repeat: 0 // Play once
       });
     }
     
-    // Play charging animation
-    attackerSprite.play(chargingAnimKey);
+    // Play the full attack animation
+    attackerSprite.play(fullAttackAnimKey);
     
-    // Create charging effect around wizard
-    this.createChargingEffect(attackerSprite);
-    
-    // After 2.5 seconds of charging, launch the blue orb
-    console.log(`⏱️ Starting 2.5 second countdown for wizard orb launch`);
-    this.time.delayedCall(2500, () => {
-      console.log(`🚀 LAUNCHING BLUE ORB PROJECTILE NOW!`);
-      console.log(`📍 Current scene active:`, this.scene.isActive());
-      console.log(`📍 Scene cameras:`, this.cameras.main.width, 'x', this.cameras.main.height);
+    // Launch projectile AFTER the complete animation finishes
+    this.time.delayedCall(animationDuration + 100, () => { // Add small buffer
+      console.log(`🚀 LAUNCHING WIZARD PROJECTILE AFTER ANIMATION COMPLETE!`);
       
-      // Play wizard sound effect
-      if (this.sound.get('wizardSound')) {
-        this.sound.play('wizardSound', { volume: 0.6 });
-      }
+      // Get world positions
+      const startPos = this.grid.gridToWorld(attacker.position!.x, attacker.position!.y);
+      const targetPos = this.grid.gridToWorld(target.position!.x, target.position!.y);
       
-      // Create the enhanced blue orb projectile
-      this.createBlueOrbProjectile(attacker, target, allUnits);
-      
-      // Play remaining attack animation frames (frames 10+)
-      const launchAnimKey = `wizard_launch_${attacker.id}`;
-      const launchFrames = attackFrames.slice(9); // frames 10+ (0-indexed: frames 9+)
-      
-      if (launchFrames.length > 0 && !this.anims.exists(launchAnimKey)) {
-        this.anims.create({
-          key: launchAnimKey,
-          frames: this.anims.generateFrameNames(wizardTextureKey, { 
-            frames: launchFrames 
-          }),
-          frameRate: 10,
-          repeat: 0 // Play once
-        });
-      }
-      
-      if (this.anims.exists(launchAnimKey)) {
-        attackerSprite.play(launchAnimKey);
-      } else {
-        // Fallback to normal attack animation if no launch frames
-        const normalAttackKey = `${attacker.name.toLowerCase()}_attack`;
-        if (this.anims.exists(normalAttackKey)) {
-          attackerSprite.play(normalAttackKey);
-        }
-      }
+      // Create the wizard projectile
+      this.createWizardProjectile(attacker, target, startPos, targetPos);
     });
   }
   
-  private createChargingEffect(wizardSprite: any) {
-    console.log(`✨ Creating charging effect around wizard`);
+  private createChargingEffect(wizardSprite: any, duration: number = 3000) {
+    console.log(`✨ Creating charging effect around wizard for ${duration}ms`);
     
     // Create a charging circle that grows and pulses around the wizard
     const chargingCircle = this.add.circle(wizardSprite.x, wizardSprite.y - 10, 10, 0x4444ff, 0.3);
@@ -1457,8 +1566,8 @@ export default class MainScene extends Phaser.Scene {
       particles: particles
     };
     
-    // Clean up charging effects after 3 seconds
-    this.time.delayedCall(3000, () => {
+    // Clean up charging effects after the specified duration
+    this.time.delayedCall(duration, () => {
       if (wizardSprite.chargingEffects) {
         wizardSprite.chargingEffects.circle.destroy();
         wizardSprite.chargingEffects.particles.destroy();
@@ -1470,6 +1579,9 @@ export default class MainScene extends Phaser.Scene {
   private createBlueOrbProjectile(attacker: Unit, target: Unit, allUnits: Unit[]) {
     console.log(`🔵 Creating blue orb projectile from ${attacker.name} to ${target.name}`);
     console.log(`🎯 Attacker position:`, attacker.position, `Target position:`, target.position);
+    console.log(`🔵 createBlueOrbProjectile CALLED! Time: ${Date.now()}`);
+    console.log(`🔵 Scene active: ${this.scene.isActive()}, Cameras: ${this.cameras.main ? 'OK' : 'NULL'}`);
+    console.log(`🔵 Current projectiles count: ${this.projectiles.length}`);
     
     if (!attacker.position || !target.position) {
       console.error(`❌ Missing positions - Attacker: ${attacker.position}, Target: ${target.position}`);
@@ -1483,9 +1595,24 @@ export default class MainScene extends Phaser.Scene {
     console.log(`🚀 Orb traveling from (${startPos.x}, ${startPos.y}) to (${targetPos.x}, ${targetPos.y})`);
     
     // Create container for the orb and all its effects
-    const orbContainer = this.add.container(startPos.x, startPos.y - 20);
-    orbContainer.setDepth(1000); // High depth to ensure visibility
-    console.log(`✨ Orb container created at depth ${orbContainer.depth}`);
+    try {
+      const orbContainer = this.add.container(startPos.x, startPos.y - 20);
+      orbContainer.setDepth(1000); // High depth to ensure visibility
+      console.log(`✨ Orb container created at depth ${orbContainer.depth}`);
+      
+      this.createOrbVisualEffects(orbContainer, startPos, targetPos, attacker, allUnits);
+    } catch (error) {
+      console.error(`❌ Failed to create orb container:`, error);
+      // Fallback to standard wizard projectile
+      const startPos = this.grid.gridToWorld(attacker.position!.x, attacker.position!.y);
+      const targetPos = this.grid.gridToWorld(target.position!.x, target.position!.y);
+      this.createWizardProjectile(attacker, target, startPos, targetPos);
+      return;
+    }
+  }
+  
+  private createOrbVisualEffects(orbContainer: Phaser.GameObjects.Container, startPos: {x: number, y: number}, targetPos: {x: number, y: number}, attacker: Unit, allUnits: Unit[]) {
+    try {
     
     // Create multiple orb layers for visual depth - made larger and more visible
     const outerGlow = this.add.circle(0, 0, 35, 0x0066ff, 0.3);
@@ -1624,7 +1751,7 @@ export default class MainScene extends Phaser.Scene {
         targetIndicator.destroy();
         
         // Create explosion at impact point
-        this.createBlueOrbExplosion(targetPos.x, targetPos.y - 20, attacker, allUnits);
+        this.createWizardImpactEffect(targetPos.x, targetPos.y - 20);
         
         // Destroy orb container
         orbContainer.destroy();
@@ -1640,45 +1767,113 @@ export default class MainScene extends Phaser.Scene {
       yoyo: true,
       ease: 'Sine.easeInOut'
     });
+    
+    } catch (error) {
+      console.error(`❌ Error creating orb visual effects:`, error);
+      // Fallback to simple projectile if visual effects fail
+      // If no target found, skip projectile creation
+      const target = allUnits.find(u => u.position && u.status !== 'dead' && u.id !== attacker.id);
+      if (target && target.position && attacker.position) {
+        const startPos = this.grid.gridToWorld(attacker.position.x, attacker.position.y);
+        const targetPos = this.grid.gridToWorld(target.position.x, target.position.y);
+        this.createWizardProjectile(attacker, target, startPos, targetPos);
+      }
+    }
   }
   
-  private createSimpleWizardProjectile(attacker: Unit, target: Unit, allUnits: Unit[]) {
-    console.log(`🔷 Creating simple wizard projectile as fallback`);
+  
+  private handleRangedUnitAttack(unit: Unit) {
+    console.log(`🎯 *** HANDLE RANGED UNIT ATTACK CALLED *** for ${unit.name} (${unit.id})`);
     
-    if (!attacker.position || !target.position) {
-      console.error(`❌ Missing positions for simple projectile`);
+    if (!unit.position) {
+      console.log(`❌ Unit has no position`);
       return;
     }
     
-    // Get world positions
-    const startPos = this.grid.gridToWorld(attacker.position.x, attacker.position.y);
-    const targetPos = this.grid.gridToWorld(target.position.x, target.position.y);
+    // Get all units for target finding
+    const allPlayerUnits = this.gameState?.players.flatMap(p => p.units) || [];
+    const allEnemyUnits = this.gameState?.enemyUnits || [];
+    const allUnits = [...allPlayerUnits, ...allEnemyUnits];
     
-    // Create a simple but bright projectile using standard Projectile class
-    const projectileConfig = {
-      startX: startPos.x,
-      startY: startPos.y - 20,
-      targetX: targetPos.x,
-      targetY: targetPos.y - 20,
-      texture: 'wizard',
-      frame: 'Charge_1_1 #10.png',
-      speed: 300,
-      scale: 0.8,
-      onComplete: () => {
-        console.log(`🔷 Simple wizard projectile reached target`);
-        this.createBlueOrbExplosion(targetPos.x, targetPos.y - 20, attacker, allUnits);
+    if (unit.name.toLowerCase() === 'wizard') {
+      console.log(`🧙 Creating Charge_1_X projectile for wizard`);
+      this.createProjectileForAttack(unit, allUnits);
+    } else {
+      console.log(`🏹 Creating standard projectile for ${unit.name}`);
+      this.createProjectileForAttack(unit, allUnits);
+    }
+  }
+  
+  
+  private createWizardImpactEffect(x: number, y: number) {
+    console.log(`💥 Creating wizard impact at (${x}, ${y})`);
+    
+    // Create multiple expanding rings for a magical effect
+    const colors = [0xffffff, 0xaaccff, 0x88ccff, 0x3388ff];
+    
+    colors.forEach((color, index) => {
+      const circle = this.add.circle(x, y, 10, color, 0.8 - index * 0.1);
+      circle.setDepth(y + 100 - index);
+      
+      this.tweens.add({
+        targets: circle,
+        radius: 60 + index * 20,
+        alpha: 0,
+        duration: 600 + index * 100,
+        ease: 'Power2.Out',
+        delay: index * 50,
+        onComplete: () => {
+          circle.destroy();
+        }
+      });
+    });
+    
+    // Add magical particles using wizard texture if available
+    if (this.textures.exists('wizard')) {
+      const particles = this.add.particles(x, y, 'wizard', {
+        frame: 'Charge_1_1 #10.png',
+        scale: { start: 0.5, end: 0 },
+        alpha: { start: 1, end: 0 },
+        tint: [0x3388ff, 0x88ccff, 0xaaccff],
+        speed: { min: 100, max: 200 },
+        lifespan: 800,
+        quantity: 12,
+        frequency: -1, // Burst all at once
+        emitZone: { type: 'edge', source: new Phaser.Geom.Circle(0, 0, 10), quantity: 12 }
+      });
+      particles.setDepth(y + 102);
+      particles.explode(12);
+      
+      // Clean up particles after animation
+      this.time.delayedCall(1000, () => {
+        if (particles && particles.active) particles.destroy();
+      });
+    } else {
+      // Fallback to simple circle particles
+      for (let i = 0; i < 12; i++) {
+        const particle = this.add.circle(x, y, 4, 0x88ccff);
+        particle.setDepth(y + 101);
+        
+        const angle = (Math.PI * 2 * i) / 12;
+        const distance = 60 + Math.random() * 40;
+        
+        this.tweens.add({
+          targets: particle,
+          x: x + Math.cos(angle) * distance,
+          y: y + Math.sin(angle) * distance,
+          alpha: 0,
+          scale: 0,
+          duration: 800,
+          ease: 'Power2.Out',
+          onComplete: () => {
+            particle.destroy();
+          }
+        });
       }
-    };
+    }
     
-    // Use the standard Projectile class which should definitely work
-    const projectile = new Projectile(this, projectileConfig);
-    
-    // Add bright tint to make it very visible  
-    projectile.setTint(0x88ccff); // Apply tint to entire container
-    projectile.setScale(1.5); // Make it bigger
-    
-    this.projectiles.push(projectile);
-    console.log(`🔷 Simple projectile added to projectiles array, total: ${this.projectiles.length}`);
+    // Add a small camera shake for impact
+    this.cameras.main.shake(200, 0.008);
   }
   
   private createBlueOrbExplosion(x: number, y: number, attacker: Unit, allUnits: Unit[]) {
@@ -2243,5 +2438,212 @@ export default class MainScene extends Phaser.Scene {
       this.dragShadow.destroy();
       this.dragShadow = null;
     }
+  }
+  
+  // TEST FUNCTION: Force create a wizard projectile for debugging
+  testWizardProjectile() {
+    console.log(`🧪 TEST: Creating test wizard projectile`);
+    
+    // Create a dummy wizard unit
+    const testWizard: Unit = {
+      id: 'test-wizard',
+      name: 'wizard',
+      playerId: 'test',
+      position: { x: 5, y: 4 },
+      status: 'attacking',
+      cost: 5,
+      damage: 4,
+      attackSpeed: 1,
+      attackType: 'Magical',
+      health: 10,
+      maxHealth: 10,
+      range: 3,
+      priority: 1,
+      movementSpeed: 1,
+      armorType: 'Unarmored',
+      targetId: 'test-target',
+      attackCooldown: 0,
+      buffs: [],
+      debuffs: []
+    };
+    
+    // Create a dummy target
+    const testTarget: Unit = {
+      id: 'test-target',
+      name: 'knight',
+      playerId: 'enemy',
+      position: { x: 8, y: 4 },
+      status: 'idle',
+      cost: 3,
+      damage: 3,
+      attackSpeed: 1,
+      attackType: 'Physical',
+      health: 12,
+      maxHealth: 12,
+      range: 1,
+      priority: 2,
+      movementSpeed: 1,
+      armorType: 'Heavy',
+      attackCooldown: 0,
+      buffs: [],
+      debuffs: []
+    };
+    
+    console.log(`🧪 Testing wizard projectile creation`);
+    console.log(`🧪 Is wizard ranged: ${this.isRangedUnit(testWizard)}`);
+    console.log(`🧪 Wizard texture exists: ${this.textures.exists('wizard')}`);
+    
+    try {
+      this.handleWizardAttack(testWizard, [testWizard, testTarget]);
+    } catch (error) {
+      console.error(`🧪 Test wizard attack failed:`, error);
+      // Fallback to direct wizard projectile creation
+      const startPos = this.grid.gridToWorld(testWizard.position!.x, testWizard.position!.y);
+      const targetPos = this.grid.gridToWorld(testTarget.position!.x, testTarget.position!.y);
+      this.createWizardProjectile(testWizard, testTarget, startPos, targetPos);
+    }
+  }
+  
+
+  // Global function accessible from browser console to add a wizard for testing
+  addTestWizard() {
+    console.log(`🧙 Adding test wizard to player roster`);
+    
+    if (!this.gameState) {
+      console.error(`❌ No game state available`);
+      return;
+    }
+    
+    const currentPlayer = this.gameState.players.find(p => p.id === this.currentPlayerId);
+    if (!currentPlayer) {
+      console.error(`❌ Current player not found`);
+      return;
+    }
+    
+    // Create a wizard unit
+    const wizardUnit = {
+      id: `test-wizard-${Date.now()}`,
+      name: 'Wizard',
+      playerId: this.currentPlayerId || '',
+      health: 18,
+      maxHealth: 18,
+      damage: 4,
+      speed: 38,
+      status: 'idle' as const,
+      position: null,
+      buffs: [],
+      cost: 12,
+      attackSpeed: 0.25,
+      attackType: 'Magical',
+      range: 50,
+      priority: 3,
+      movementSpeed: 38,
+      armorType: 'Unarmored',
+      attackCooldown: 0,
+      debuffs: []
+    };
+    
+    // Add to player's units
+    currentPlayer.units.push(wizardUnit);
+    console.log(`🧙 Added wizard to player units. Total units: ${currentPlayer.units.length}`);
+    
+    return wizardUnit;
+  }
+  
+  private testWizardProjectile() {
+    console.log('🧙 Testing wizard projectile creation...');
+    
+    // Create a fake wizard unit
+    const wizard: Unit = {
+      id: 'test-wizard',
+      name: 'Wizard',
+      playerId: 'test',
+      health: 10,
+      maxHealth: 10,
+      damage: 5,
+      speed: 1,
+      status: 'attacking',
+      position: { x: 5, y: 4 },
+      buffs: []
+    };
+    
+    // Create a fake target
+    const target: Unit = {
+      id: 'test-target',
+      name: 'Enemy',
+      playerId: 'enemy',
+      health: 10,
+      maxHealth: 10,
+      damage: 3,
+      speed: 1,
+      status: 'idle',
+      position: { x: 10, y: 4 },
+      buffs: []
+    };
+    
+    // Get world positions
+    const startPos = this.grid.gridToWorld(wizard.position!.x, wizard.position!.y);
+    const targetPos = this.grid.gridToWorld(target.position!.x, target.position!.y);
+    
+    // Create the wizard projectile
+    this.createWizardProjectile(wizard, target, startPos, targetPos);
+  }
+  
+  private testWizardChargeFrame() {
+    console.log('🧙 Testing wizard Charge frame rendering...');
+    
+    if (!this.textures.exists('wizard')) {
+      console.error('❌ Wizard texture not loaded!');
+      return;
+    }
+    
+    const wizardTexture = this.textures.get('wizard');
+    const frameNames = wizardTexture.getFrameNames();
+    const chargeFrames = frameNames.filter(f => f.includes('Charge_1_'));
+    
+    console.log(`Found ${chargeFrames.length} Charge frames:`, chargeFrames);
+    
+    // Create sprites for each Charge frame
+    chargeFrames.forEach((frame, index) => {
+      const x = 100 + (index * 80);
+      const y = 200;
+      
+      // Create using Projectile class
+      const projectile = new Projectile(this, {
+        startX: x,
+        startY: y,
+        targetX: x + 200,
+        targetY: y,
+        texture: 'wizard',
+        frame: frame,
+        speed: 50, // Very slow so we can see it
+        scale: 3.0
+      });
+      
+      this.projectiles.push(projectile);
+      
+      // Also create a static sprite to compare
+      const staticSprite = this.add.sprite(x, y + 100, 'wizard', frame);
+      staticSprite.setScale(3.0);
+      staticSprite.setDepth(10000);
+      
+      // Add text label
+      const label = this.add.text(x, y + 150, frame.split(' ')[0], {
+        fontSize: '12px',
+        color: '#ffffff'
+      });
+      label.setOrigin(0.5);
+      
+      console.log(`Created test sprites for frame: ${frame}`);
+    });
+  }
+}
+
+// Make test functions globally accessible
+declare global {
+  interface Window {
+    testWizardChargeFrame: () => void;
+    addTestWizard: () => any;
+    testWizardAttack: () => void;
   }
 }

@@ -10,6 +10,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   private highlightRect: Phaser.GameObjects.Rectangle | null = null;
   private isGridVisible: boolean = true;
   private playerHoverRects: Map<string, Phaser.GameObjects.Rectangle> = new Map();
+  private gridBackground: Phaser.GameObjects.Rectangle | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -32,6 +33,33 @@ export default class Grid extends Phaser.GameObjects.Container {
   private createGrid() {
     const offsetX = -(this.gridWidth * this.cellSize) / 2;
     const offsetY = -(this.gridHeight * this.cellSize) / 2;
+    
+    console.log('=== GRID CREATION ===');
+    console.log('Grid total size:', {
+      pixelWidth: this.gridWidth * this.cellSize,
+      pixelHeight: this.gridHeight * this.cellSize,
+      cellSize: this.cellSize,
+      position: { x: this.x, y: this.y }
+    });
+    
+    // Create full-screen background for grid area
+    // The background needs to be positioned relative to the grid container's position
+    const sceneWidth = this.scene.cameras.main.width;
+    const sceneHeight = this.scene.cameras.main.height;
+    
+    // Since the grid container is centered, we need to offset the background
+    // to cover the entire screen from the container's perspective
+    this.gridBackground = this.scene.add.rectangle(
+      0,
+      0,
+      sceneWidth * 2, // Make it extra wide to ensure full coverage
+      sceneHeight * 2, // Make it extra tall to ensure full coverage
+      0x0a0a0f,
+      0.8
+    );
+    this.gridBackground.setOrigin(0.5, 0.5); // Center origin
+    this.add(this.gridBackground);
+    this.sendToBack(this.gridBackground); // Ensure it's behind the grid cells
     
     // Create grid cells
     for (let y = 0; y < this.gridHeight; y++) {
@@ -182,6 +210,9 @@ export default class Grid extends Phaser.GameObjects.Container {
   setGridVisible(visible: boolean) {
     this.isGridVisible = visible;
     this.setVisible(visible);
+    if (this.gridBackground) {
+      this.gridBackground.setVisible(visible);
+    }
   }
 
   toggleGridVisibility() {
@@ -202,5 +233,15 @@ export default class Grid extends Phaser.GameObjects.Container {
       rect.destroy();
     }
     this.playerHoverRects.clear();
+  }
+
+  updateBackgroundSize() {
+    if (this.gridBackground) {
+      const sceneWidth = this.scene.cameras.main.width;
+      const sceneHeight = this.scene.cameras.main.height;
+      // Make background extra large to ensure full coverage
+      this.gridBackground.setSize(sceneWidth * 2, sceneHeight * 2);
+      this.gridBackground.setPosition(0, 0); // Keep centered at container origin
+    }
   }
 }

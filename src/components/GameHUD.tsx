@@ -17,7 +17,45 @@ const GameHUD: React.FC = () => {
   const [showGridToggle, setShowGridToggle] = React.useState(false);
   const [showPlayerTooltip, setShowPlayerTooltip] = useState(false);
   const [showUpgradePanel, setShowUpgradePanel] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Fullscreen toggle handler
+  const toggleFullscreen = React.useCallback(() => {
+    if (typeof window !== 'undefined' && (window as any).gameInstance) {
+      const game = (window as any).gameInstance;
+      
+      if (game && game.scale) {
+        if (game.scale.isFullscreen) {
+          game.scale.stopFullscreen();
+          setIsFullscreen(false);
+        } else {
+          game.scale.startFullscreen();
+          setIsFullscreen(true);
+        }
+      }
+    }
+  }, []);
+
+  // Listen for fullscreen changes
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).gameInstance) {
+      const game = (window as any).gameInstance;
+      
+      if (game && game.scale) {
+        const handleEnterFullscreen = () => setIsFullscreen(true);
+        const handleLeaveFullscreen = () => setIsFullscreen(false);
+        
+        game.scale.on('enterfullscreen', handleEnterFullscreen);
+        game.scale.on('leavefullscreen', handleLeaveFullscreen);
+        
+        return () => {
+          game.scale.off('enterfullscreen', handleEnterFullscreen);
+          game.scale.off('leavefullscreen', handleLeaveFullscreen);
+        };
+      }
+    }
+  }, []);
 
   // Reset upgrade panel visibility when phase changes
   React.useEffect(() => {
@@ -43,6 +81,13 @@ const GameHUD: React.FC = () => {
       console.log('GameHUD: Closing upgrade panel due to card count decrease');
       setShowUpgradePanel(false);
     }
+    
+    // Also close if there are no more upgrade cards
+    if (showUpgradePanel && currentCount === 0) {
+      console.log('GameHUD: Closing upgrade panel - no more upgrade cards');
+      setShowUpgradePanel(false);
+    }
+    
     prevUpgradeCardCount.current = currentCount;
   }, [player?.upgradeCards?.length, showUpgradePanel]);
 
@@ -201,6 +246,17 @@ const GameHUD: React.FC = () => {
           <Text style={[styles.playerName, { color: player.color || '#FFF' }]}>{player.name}</Text>
           <Text style={styles.unitCount}>Units: {player.units.length}</Text>
         </TouchableOpacity>
+        {/* Fullscreen Button */}
+        {typeof window !== 'undefined' && (
+          <TouchableOpacity
+            style={styles.fullscreenButton}
+            onPress={toggleFullscreen}
+          >
+            <Text style={styles.fullscreenButtonText}>
+              {isFullscreen ? '↙' : '↗'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Unplaced Units */}
@@ -324,6 +380,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     pointerEvents: 'box-none',
+    zIndex: 100,
   },
   topHUD: {
     position: 'absolute',
@@ -409,7 +466,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    borderTopWidth: 2,
+    borderTopColor: 'rgba(255, 215, 0, 0.3)',
   },
   gridToggleButton: {
     backgroundColor: '#1976D2',
@@ -617,6 +676,19 @@ const styles = StyleSheet.create({
   },
   timerTextRed: {
     color: '#FF4444',
+  },
+  fullscreenButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  fullscreenButtonText: {
+    color: '#FFF',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 });
 

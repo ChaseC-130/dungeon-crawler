@@ -9,7 +9,7 @@ interface UnifiedUnitSpriteProps {
 }
 
 // This component exactly replicates the main game's sprite rendering approach
-const UnifiedUnitSprite: React.FC<UnifiedUnitSpriteProps> = ({ unitName, width, height }) => {
+const UnifiedUnitSprite: React.FC<UnifiedUnitSpriteProps> = React.memo(({ unitName, width, height }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
 
@@ -161,7 +161,7 @@ const UnifiedUnitSprite: React.FC<UnifiedUnitSpriteProps> = ({ unitName, width, 
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

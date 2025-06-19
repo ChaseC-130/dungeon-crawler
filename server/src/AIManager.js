@@ -51,7 +51,7 @@ class AIManager {
     let unitId = 0;
 
     while (currentBudget < spawnBudget) {
-      // For now, spawn only goblins
+      // For now, spawn only goblins to avoid sprite issues
       const unitStats = UNIT_STATS.goblin;
       
       // Check if we can afford another goblin

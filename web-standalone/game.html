@@ -15,17 +15,28 @@
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            width: 100vw;
+            height: 100vh;
+            background-image: radial-gradient(circle at 30% 20%, rgba(255, 215, 0, 0.03) 0%, transparent 50%),
+                              radial-gradient(circle at 70% 80%, rgba(139, 69, 19, 0.05) 0%, transparent 50%),
+                              linear-gradient(135deg, #1a1a1a 0%, #2d1b00 50%, #1a1a1a 100%);
+            background-size: 100% 100%;
+            background-attachment: fixed;
         }
         
         #game-container {
             width: 100vw;
             height: 100vh;
             position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         #phaser-game {
             width: 100%;
             height: 100%;
+            display: block;
         }
         
         .hud {
@@ -94,19 +105,24 @@
         }
         
         .shop {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            transform: none;
             background: rgba(0, 0, 0, 0.95);
-            padding: 10px;
-            border-radius: 8px;
+            padding: 15px;
+            border-radius: 0;
             display: none;
-            max-width: 85vw;
+            width: 100%;
             max-height: 25vh;
             z-index: 100;
             backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-top: 2px solid rgba(255, 215, 0, 0.3);
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+            box-sizing: border-box;
         }
         
         .shop.active {
@@ -129,9 +145,9 @@
         
         .shop-units {
             display: flex;
-            gap: 8px;
-            flex-wrap: nowrap;
-            justify-content: flex-start;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
             max-width: 100%;
             overflow-x: auto;
             overflow-y: hidden;
@@ -159,19 +175,24 @@
         
         /* Sell Area Styles */
         .sell-area {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            transform: none;
             background: rgba(139, 69, 19, 0.95);
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 0;
             display: none;
-            max-width: 85vw;
+            width: 100%;
             z-index: 101;
             backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 69, 0, 0.7);
+            border-top: 2px solid rgba(255, 69, 0, 0.7);
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
             text-align: center;
+            box-sizing: border-box;
         }
         
         .sell-area.active {
@@ -2579,10 +2600,48 @@
             }
         }
 
+        // Track if shop needs full update
+        let lastShopUnits = null;
+        let lastPlayerGold = null;
+        
         // Update shop display
         function updateShop(units, playerGold) {
             console.log('Updating shop with units:', units, 'Gold:', playerGold);
             const shopUnitsDiv = document.getElementById('shop-units');
+            
+            // Check if we need a full update or just gold update
+            const unitsChanged = JSON.stringify(units) !== JSON.stringify(lastShopUnits);
+            const goldChanged = playerGold !== lastPlayerGold;
+            
+            if (!unitsChanged && goldChanged) {
+                // Only gold changed, just update affordability
+                console.log('Only updating gold affordability');
+                const unitCards = shopUnitsDiv.querySelectorAll('.unit-card');
+                unitCards.forEach((card, index) => {
+                    const unit = units[index];
+                    if (unit) {
+                        const playerGoldNum = Number(playerGold) || 0;
+                        const unitCostNum = Number(unit.cost) || 0;
+                        const canAfford = playerGoldNum >= unitCostNum;
+                        
+                        if (canAfford) {
+                            card.classList.remove('disabled');
+                            // Re-enable drag if it was disabled
+                            if (!card.hasAttribute('data-drag-enabled')) {
+                                setupUniversalDrag(card, unit.name.toLowerCase());
+                                card.setAttribute('data-drag-enabled', 'true');
+                            }
+                        } else {
+                            card.classList.add('disabled');
+                            card.removeAttribute('data-drag-enabled');
+                        }
+                    }
+                });
+                lastPlayerGold = playerGold;
+                return;
+            }
+            
+            // Full update needed
             shopUnitsDiv.innerHTML = '';
             
             units.forEach((unit, index) => {
@@ -2611,6 +2670,7 @@
                 if (canAfford) {
                     // Universal drag system for desktop and mobile
                     setupUniversalDrag(unitCard, unit.name.toLowerCase());
+                    unitCard.setAttribute('data-drag-enabled', 'true');
                 }
                 
                 shopUnitsDiv.appendChild(unitCard);
@@ -2628,6 +2688,10 @@
                     }
                 });
             }, 200); // Increased delay to ensure Phaser is ready
+            
+            // Update tracking
+            lastShopUnits = JSON.parse(JSON.stringify(units));
+            lastPlayerGold = playerGold;
         }
         
         // Universal drag system for desktop and mobile
@@ -2929,8 +2993,10 @@
                 width: window.innerWidth,
                 height: window.innerHeight,
                 scale: {
-                    mode: Phaser.Scale.RESIZE,
+                    mode: Phaser.Scale.FIT,
                     autoCenter: Phaser.Scale.CENTER_BOTH,
+                    width: window.innerWidth,
+                    height: window.innerHeight
                 },
                 backgroundColor: '#1a1a2e',
                 scene: {
@@ -3830,47 +3896,101 @@
             const isSmallScreen = screenWidth < 768 || screenHeight < 600;
             const isPortrait = screenHeight > screenWidth;
             
-            // Calculate responsive grid size with better spacing for UI
-            let widthMultiplier = 0.95;
-            let heightMultiplier = 0.65;
-            let gridOffsetY = 80;
+            // AGGRESSIVE FIX: Use much more of the screen space
+            console.log('🔥 Screen analysis:', {
+                isSmallScreen,
+                isPortrait,
+                screenWidth,
+                screenHeight
+            });
             
-            if (isSmallScreen) {
-                widthMultiplier = 0.98;
-                heightMultiplier = 0.55;
-                gridOffsetY = 60;
-            }
+            // Use much more of the screen - the HUD is working fine, so we can be more aggressive
+            let widthMultiplier = 0.95;  // Keep some margin
+            let heightMultiplier = 0.85; // INCREASED from 0.65 to 0.85 - use much more height
+            let gridOffsetY = 20;        // REDUCED from 80 to 20 - less top margin
             
-            if (isPortrait) {
-                widthMultiplier = 0.98;
-                heightMultiplier = 0.45;
-                gridOffsetY = 40;
+            // For landscape screens, be even more aggressive
+            if (screenWidth > screenHeight && screenWidth > 1000) {
+                widthMultiplier = 0.98;  // Use almost full width
+                heightMultiplier = 0.90; // Use almost full height
+                gridOffsetY = 10;        // Minimal top margin
+                console.log('🔥 Using MAXIMUM space for large landscape screen');
             }
             
             const availableWidth = screenWidth * widthMultiplier;
             const availableHeight = screenHeight * heightMultiplier;
             
-            this.cellSize = Math.min(
-                availableWidth / gridWidth,
-                availableHeight / gridHeight,
-                60 // Maximum cell size to prevent grid from being too large
-            );
+            console.log('🔥 Available space calculation:', {
+                widthMultiplier,
+                heightMultiplier,
+                availableWidth,
+                availableHeight,
+                percentOfScreenWidth: (availableWidth / screenWidth * 100).toFixed(1) + '%',
+                percentOfScreenHeight: (availableHeight / screenHeight * 100).toFixed(1) + '%'
+            });
             
-            // Minimum cell size for usability
-            this.cellSize = Math.max(this.cellSize, 20);
+            // RESPONSIVE SCALING: Scale grid to fit user's screen properly
+            console.log('🔥 RESPONSIVE GRID SCALING 🔥');
+            console.log('🔥 Screen dimensions:', { screenWidth, screenHeight });
             
-            this.gridX = this.cameras.main.centerX - (gridWidth * this.cellSize) / 2;
-            // Position grid higher up to avoid shop panel overlap
-            this.gridY = this.cameras.main.centerY - (gridHeight * this.cellSize) / 2 - gridOffsetY;
+            // Use 95% of screen width for the grid (eliminates black space on sides)
+            const targetGridWidth = screenWidth * 0.95;
+            const cellSizeByWidth = targetGridWidth / gridWidth;
+            
+            // Leave room for HUD at top and bottom
+            const targetGridHeight = screenHeight * 0.80; // Use 80% of height
+            const cellSizeByHeight = targetGridHeight / gridHeight;
+            
+            // Use the smaller dimension to ensure grid fits on screen
+            this.cellSize = Math.min(cellSizeByWidth, cellSizeByHeight);
+            
+            // Set reasonable bounds for usability
+            this.cellSize = Math.max(this.cellSize, 25); // Minimum for small screens
+            this.cellSize = Math.min(this.cellSize, 120); // Maximum for large screens
+            
+            console.log('🔥 Responsive calculations:', {
+                targetGridWidth,
+                targetGridHeight,
+                cellSizeByWidth,
+                cellSizeByHeight,
+                chosenCellSize: this.cellSize
+            });
+            
+            console.log('🔥 FINAL Grid calculations:', {
+                finalCellSize: this.cellSize,
+                gridPixelWidth: this.cellSize * gridWidth,
+                gridPixelHeight: this.cellSize * gridHeight,
+                widthPercentOfScreen: ((this.cellSize * gridWidth) / screenWidth * 100).toFixed(1) + '%',
+                heightPercentOfScreen: ((this.cellSize * gridHeight) / screenHeight * 100).toFixed(1) + '%',
+                screenWidth,
+                screenHeight
+            });
+            
+            // Position grid to eliminate black space on sides
+            const actualGridPixelWidth = gridWidth * this.cellSize;
+            const actualGridPixelHeight = gridHeight * this.cellSize;
+            
+            // Center horizontally but ensure it uses the available width
+            this.gridX = (screenWidth - actualGridPixelWidth) / 2;
+            
+            // Position vertically with room for HUD
+            this.gridY = (screenHeight - actualGridPixelHeight) / 2 - gridOffsetY;
             
             // Ensure grid doesn't go off screen
-            const minMargin = 10;
-            if (this.gridX < minMargin) {
-                this.gridX = minMargin;
-            }
-            if (this.gridY < minMargin) {
-                this.gridY = minMargin;
-            }
+            this.gridX = Math.max(5, this.gridX); // Minimum 5px margin
+            this.gridY = Math.max(50, this.gridY); // Minimum 50px from top for HUD
+            
+            console.log('🔥 Grid positioning:', {
+                gridX: this.gridX,
+                gridY: this.gridY,
+                centerX: this.cameras.main.centerX,
+                centerY: this.cameras.main.centerY,
+                gridOffsetY
+            });
+            
+            // Debug border removed - no longer needed
+            
+            // Grid positioning is now handled above
             
             // Draw grid lines with adaptive thickness
             const lineThickness = isSmallScreen ? 1 : 2;
@@ -4712,25 +4832,72 @@
         };
         
         Phaser.Scene.prototype.createWizardProjectile = function(attackerId, targetId) {
-            if (!this.combatUnits || !this.combatUnits[attackerId] || !this.combatUnits[targetId]) return;
+            console.log(`🧙 createWizardProjectile called: attacker=${attackerId}, target=${targetId}`);
+            
+            if (!this.combatUnits || !this.combatUnits[attackerId] || !this.combatUnits[targetId]) {
+                console.log(`🧙 Missing combat units data`);
+                return;
+            }
             
             const attackerData = this.combatUnits[attackerId];
             const targetData = this.combatUnits[targetId];
             
-            if (!attackerData.sprite || !targetData.sprite || !attackerData.sprite.scene) return;
+            if (!attackerData.sprite || !targetData.sprite || !attackerData.sprite.scene) {
+                console.log(`🧙 Missing sprite data`);
+                return;
+            }
             
             // Check if wizard texture exists and has Magic_arrow_2 frame
             if (!this.textures.exists('wizard')) return;
             
             const wizardTexture = this.textures.get('wizard');
             const frameNames = wizardTexture.getFrameNames();
-            const magicArrowFrame = frameNames.find(frame => frame === 'Charge_2_1 #11.png');
+            // Try to find the best Charge_1_X frame for projectile
+            const magicArrowFrame = frameNames.find(frame => frame.includes('Charge_1_1')) || 
+                                   frameNames.find(frame => frame.includes('Charge_1_2')) ||
+                                   frameNames.find(frame => frame.includes('Charge_1_3')) ||
+                                   frameNames.find(frame => frame.includes('Charge_2_1')) ||
+                                   frameNames.find(frame => frame.includes('Charge')) ||
+                                   frameNames[0];
             
-            if (!magicArrowFrame) return;
+            if (!magicArrowFrame) {
+                console.log('No suitable wizard frame found for projectile');
+                return;
+            }
             
-            // Create projectile sprite
-            const projectile = this.add.sprite(attackerData.sprite.x, attackerData.sprite.y - 10, 'wizard', magicArrowFrame);
-            projectile.setScale(0.4);
+            console.log(`Creating wizard projectile with frame: ${magicArrowFrame}`);
+            
+            // Create projectile - ALWAYS use a visible fallback
+            let projectile;
+            let glowEffect = null;
+            try {
+                projectile = this.add.sprite(attackerData.sprite.x, attackerData.sprite.y - 10, 'wizard', magicArrowFrame);
+                projectile.setScale(1.0); // 50% smaller than before (was 2.0, now 1.0)
+                projectile.setAlpha(1.0);
+                projectile.setVisible(true);
+                
+                // Add glow effect for better visibility
+                glowEffect = this.add.sprite(attackerData.sprite.x, attackerData.sprite.y - 10, 'wizard', magicArrowFrame);
+                glowEffect.setScale(1.25); // 50% smaller than before (was 2.5, now 1.25)
+                glowEffect.setAlpha(0.5);
+                glowEffect.setTint(0x88ccff);
+                glowEffect.setBlendMode(Phaser.BlendModes.ADD);
+                glowEffect.setDepth(attackerData.sprite.y + 24);
+                
+                console.log(`🧙 Sprite projectile created: width=${projectile.width}, height=${projectile.height}, visible=${projectile.visible}`);
+                
+            } catch (error) {
+                console.log(`🧙 Failed to create sprite projectile, using bright circle instead:`, error);
+                // Fallback to visible bright circle (50% smaller)
+                projectile = this.add.graphics();
+                projectile.fillStyle(0x00ffff, 1.0); // Bright cyan
+                projectile.fillCircle(0, 0, 10); // 50% smaller (was 20, now 10)
+                projectile.lineStyle(2, 0xffffff, 1.0); // Thinner outline
+                projectile.strokeCircle(0, 0, 10);
+                projectile.x = attackerData.sprite.x;
+                projectile.y = attackerData.sprite.y - 10;
+                console.log(`🧙 Graphics fallback projectile created at (${projectile.x}, ${projectile.y})`);
+            }
             projectile.setDepth(attackerData.sprite.y + 25);
             
             // Calculate angle to target
@@ -4740,14 +4907,18 @@
             );
             projectile.setRotation(angle);
             
-            // Animate projectile to target
+            // Animate projectile to target (and glow effect if it exists)
+            const tweenTargets = glowEffect ? [projectile, glowEffect] : [projectile];
+            
             this.tweens.add({
-                targets: projectile,
+                targets: tweenTargets,
                 x: targetData.sprite.x,
                 y: targetData.sprite.y - 10,
                 duration: 400,
                 ease: 'Power2',
                 onComplete: () => {
+                    console.log(`🧙 Projectile reached target, cleaning up all sprites`);
+                    
                     // Create impact effect
                     const impact = this.add.circle(targetData.sprite.x, targetData.sprite.y - 10, 15, 0x4488FF, 0.7);
                     impact.setDepth(targetData.sprite.y + 30);
@@ -4763,7 +4934,15 @@
                         }
                     });
                     
-                    projectile.destroy();
+                    // Clean up ALL projectile components
+                    if (projectile && projectile.scene) {
+                        projectile.destroy();
+                    }
+                    if (glowEffect && glowEffect.scene) {
+                        glowEffect.destroy();
+                    }
+                    
+                    console.log(`🧙 All projectile sprites cleaned up`);
                 }
             });
         };
@@ -4880,6 +5059,11 @@
                                 if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== attackAnimKey) {
                                     console.log(`Playing attack animation: ${attackAnimKey} for unit ${unit.id}`);
                                     unitData.sprite.play(attackAnimKey);
+                                    
+                                    // Create projectile for wizard attacks
+                                    if (unitName === 'wizard' && unit.targetId) {
+                                        this.createWizardProjectile(unit.id, unit.targetId);
+                                    }
                                     
                                     // Chain back to idle after attack
                                     unitData.sprite.once('animationcomplete', () => {
@@ -5629,6 +5813,7 @@
         if (window.electron && window.electron.ipcRenderer) {
             window.electron.ipcRenderer.on('window-resize', handleResize);
         }
+        
     </script>
 </body>
 </html>

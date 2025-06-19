@@ -23,6 +23,9 @@ export class Projectile extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, config: ProjectileConfig) {
     super(scene, config.startX, config.startY);
     
+    console.log(`🎯 PROJECTILE CONSTRUCTOR: Creating projectile from (${config.startX}, ${config.startY}) to (${config.targetX}, ${config.targetY}) with texture: ${config.texture}`);
+    console.log(`🎯 Scene info: active=${scene.scene.isActive()}, cameras=${scene.cameras ? 'OK' : 'NULL'}`);
+    
     this.targetX = config.targetX;
     this.targetY = config.targetY;
     this.speed = config.speed || 400; // pixels per second
@@ -30,11 +33,75 @@ export class Projectile extends Phaser.GameObjects.Container {
     this.startTime = scene.time.now;
     
     // Create the projectile sprite
-    this.projectileSprite = scene.add.sprite(0, 0, config.texture, config.frame);
-    this.projectileSprite.setScale(config.scale || 0.8);
+    console.log(`🎯 Creating sprite with texture: ${config.texture}, frame: ${config.frame}`);
+    console.log(`🎯 Texture exists: ${scene.textures.exists(config.texture)}`);
+    
+    // If no frame specified, try to find a suitable projectile frame
+    let frameToUse = config.frame;
+    if (!frameToUse && scene.textures.exists(config.texture)) {
+      const frameNames = scene.textures.get(config.texture).getFrameNames();
+      // Look for Charge_1_1 frame for wizard
+      if (config.texture === 'wizard') {
+        frameToUse = frameNames.find(f => f.includes('Charge_1_1')) || frameNames[0];
+        console.log(`🎯 Auto-selected wizard frame: ${frameToUse}`);
+      } else {
+        frameToUse = frameNames[0];
+      }
+    }
+    
+    try {
+      this.projectileSprite = scene.add.sprite(0, 0, config.texture, frameToUse);
+      this.projectileSprite.setScale(config.scale || 0.8);
+      
+      // Fix rotation artifacts by setting proper blend mode and alpha handling
+      this.projectileSprite.setBlendMode(Phaser.BlendModes.NORMAL);
+      
+      // Disable texture smoothing to prevent white edge artifacts during rotation
+      if (this.projectileSprite.texture && this.projectileSprite.texture.source) {
+        this.projectileSprite.texture.source[0].setFilter(Phaser.Textures.FilterMode.NEAREST);
+      }
+      
+      // Ensure the sprite doesn't have any tint that might cause color issues
+      this.projectileSprite.clearTint();
+      
+      // Set proper origin for rotation
+      this.projectileSprite.setOrigin(0.5, 0.5);
+      
+      // Ensure the sprite is visible and positioned properly
+      this.projectileSprite.setVisible(true);
+      this.projectileSprite.setAlpha(1.0);
+      this.projectileSprite.setRoundPixels(true);
+      
+      console.log(`🎯 Sprite created: width=${this.projectileSprite.width}, height=${this.projectileSprite.height}, visible=${this.projectileSprite.visible}, frame=${frameToUse}`);
+      
+      // If sprite has no dimensions, it probably failed to load
+      if (this.projectileSprite.width === 0 || this.projectileSprite.height === 0) {
+        console.warn(`🎯 Sprite has zero dimensions, creating fallback`);
+        this.projectileSprite.destroy();
+        throw new Error('Sprite has zero dimensions');
+      }
+    } catch (error) {
+      console.error(`🎯 Failed to create sprite with texture, creating fallback graphics:`, error);
+      
+      // Create a simple graphics object as fallback
+      const graphics = scene.add.graphics();
+      graphics.fillStyle(0x00ffff, 1.0);
+      graphics.fillCircle(0, 0, 12);
+      graphics.lineStyle(2, 0xffffff, 1.0);
+      graphics.strokeCircle(0, 0, 12);
+      
+      // Cast to sprite-like object for compatibility
+      this.projectileSprite = graphics as any;
+      this.projectileSprite.setVisible(true);
+      this.projectileSprite.setAlpha(1.0);
+      
+      console.log(`🎯 Fallback graphics created: visible=${this.projectileSprite.visible}`);
+    }
     
     // Add sprite to container
     this.add(this.projectileSprite);
+    
+    console.log(`🎯 Sprite added to container, container children: ${this.list.length}`);
     
     // Calculate angle to target
     const angle = Phaser.Math.Angle.Between(
@@ -44,8 +111,20 @@ export class Projectile extends Phaser.GameObjects.Container {
       config.targetY
     );
     
-    // Rotate projectile to face target (add 90 degrees for proper orientation)
-    this.setRotation(angle + Math.PI / 2);
+    // Rotate the sprite directly instead of the container to avoid double rendering
+    // For wizard projectiles, the sprite faces right by default, so we don't need to add 90 degrees
+    if (config.texture === 'wizard') {
+      this.projectileSprite.setRotation(angle);
+    } else {
+      // For other projectiles, add 90 degrees for proper orientation
+      this.projectileSprite.setRotation(angle + Math.PI / 2);
+    }
+    
+    // Don't rotate the container itself
+    this.setRotation(0);
+    
+    // Set round pixels to prevent sub-pixel positioning artifacts
+    this.setRoundPixels(true);
     
     // Set depth based on starting Y position
     this.setDepth(config.startY + 100); // Above units
@@ -53,8 +132,17 @@ export class Projectile extends Phaser.GameObjects.Container {
     // Add to scene
     scene.add.existing(this);
     
-    // Create animation if texture has multiple frames
-    this.createAnimation();
+    // Log final container state
+    console.log(`🎯 Container created: x=${this.x}, y=${this.y}, depth=${this.depth}, visible=${this.visible}, alpha=${this.alpha}`);
+    console.log(`🎯 Container children count: ${this.list.length}`);
+    console.log(`🎯 Scene children count: ${scene.children.length}`);
+    
+    // Make container extra visible for debugging
+    this.setVisible(true);
+    this.setAlpha(1.0);
+    
+    // Don't create animations to avoid frame conflicts - use single frame for projectiles
+    // this.createAnimation();
   }
   
   private createAnimation() {
@@ -75,25 +163,33 @@ export class Projectile extends Phaser.GameObjects.Container {
     const frameNames = this.scene.textures.get(textureKey).getFrameNames();
     
     // Find projectile frames - prioritize Charge_1_X frames for wizards, fallback to Magic_arrow
-    // Debug: check all frame names that contain 'charge'
-    const allChargeFrames = frameNames.filter(frame => frame.toLowerCase().includes('charge'));
-    console.log('All frames containing "charge":', allChargeFrames);
+    let projectileFrames: string[] = [];
     
-    const chargeFrames = frameNames.filter(frame => 
-      frame.toLowerCase().includes('charge_1_') && frame.toLowerCase().includes('.png')
-    );
+    if (textureKey === 'wizard') {
+      // For wizard, use Charge_1_X frames (excluding Charge_1_9 which is a different animation)
+      const chargeFrames = frameNames.filter(frame => 
+        frame.includes('Charge_1_') && 
+        frame.includes('.png') &&
+        !frame.includes('Charge_1_9') && // Exclude frame 9 which looks different
+        !frame.includes('Charge_1_8') && // Exclude frame 8 which looks different
+        !frame.includes('Charge_1_7') && // Exclude frame 7 which looks different
+        !frame.includes('Charge_1_6')    // Exclude frame 6 which looks different
+      );
+      console.log('Wizard Charge frames found:', chargeFrames.length, chargeFrames);
+      projectileFrames = chargeFrames;
+    }
     
-    console.log('Available frame names:', frameNames.slice(0, 10)); // Debug: show first 10 frame names
-    console.log('Filtered charge frames:', chargeFrames);
+    // Fallback to Magic_arrow or other projectile frames
+    if (projectileFrames.length === 0) {
+      const magicArrowFrames = frameNames.filter(frame => 
+        frame.toLowerCase().includes('magic_arrow') || 
+        frame.toLowerCase().includes('projectile') ||
+        frame.toLowerCase().includes('spell')
+      );
+      projectileFrames = magicArrowFrames;
+    }
     
-    const magicArrowFrames = frameNames.filter(frame => 
-      frame.toLowerCase().includes('magic_arrow') || 
-      frame.toLowerCase().includes('projectile') ||
-      frame.toLowerCase().includes('spell')
-    );
-    
-    // Use Charge_1_X frames if available, otherwise use Magic_arrow frames
-    const projectileFrames = chargeFrames.length > 0 ? chargeFrames : magicArrowFrames;
+    // Skip if we already have projectile frames
     
     if (projectileFrames.length > 0) {
       // Sort frames properly by extracting the frame number
@@ -154,8 +250,8 @@ export class Projectile extends Phaser.GameObjects.Container {
       this.targetY
     );
     
-    this.x += Math.cos(angle) * step;
-    this.y += Math.sin(angle) * step;
+    this.x = Math.round(this.x + Math.cos(angle) * step);
+    this.y = Math.round(this.y + Math.sin(angle) * step);
     
     // Update depth based on current Y position
     this.setDepth(this.y + 100);

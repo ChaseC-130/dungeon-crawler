@@ -37,7 +37,7 @@ function getUnitColor(unitName: string): string {
   return colors[unitName.toLowerCase()] || '#666666';
 }
 
-const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, height, useGridCellSize = false }) => {
+const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = React.memo(({ unitName, width, height, useGridCellSize = false }) => {
   const [spriteDataUrl, setSpriteDataUrl] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -284,7 +284,7 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = ({ unitName, width, he
       />
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

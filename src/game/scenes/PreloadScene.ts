@@ -132,8 +132,8 @@ export default class PreloadScene extends Phaser.Scene {
         if (jsonData.textures && jsonData.textures[0] && jsonData.textures[0].frames) {
           const frames: any = {};
           jsonData.textures[0].frames.forEach((frame: any) => {
-            // Use filename without extension as frame name
-            const frameName = frame.filename.replace('.png', '');
+            // Keep the full filename including .png extension
+            const frameName = frame.filename;
             frames[frameName] = {
               frame: {
                 x: frame.frame.x,
