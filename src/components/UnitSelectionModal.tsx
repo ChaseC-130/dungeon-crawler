@@ -17,88 +17,116 @@ import UnifiedUnitSprite from './UnifiedUnitSprite';
 // Unit stats - should match server
 const UNIT_STATS: Record<string, UnitStats> = {
   knight: {
+    name: 'Knight',
     cost: 3,
     health: 1200,
+    maxHealth: 1200,
     damage: 15,
     attackSpeed: 0.8,
     movementSpeed: 1.0,
     range: 1,
     priority: 3,
-    attackType: 'melee',
-    armorType: 'heavy',
+    attackType: 'Physical',
+    armorType: 'Heavy',
     innatePassive: 'Tank: Reduces damage taken by 20%'
   },
   priest: {
+    name: 'Priest',
     cost: 4,
     health: 800,
+    maxHealth: 800,
     damage: 10,
     attackSpeed: 1.0,
     movementSpeed: 1.0,
     range: 3,
     priority: 5,
-    attackType: 'magic',
-    armorType: 'light',
+    attackType: 'Magical',
+    armorType: 'Light',
     innatePassive: 'Healer: Heals lowest HP ally for 15 HP every 2 seconds'
   },
   bishop: {
+    name: 'Bishop',
     cost: 5,
     health: 1000,
+    maxHealth: 1000,
     damage: 20,
     attackSpeed: 1.2,
     movementSpeed: 0.8,
     range: 3,
     priority: 4,
-    attackType: 'magic',
-    armorType: 'medium',
+    attackType: 'Magical',
+    armorType: 'Light',
     innatePassive: 'Holy Shield: Grants 10% damage reduction to nearby allies'
   },
   fighter: {
+    name: 'Fighter',
     cost: 2,
     health: 800,
+    maxHealth: 800,
     damage: 20,
     attackSpeed: 1.2,
     movementSpeed: 1.2,
     range: 1,
     priority: 2,
-    attackType: 'melee',
-    armorType: 'medium',
+    attackType: 'Physical',
+    armorType: 'Light',
     innatePassive: 'Berserker: +20% attack speed when below 50% HP'
   },
   goblin: {
+    name: 'Goblin',
     cost: 1,
     health: 500,
+    maxHealth: 500,
     damage: 15,
     attackSpeed: 1.5,
     movementSpeed: 1.5,
     range: 1,
     priority: 1,
-    attackType: 'melee',
-    armorType: 'light',
+    attackType: 'Physical',
+    armorType: 'Light',
     innatePassive: 'Swarm: +5% damage for each allied Goblin'
   },
   wizard: {
+    name: 'Wizard',
     cost: 4,
     health: 700,
+    maxHealth: 700,
     damage: 25,
     attackSpeed: 0.8,
     movementSpeed: 1.0,
     range: 4,
     priority: 4,
-    attackType: 'magic',
-    armorType: 'light',
+    attackType: 'Magical',
+    armorType: 'Light',
     innatePassive: 'Arcane Power: Deals splash damage to nearby enemies'
   },
   gladiator: {
+    name: 'Gladiator',
     cost: 3,
     health: 1000,
+    maxHealth: 1000,
     damage: 18,
     attackSpeed: 1.0,
     movementSpeed: 1.1,
     range: 1,
     priority: 2,
-    attackType: 'melee',
-    armorType: 'heavy',
+    attackType: 'Physical',
+    armorType: 'Heavy',
     innatePassive: 'Bloodthirst: Heals for 20% of damage dealt'
+  },
+  'red dragon': {
+    name: 'Red Dragon',
+    cost: 6,
+    health: 1800,
+    maxHealth: 1800,
+    damage: 25,
+    attackSpeed: 0.75,
+    movementSpeed: 1.0,
+    range: 3,
+    priority: 1,
+    attackType: 'Magical',
+    armorType: 'Heavy',
+    innatePassive: 'Flying: Becomes untargetable at 66% and 33% health for 5 seconds'
   }
 };
 
@@ -113,11 +141,19 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
   const [hoveredUnit, setHoveredUnit] = useState<string | null>(null);
   const maxUnits = 5;
+  
+  // Debug UNIT_STATS structure
+  console.log('UNIT_STATS object:', UNIT_STATS);
+  console.log('UNIT_STATS keys:', Object.keys(UNIT_STATS));
+  console.log('Red Dragon entry:', UNIT_STATS['red dragon']);
 
-  const allUnits = Object.entries(UNIT_STATS).map(([name, stats]) => ({
-    name,
-    ...stats
+  const allUnits = Object.entries(UNIT_STATS).map(([key, stats]) => ({
+    ...stats,
+    key,
+    name: stats.name
   }));
+  
+  console.log('All units from UNIT_STATS:', allUnits.map(u => `${u.name} (key: ${u.key})`));
   
   // Calculate responsive grid layout for 20+ cards
   const containerPadding = 40;
@@ -140,13 +176,13 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
     }
   };
 
-  const renderUnitCard = (unit: UnitStats & { name: string }) => {
-    const isSelected = selectedUnits.includes(unit.name);
+  const renderUnitCard = (unit: UnitStats & { name: string, key: string }) => {
+    const isSelected = selectedUnits.includes(unit.key);
     const canSelect = selectedUnits.length < maxUnits || isSelected;
-    const isHovered = hoveredUnit === unit.name;
+    const isHovered = hoveredUnit === unit.key;
 
     return (
-      <View key={unit.name} style={styles.cardContainer}>
+      <View key={unit.key} style={styles.cardContainer}>
         <TouchableOpacity
           style={[
             styles.unitCard,
@@ -154,8 +190,8 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
             !canSelect && styles.unitCardDisabled,
             { width: cardWidth }
           ]}
-          onPress={() => toggleUnit(unit.name)}
-          onPressIn={() => setHoveredUnit(unit.name)}
+          onPress={() => toggleUnit(unit.key)}
+          onPressIn={() => setHoveredUnit(unit.key)}
           onPressOut={() => setHoveredUnit(null)}
           disabled={!canSelect}
         >
@@ -164,9 +200,9 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
           
           <View style={styles.unitImageContainer}>
             {Platform.OS === 'web' ? (
-              <UnifiedUnitSprite unitName={unit.name} width={360} height={360} />
+              <UnifiedUnitSprite unitName={unit.key} width={360} height={360} />
             ) : (
-              <UnitSpriteSimple unitName={unit.name} width={360} height={360} useGridCellSize={true} />
+              <UnitSpriteSimple unitName={unit.key} width={360} height={360} useGridCellSize={true} />
             )}
           </View>
         </TouchableOpacity>
@@ -194,9 +230,15 @@ const UnitSelectionModal: React.FC<UnitSelectionModalProps> = ({ visible, onComp
           <Text style={styles.subtitle}>
             Select {maxUnits} units ({selectedUnits.length}/{maxUnits})
           </Text>
+          <Text style={[styles.subtitle, {color: 'yellow', fontSize: 16}]}>
+            DEBUG: {allUnits.length} units available: {allUnits.map(u => `${u.name} (${u.key})`).join(', ')}
+          </Text>
           
           <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.unitsGrid}>
-            {allUnits.map(renderUnitCard)}
+            {allUnits.map((unit, index) => {
+              console.log(`Rendering unit ${index + 1}: ${unit.name} (key: ${unit.key})`);
+              return renderUnitCard(unit);
+            })}
           </ScrollView>
           
           <TouchableOpacity

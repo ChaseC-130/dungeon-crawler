@@ -45,7 +45,8 @@
       "Bash(sed:*)",
       "Bash(pkill:*)",
       "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg \"post-combat|upgrade.*modal|createUpgradeModal|showUpgradeModal\" \"/mnt/c/Users/Chase and Chelsea/Desktop/dungeon-crawler/web-standalone/game.html\")",
-      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"updateGameState.*post-combat|showUpgradeModal|upgradeModal.*show|phase.*===.*post\" \"/mnt/c/Users/Chase and Chelsea/Desktop/dungeon-crawler/web-standalone/game.html\")"
+      "Bash(/home/chase/.nvm/versions/node/v24.1.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"updateGameState.*post-combat|showUpgradeModal|upgradeModal.*show|phase.*===.*post\" \"/mnt/c/Users/Chase and Chelsea/Desktop/dungeon-crawler/web-standalone/game.html\")",
+      "Bash(awk:*)"
     ],
     "deny": []
   }

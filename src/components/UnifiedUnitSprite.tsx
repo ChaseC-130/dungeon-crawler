@@ -26,14 +26,22 @@ const UnifiedUnitSprite: React.FC<UnifiedUnitSpriteProps> = React.memo(({ unitNa
         // Check if texture is already loaded in main game
         const mainGame = (window as any).gameInstance;
         if (mainGame && mainGame.textures && mainGame.textures.exists(textureKey)) {
+          console.log(`Texture for ${unitName} already exists in main game`);
           return;
         }
         // Otherwise load it
-        this.load.atlas(
-          textureKey,
-          `/assets/units/${textureKey}/${textureKey}.png`,
-          `/assets/units/${textureKey}/${textureKey}.json`
-        );
+        // Special handling for red dragon - files are named without space
+        const pathKey = unitName.toLowerCase();
+        const fileName = pathKey === 'red dragon' ? 'reddragon' : pathKey;
+        const imgUrl = `/assets/units/${pathKey}/${fileName}.png`;
+        const jsonUrl = `/assets/units/${pathKey}/${fileName}.json`;
+        console.log(`UnifiedUnitSprite loading: ${unitName} -> img=${imgUrl}, json=${jsonUrl}`);
+        
+        this.load.atlas(textureKey, imgUrl, jsonUrl);
+        
+        this.load.on('loaderror', (file: any) => {
+          console.error(`Failed to load file: ${file.key}`, file);
+        });
       }
 
       create() {
@@ -43,6 +51,7 @@ const UnifiedUnitSprite: React.FC<UnifiedUnitSpriteProps> = React.memo(({ unitNa
         this.cameras.main.centerOn(0, 0);
         
         if (!this.textures.exists(textureKey)) {
+          console.error(`UnifiedUnitSprite: Texture ${textureKey} for unit ${unitName} does not exist, using placeholder`);
           // Create placeholder sprite exactly like main game
           if (!this.textures.exists('__DEFAULT')) {
             const graphics = this.add.graphics();
@@ -53,8 +62,18 @@ const UnifiedUnitSprite: React.FC<UnifiedUnitSpriteProps> = React.memo(({ unitNa
           }
           const sprite = this.add.sprite(0, 0, '__DEFAULT');
           sprite.setScale(0.8);
+          
+          // Add text to show which unit failed
+          const text = this.add.text(0, 0, unitName, {
+            fontSize: '16px',
+            color: '#ffffff',
+            align: 'center'
+          });
+          text.setOrigin(0.5, 0.5);
           return;
         }
+        
+        console.log(`UnifiedUnitSprite: Successfully loaded texture ${textureKey} for unit ${unitName}`);
 
         // Get frames from atlas
         const texture = this.textures.get(textureKey);

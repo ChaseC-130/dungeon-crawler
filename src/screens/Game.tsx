@@ -12,6 +12,7 @@ import { useGame } from '../contexts/GameContext';
 import GameHUD from '../components/GameHUD';
 import PhaserGame from '../game/PhaserGame';
 import UnitSelectionModal from '../components/UnitSelectionModal';
+import '../game/debugHelpers'; // Load debug helpers
 
 type GameScreenProps = StackScreenProps<RootStackParamList, 'Game'>;
 
@@ -38,8 +39,8 @@ const Game: React.FC = () => {
     const handleWebResize = () => {
       if (Platform.OS === 'web') {
         const newDimensions = {
-          width: window.innerWidth,
-          height: window.innerHeight
+          width: Math.max(400, window.innerWidth),   // Enforce minimum width
+          height: Math.max(600, window.innerHeight)  // Enforce minimum height to prevent grid cutoff
         };
         setDimensions(newDimensions);
         

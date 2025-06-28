@@ -386,19 +386,19 @@
         /* Ensure upgrade modal fits on screen with buttons */
         #upgrade-modal .unit-selection-content {
             height: auto;
-            max-height: 70vh;
-            width: 85vw;
-            max-width: 1000px;
-            padding: 20px;
-            overflow-y: auto;
-            background: rgba(20, 20, 35, 0.9);
+            max-height: 90vh;
+            width: 95vw;
+            max-width: 1400px;
+            padding: 25px;
+            overflow-y: visible;
+            background: rgba(20, 20, 35, 0.95);
         }
         
         /* Ensure confirm button is always visible on smaller screens */
         @media (max-height: 800px) {
             #upgrade-modal .unit-selection-content {
-                height: calc(100vh - 160px); /* More space for buttons */
-                max-height: 400px;
+                height: auto;
+                max-height: 85vh;
             }
             
             .select-upgrade-btn {
@@ -411,8 +411,8 @@
         
         @media (max-height: 650px) {
             #upgrade-modal .unit-selection-content {
-                height: calc(100vh - 180px); /* Even more space for buttons */
-                max-height: 320px;
+                height: auto;
+                max-height: 80vh;
             }
             
             .select-upgrade-btn {
@@ -720,10 +720,10 @@
         .upgrade-cards-container {
             display: flex;
             justify-content: center;
-            gap: 12px;
+            gap: 20px;
             flex-wrap: wrap;
-            padding: 5px;
-            margin-bottom: 15px;
+            padding: 10px;
+            margin-bottom: 20px;
         }
         
         /* Scrollbar styles removed - no scrolling allowed in upgrade panel */
@@ -731,13 +731,14 @@
         .upgrade-card {
             background: rgba(255, 255, 255, 0.08);
             border: 2px solid rgba(255, 215, 0, 0.4);
-            border-radius: 8px;
-            padding: 8px;
-            width: 150px;
+            border-radius: 12px;
+            padding: 15px;
+            width: 200px;
+            min-height: 220px;
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             position: relative;
             display: flex;
             flex-direction: column;
@@ -750,14 +751,14 @@
         /* Responsive scaling for smaller screens */
         @media (max-height: 700px) {
             #upgrade-modal .unit-selection-content {
-                max-height: 65vh;
-                padding: 10px;
+                max-height: 85vh;
+                padding: 15px;
             }
             
             .upgrade-card {
-                width: 130px;
-                min-height: 140px;
-                padding: 6px;
+                width: 170px;
+                min-height: 180px;
+                padding: 12px;
             }
             
             .unit-selection-title {
@@ -785,14 +786,14 @@
         
         @media (max-height: 600px) {
             #upgrade-modal .unit-selection-content {
-                max-height: 65vh;
-                padding: 10px;
+                max-height: 85vh;
+                padding: 15px;
             }
             
             .upgrade-card {
-                width: 150px;
-                min-height: 160px;
-                padding: 10px;
+                width: 180px;
+                min-height: 200px;
+                padding: 12px;
             }
             
             .unit-selection-title {
@@ -826,9 +827,9 @@
         /* Ultra-small screens (mobile phones in landscape, small windows) */
         @media (max-height: 500px) {
             #upgrade-modal .unit-selection-content {
-                height: calc(100vh - 120px);
-                max-height: 280px;
-                padding: 2px;
+                height: auto;
+                max-height: 75vh;
+                padding: 10px;
             }
             
             .unit-selection-title {
@@ -946,10 +947,10 @@
         }
         
         .upgrade-icon {
-            width: 50px;
-            height: 50px;
-            margin: 0 auto 10px auto;
-            border-radius: 8px;
+            width: 65px;
+            height: 65px;
+            margin: 0 auto 12px auto;
+            border-radius: 10px;
             background: rgba(255, 255, 255, 0.05);
             display: flex;
             align-items: center;
@@ -1196,7 +1197,55 @@
             cursor: pointer;
             z-index: 10;
             box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
-            transition: all 0.2s ease;
+        }
+        
+        /* Simple upgrade selection buttons */
+        .simple-select-btn {
+            background: linear-gradient(145deg, #4CAF50, #388E3C);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+        }
+        
+        .simple-select-btn:hover {
+            background: linear-gradient(145deg, #5CBF60, #4CAF50);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .unit-select-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        
+        .unit-select-btn {
+            background: rgba(255, 215, 0, 0.8);
+            border: 2px solid #FFD700;
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 80px;
+        }
+        
+        .unit-select-btn:hover {
+            background: #FFD700;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(255, 215, 0, 0.4);
         }
         
         .select-upgrade-btn:hover:not(:disabled) {
@@ -1677,6 +1726,45 @@
                 armorType: 'Unarmored',
                 innatePassive: 'None',
                 description: 'Cheap, fast melee unit - good for early game'
+            },
+            bishop: {
+                cost: 15,
+                damage: 2,
+                health: 25,
+                attackSpeed: 1.2,
+                movementSpeed: 25,
+                range: 12,
+                priority: 4,
+                attackType: 'Magical',
+                armorType: 'Light',
+                innatePassive: 'Holy Shield: Grants 10% damage reduction to nearby allies',
+                description: 'Support caster that provides defensive buffs to allies'
+            },
+            gladiator: {
+                cost: 18,
+                damage: 4,
+                health: 35,
+                attackSpeed: 1.0,
+                movementSpeed: 38,
+                range: 8,
+                priority: 2,
+                attackType: 'Physical',
+                armorType: 'Heavy',
+                innatePassive: 'Bloodthirst: Heals for 20% of damage dealt',
+                description: 'Aggressive melee fighter with self-sustain'
+            },
+            'red dragon': {
+                cost: 25,
+                damage: 5,
+                health: 50,
+                attackSpeed: 0.25,
+                movementSpeed: 35,
+                range: 9,
+                priority: 1,
+                attackType: 'Physical',
+                armorType: 'Heavy',
+                innatePassive: 'Special Mode: At 50% health, triggers rise animation and special area attacks with 200% damage',
+                description: 'Powerful melee unit that becomes devastating at low health'
             }
         };
         
@@ -1780,6 +1868,35 @@
             socket.on('combat-update', (playerUnits, enemyUnits) => {
                 if (window.gameScene) {
                     window.gameScene.updateCombatState(playerUnits, enemyUnits);
+                }
+            });
+            
+            socket.on('dragon-rise', (data) => {
+                console.log(`🌟 CLIENT RECEIVED dragon-rise event for dragon ${data.dragonId}!`);
+                if (window.gameScene && window.gameScene.handleDragonRise) {
+                    console.log(`🎬 Calling handleDragonRise for dragon ${data.dragonId}`);
+                    window.gameScene.handleDragonRise(data.dragonId);
+                } else {
+                    console.log(`❌ GameScene or handleDragonRise method not found`);
+                }
+            });
+            
+            socket.on('dragon-special-attack', (data) => {
+                console.log(`🔥 Dragon ${data.dragonId} is performing special attack!`);
+                if (window.gameScene && window.gameScene.handleDragonSpecialAttack) {
+                    window.gameScene.handleDragonSpecialAttack(data.dragonId, data.targetPosition, data.affectedUnits);
+                } else {
+                    console.log(`❌ GameScene or handleDragonSpecialAttack method not found`);
+                }
+            });
+            
+            socket.on('dragon-landing', (data) => {
+                console.log(`🛬 CLIENT RECEIVED dragon-landing event for dragon ${data.dragonId}!`);
+                if (window.gameScene && window.gameScene.handleDragonLanding) {
+                    console.log(`🎬 Calling handleDragonLanding for dragon ${data.dragonId}`);
+                    window.gameScene.handleDragonLanding(data.dragonId);
+                } else {
+                    console.log(`❌ GameScene or handleDragonLanding method not found`);
                 }
             });
             
@@ -2993,8 +3110,8 @@
                 width: window.innerWidth,
                 height: window.innerHeight,
                 scale: {
-                    mode: Phaser.Scale.FIT,
-                    autoCenter: Phaser.Scale.CENTER_BOTH,
+                    mode: Phaser.Scale.RESIZE,
+                    autoCenter: Phaser.Scale.NO_CENTER,
                     width: window.innerWidth,
                     height: window.innerHeight
                 },
@@ -3013,7 +3130,7 @@
         const animationsStore = {};
 
         // Unit list from our game
-        const unitList = ["knight", "priest", "fighter", "wizard", "goblin"];
+        const unitList = ["knight", "priest", "bishop", "fighter", "goblin", "wizard", "gladiator", "red dragon"];
 
         function preload() {
             console.log('Preloading assets...');
@@ -3030,14 +3147,17 @@
             // Load unit atlases with simplified approach
             unitList.forEach(unit => {
                 console.log(`Loading atlas for ${unit}`);
+                // Special handling for red dragon - files are named without space
+                const fileName = unit === 'red dragon' ? 'reddragon' : unit;
                 this.load.atlas(
                     unit,
-                    `units/${unit}/${unit}.png`,
-                    `units/${unit}/${unit}.json`
+                    `units/${unit}/${fileName}.png`,
+                    `units/${unit}/${fileName}.json`
                 );
                 
-                // Load sound (optional)
-                this.load.audio(`${unit}Sound`, `units/${unit}/${unit}Sound.mp3`);
+                // Load sound (optional) - red dragon sound file has space in name
+                const soundFileName = unit === 'red dragon' ? 'red dragonSound' : `${unit}Sound`;
+                this.load.audio(`${unit}Sound`, `units/${unit}/${soundFileName}.mp3`);
             });
         }
         
@@ -3203,7 +3323,24 @@
                            frame.toLowerCase().includes("death") || frame.toLowerCase().includes("die") || frame.toLowerCase().includes("dead_");
                 });
                 
-                console.log(`Found frames for ${atlasKey}: ${idleFrames.length} idle, ${walkFrames.length} walk, ${attackFrames.length} attack, ${deathFrames.length} death`);
+                // Special frames for red dragon
+                const specialFrames = textureFrames.filter(frame => {
+                    return frame.startsWith("Special_") || frame.toLowerCase().includes("special");
+                });
+                
+                const riseFrames = textureFrames.filter(frame => {
+                    return frame.startsWith("Rise_") || frame.toLowerCase().includes("rise");
+                });
+                
+                const flightFrames = textureFrames.filter(frame => {
+                    return frame.startsWith("Flight_") || frame.toLowerCase().includes("flight");
+                });
+                
+                const landingFrames = textureFrames.filter(frame => {
+                    return frame.startsWith("Landing_") || frame.toLowerCase().includes("landing");
+                });
+                
+                console.log(`Found frames for ${atlasKey}: ${idleFrames.length} idle, ${walkFrames.length} walk, ${attackFrames.length} attack, ${deathFrames.length} death, ${specialFrames.length} special, ${riseFrames.length} rise, ${flightFrames.length} flight, ${landingFrames.length} landing`);
 
                 // Create idle animation
                 if (idleFrames.length > 0) {
@@ -3296,13 +3433,97 @@
                         console.log(`✓ Created death animation (using last idle frame): ${animKey}`);
                     }
                 }
+                
+                // Create special animation (red dragon)
+                if (specialFrames.length > 0) {
+                    const animKey = `${atlasKey}_special`;
+                    if (!scene.anims.exists(animKey)) {
+                        // Sort the special frames numerically
+                        const sortedSpecialFrames = specialFrames.sort((a, b) => {
+                            const numA = parseInt(a.match(/Special_(\d+)/)?.[1] || '0');
+                            const numB = parseInt(b.match(/Special_(\d+)/)?.[1] || '0');
+                            return numA - numB;
+                        });
+                        scene.anims.create({
+                            key: animKey,
+                            frames: sortedSpecialFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 8,
+                            repeat: 0, // Play once
+                        });
+                        console.log(`✓ Created special animation: ${animKey}`);
+                    }
+                }
+                
+                // Create rise animation (red dragon)
+                if (riseFrames.length > 0) {
+                    const animKey = `${atlasKey}_rise`;
+                    if (!scene.anims.exists(animKey)) {
+                        // Sort the rise frames numerically
+                        const sortedRiseFrames = riseFrames.sort((a, b) => {
+                            const numA = parseInt(a.match(/Rise_(\d+)/)?.[1] || '0');
+                            const numB = parseInt(b.match(/Rise_(\d+)/)?.[1] || '0');
+                            return numA - numB;
+                        });
+                        scene.anims.create({
+                            key: animKey,
+                            frames: sortedRiseFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 6,
+                            repeat: 0, // Play once
+                        });
+                        console.log(`✓ Created rise animation: ${animKey}`);
+                    }
+                }
+                
+                // Create flight animation (red dragon)
+                if (flightFrames.length > 0) {
+                    const animKey = `${atlasKey}_flight`;
+                    if (!scene.anims.exists(animKey)) {
+                        // Sort the flight frames numerically
+                        const sortedFlightFrames = flightFrames.sort((a, b) => {
+                            const numA = parseInt(a.match(/Flight_(\d+)/)?.[1] || '0');
+                            const numB = parseInt(b.match(/Flight_(\d+)/)?.[1] || '0');
+                            return numA - numB;
+                        });
+                        scene.anims.create({
+                            key: animKey,
+                            frames: sortedFlightFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 8,
+                            repeat: -1, // Loop for flying movement
+                        });
+                        console.log(`✓ Created flight animation: ${animKey}`);
+                    }
+                }
+                
+                // Create landing animation (red dragon)
+                if (landingFrames.length > 0) {
+                    const animKey = `${atlasKey}_landing`;
+                    if (!scene.anims.exists(animKey)) {
+                        // Sort the landing frames numerically
+                        const sortedLandingFrames = landingFrames.sort((a, b) => {
+                            const numA = parseInt(a.match(/Landing_(\d+)/)?.[1] || '0');
+                            const numB = parseInt(b.match(/Landing_(\d+)/)?.[1] || '0');
+                            return numA - numB;
+                        });
+                        scene.anims.create({
+                            key: animKey,
+                            frames: sortedLandingFrames.map(frame => ({ key: atlasKey, frame: frame })),
+                            frameRate: 6,
+                            repeat: 0, // Play once
+                        });
+                        console.log(`✓ Created landing animation: ${animKey}`);
+                    }
+                }
 
                 // Store the animation references
                 animationsStore[atlasKey] = {
                     idle: `${atlasKey}_idle`,
                     walk: `${atlasKey}_walk`,
                     attack: `${atlasKey}_attack`,
-                    death: `${atlasKey}_death`
+                    death: `${atlasKey}_death`,
+                    special: `${atlasKey}_special`,
+                    rise: `${atlasKey}_rise`,
+                    flight: `${atlasKey}_flight`,
+                    landing: `${atlasKey}_landing`
                 };
 
                 console.log(`Stored animations for ${atlasKey}:`, animationsStore[atlasKey]);
@@ -3499,7 +3720,7 @@
             
             // DOM-based drag system similar to shop
             sprite.on('pointerdown', (pointer) => {
-                console.log(`🖱️ Pointer down on unit ${unit.name}`);
+                console.log(`🚀 NEW VERSION! Pointer down on unit ${unit.name}`);
                 
                 dragData.startMouseX = pointer.x;
                 dragData.startMouseY = pointer.y;
@@ -3590,6 +3811,15 @@
                 // Add a data attribute to help debug
                 dragData.dragClone.setAttribute('data-debug', `drag-clone-${unit.name}`);
                 console.log(`✅ Drag clone created with all styles applied`);
+                console.log(`🔧 DEBUG: Drag clone style:`, {
+                    position: dragData.dragClone.style.position,
+                    zIndex: dragData.dragClone.style.zIndex,
+                    opacity: dragData.dragClone.style.opacity,
+                    left: dragData.dragClone.style.left,
+                    top: dragData.dragClone.style.top,
+                    width: dragData.dragClone.style.width,
+                    height: dragData.dragClone.style.height
+                });
                 
                 // Create sprite container for the drag clone
                 const spriteContainer = document.createElement('div');
@@ -3613,8 +3843,20 @@
                 } else {
                     console.log(`❌ GameScene not available for animated sprite creation`);
                     // Fallback: create a simple colored div to show the drag is working
-                    spriteContainer.innerHTML = `<div style="width: 64px; height: 64px; background: #FF6B6B; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">${unit.name}</div>`;
+                    spriteContainer.innerHTML = `<div style="width: 64px; height: 64px; background: #FFD700; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #000; font-weight: bold; font-size: 10px; border: 2px solid #FFA000;">${unit.name}</div>`;
                 }
+                
+                // Always show a visible indicator even if sprite fails
+                console.log(`🔥 Ensuring drag clone is visible with fallback indicator`);
+                setTimeout(() => {
+                    if (dragData.dragClone && dragData.dragClone.children.length > 0) {
+                        const container = dragData.dragClone.children[0];
+                        if (container.children.length === 0) {
+                            console.log(`⚠️ No sprite content found, adding fallback`);
+                            container.innerHTML = `<div style="width: 64px; height: 64px; background: #FFD700; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #000; font-weight: bold; font-size: 10px; border: 2px solid #FFA000;">${unit.name}</div>`;
+                        }
+                    }
+                }, 100);
                 
                 // Add visual effects to original sprite
                 sprite.setTint(0xffff00);
@@ -3817,16 +4059,16 @@
                 const cellWorldY = this.gridY + (gridY * this.cellSize);
                 
                 if (isValidDrop) {
-                    // Green for valid drop
-                    this.dropZonePreview.fillStyle(0x4CAF50, 0.5);
+                    // Subtle green for valid drop
+                    this.dropZonePreview.fillStyle(0x81C784, 0.15);
                     this.dropZonePreview.fillRect(cellWorldX, cellWorldY, this.cellSize, this.cellSize);
-                    this.dropZonePreview.lineStyle(3, 0x4CAF50, 1);
+                    this.dropZonePreview.lineStyle(2, 0x81C784, 0.7);
                     this.dropZonePreview.strokeRect(cellWorldX, cellWorldY, this.cellSize, this.cellSize);
                 } else {
-                    // Red for invalid drop
-                    this.dropZonePreview.fillStyle(0xF44336, 0.5);
+                    // Subtle orange for invalid drop
+                    this.dropZonePreview.fillStyle(0xFF8A65, 0.15);
                     this.dropZonePreview.fillRect(cellWorldX, cellWorldY, this.cellSize, this.cellSize);
-                    this.dropZonePreview.lineStyle(3, 0xF44336, 1);
+                    this.dropZonePreview.lineStyle(2, 0xFF8A65, 0.7);
                     this.dropZonePreview.strokeRect(cellWorldX, cellWorldY, this.cellSize, this.cellSize);
                 }
             }
@@ -3857,12 +4099,50 @@
                 backgroundKey = 'battle4';
             }
             
-            // Add transparent background preview
-            this.preparationBackground = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, backgroundKey);
-            this.preparationBackground.setOrigin(0.5, 0.5);
-            this.preparationBackground.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-            this.preparationBackground.setAlpha(0.3); // Make it transparent
-            this.preparationBackground.setDepth(-1); // Behind everything except grid
+            // Add background using a different approach for unlimited scaling
+            // Create a render texture that can be any size
+            if (this.preparationBackground) {
+                this.preparationBackground.destroy();
+            }
+            
+            // Create graphics object to draw the background
+            const graphics = this.add.graphics();
+            
+            // Load the texture and draw it scaled
+            const texture = this.textures.get(backgroundKey);
+            if (texture && texture.source && texture.source[0]) {
+                // Create a render texture at window size
+                const rt = this.add.renderTexture(0, 0, window.innerWidth, window.innerHeight);
+                rt.setOrigin(0, 0);
+                
+                // Draw the background image stretched to fill
+                const tempSprite = this.add.image(0, 0, backgroundKey);
+                tempSprite.setOrigin(0, 0);
+                
+                const scaleX = window.innerWidth / tempSprite.width;
+                const scaleY = window.innerHeight / tempSprite.height;
+                tempSprite.setScale(scaleX, scaleY);
+                
+                // Draw to render texture
+                rt.draw(tempSprite);
+                tempSprite.destroy();
+                
+                this.preparationBackground = rt;
+                this.preparationBackground.setDepth(-100);
+            }
+            
+            // Add blue overlay for preparation phase
+            if (this.preparationOverlay) {
+                this.preparationOverlay.destroy();
+            }
+            this.preparationOverlay = this.add.rectangle(
+                0, 0,
+                window.innerWidth,
+                window.innerHeight,
+                0x1a1a2e, 0.6
+            );
+            this.preparationOverlay.setOrigin(0, 0);
+            this.preparationOverlay.setDepth(-90);
             
             console.log(`Showing preparation background: ${backgroundKey} for floor ${floor}`);
         };
@@ -3871,6 +4151,10 @@
             if (this.preparationBackground) {
                 this.preparationBackground.destroy();
                 this.preparationBackground = null;
+            }
+            if (this.preparationOverlay) {
+                this.preparationOverlay.destroy();
+                this.preparationOverlay = null;
             }
         };
         
@@ -3896,96 +4180,63 @@
             const isSmallScreen = screenWidth < 768 || screenHeight < 600;
             const isPortrait = screenHeight > screenWidth;
             
-            // AGGRESSIVE FIX: Use much more of the screen space
-            console.log('🔥 Screen analysis:', {
+            // PROPER GRID SCALING: Ensure all cells are visible on all screen sizes
+            console.log('📐 Grid scaling analysis:', {
                 isSmallScreen,
                 isPortrait,
                 screenWidth,
                 screenHeight
             });
             
-            // Use much more of the screen - the HUD is working fine, so we can be more aggressive
-            let widthMultiplier = 0.95;  // Keep some margin
-            let heightMultiplier = 0.85; // INCREASED from 0.65 to 0.85 - use much more height
-            let gridOffsetY = 20;        // REDUCED from 80 to 20 - less top margin
+            // Calculate available space accounting for UI elements - based on actual UI layout
+            const topHUDHeight = 120;    // Player info, gold, timer, + unplaced units area
+            const bottomHUDHeight = 280; // Shop panel with unit cards + extra safety margin
+            const horizontalMargin = 30;
+            const verticalMargin = 30; // Extra vertical margin to prevent overlap
             
-            // For landscape screens, be even more aggressive
-            if (screenWidth > screenHeight && screenWidth > 1000) {
-                widthMultiplier = 0.98;  // Use almost full width
-                heightMultiplier = 0.90; // Use almost full height
-                gridOffsetY = 10;        // Minimal top margin
-                console.log('🔥 Using MAXIMUM space for large landscape screen');
-            }
+            const availableWidth = screenWidth - (horizontalMargin * 2);
+            const availableHeight = screenHeight - topHUDHeight - bottomHUDHeight - (verticalMargin * 2);
             
-            const availableWidth = screenWidth * widthMultiplier;
-            const availableHeight = screenHeight * heightMultiplier;
-            
-            console.log('🔥 Available space calculation:', {
-                widthMultiplier,
-                heightMultiplier,
+            console.log('📏 Available space:', {
                 availableWidth,
                 availableHeight,
-                percentOfScreenWidth: (availableWidth / screenWidth * 100).toFixed(1) + '%',
-                percentOfScreenHeight: (availableHeight / screenHeight * 100).toFixed(1) + '%'
+                reservedSpace: {
+                    topHUD: topHUDHeight,
+                    bottomHUD: bottomHUDHeight,
+                    margins: { horizontal: horizontalMargin * 2, vertical: verticalMargin * 2 }
+                }
             });
             
-            // RESPONSIVE SCALING: Scale grid to fit user's screen properly
-            console.log('🔥 RESPONSIVE GRID SCALING 🔥');
-            console.log('🔥 Screen dimensions:', { screenWidth, screenHeight });
-            
-            // Use 95% of screen width for the grid (eliminates black space on sides)
-            const targetGridWidth = screenWidth * 0.95;
-            const cellSizeByWidth = targetGridWidth / gridWidth;
-            
-            // Leave room for HUD at top and bottom
-            const targetGridHeight = screenHeight * 0.80; // Use 80% of height
-            const cellSizeByHeight = targetGridHeight / gridHeight;
-            
-            // Use the smaller dimension to ensure grid fits on screen
+            // Calculate cell size to fit grid within available space
+            const cellSizeByWidth = availableWidth / gridWidth;
+            const cellSizeByHeight = availableHeight / gridHeight;
             this.cellSize = Math.min(cellSizeByWidth, cellSizeByHeight);
             
-            // Set reasonable bounds for usability
-            this.cellSize = Math.max(this.cellSize, 25); // Minimum for small screens
-            this.cellSize = Math.min(this.cellSize, 120); // Maximum for large screens
+            // Ensure reasonable cell size bounds
+            const minCellSize = 20; // Ensure visibility on small screens
+            const maxCellSize = 80; // Prevent oversized grids
+            this.cellSize = Math.max(minCellSize, Math.min(maxCellSize, this.cellSize));
             
-            console.log('🔥 Responsive calculations:', {
-                targetGridWidth,
-                targetGridHeight,
-                cellSizeByWidth,
-                cellSizeByHeight,
-                chosenCellSize: this.cellSize
-            });
+            // Calculate actual grid dimensions
+            const actualGridWidth = this.cellSize * gridWidth;
+            const actualGridHeight = this.cellSize * gridHeight;
             
-            console.log('🔥 FINAL Grid calculations:', {
-                finalCellSize: this.cellSize,
-                gridPixelWidth: this.cellSize * gridWidth,
-                gridPixelHeight: this.cellSize * gridHeight,
-                widthPercentOfScreen: ((this.cellSize * gridWidth) / screenWidth * 100).toFixed(1) + '%',
-                heightPercentOfScreen: ((this.cellSize * gridHeight) / screenHeight * 100).toFixed(1) + '%',
-                screenWidth,
-                screenHeight
-            });
+            // Center grid in available space
+            this.gridX = (screenWidth - actualGridWidth) / 2;
+            this.gridY = topHUDHeight + verticalMargin + (availableHeight - actualGridHeight) / 2;
             
-            // Position grid to eliminate black space on sides
-            const actualGridPixelWidth = gridWidth * this.cellSize;
-            const actualGridPixelHeight = gridHeight * this.cellSize;
-            
-            // Center horizontally but ensure it uses the available width
-            this.gridX = (screenWidth - actualGridPixelWidth) / 2;
-            
-            // Position vertically with room for HUD
-            this.gridY = (screenHeight - actualGridPixelHeight) / 2 - gridOffsetY;
-            
-            // Ensure grid doesn't go off screen
-            this.gridX = Math.max(5, this.gridX); // Minimum 5px margin
-            this.gridY = Math.max(50, this.gridY); // Minimum 50px from top for HUD
-            
-            console.log('🔥 Grid positioning:', {
-                gridX: this.gridX,
-                gridY: this.gridY,
-                centerX: this.cameras.main.centerX,
-                centerY: this.cameras.main.centerY,
-                gridOffsetY
+            console.log('✅ Final grid layout:', {
+                cellSize: this.cellSize,
+                gridDimensions: { width: actualGridWidth, height: actualGridHeight },
+                position: { x: this.gridX, y: this.gridY },
+                screenUtilization: {
+                    width: (actualGridWidth / screenWidth * 100).toFixed(1) + '%',
+                    height: (actualGridHeight / screenHeight * 100).toFixed(1) + '%'
+                },
+                fitsInAvailableSpace: {
+                    width: actualGridWidth <= availableWidth,
+                    height: actualGridHeight <= availableHeight
+                }
             });
             
             // Debug border removed - no longer needed
@@ -4008,8 +4259,14 @@
             }
             this.gridGraphics.strokePath();
             
-            // Clear any existing highlights before setting up interaction
+            // Clear any existing highlights and interaction zones before recreating
             highlightedCells.clear();
+            
+            // Remove existing interaction zones
+            if (this.gridInteractionZones) {
+                this.gridInteractionZones.forEach(zone => zone.destroy());
+                this.gridInteractionZones = [];
+            }
             
             // Setup grid cell interaction for highlighting
             this.setupGridCellInteraction();
@@ -4052,11 +4309,10 @@
         };
         
         Phaser.Scene.prototype.setupGridCellInteraction = function() {
-            // Remove existing interaction zones
-            if (this.gridInteractionZones) {
-                this.gridInteractionZones.forEach(zone => zone.destroy());
+            // Initialize array if it doesn't exist
+            if (!this.gridInteractionZones) {
+                this.gridInteractionZones = [];
             }
-            this.gridInteractionZones = [];
             
             const gridWidth = this.gridWidth || 20;
             const gridHeight = this.gridHeight || 8;
@@ -4610,10 +4866,30 @@
                 this.battleBackground.destroy();
             }
             
-            // Add new background
-            this.battleBackground = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, backgroundKey);
-            this.battleBackground.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-            this.battleBackground.setDepth(-1); // Behind everything else
+            // Add new background using render texture for unlimited scaling
+            if (this.battleBackground) {
+                this.battleBackground.destroy();
+            }
+            
+            // Create a render texture at window size
+            const rt = this.add.renderTexture(0, 0, window.innerWidth, window.innerHeight);
+            rt.setOrigin(0, 0);
+            
+            // Draw the background image stretched to fill
+            const tempSprite = this.add.image(0, 0, backgroundKey);
+            tempSprite.setOrigin(0, 0);
+            
+            const scaleX = window.innerWidth / tempSprite.width;
+            const scaleY = window.innerHeight / tempSprite.height;
+            tempSprite.setScale(scaleX, scaleY);
+            
+            // Draw to render texture
+            rt.draw(tempSprite);
+            tempSprite.destroy();
+            
+            this.battleBackground = rt;
+            this.battleBackground.setDepth(-100);
+            console.log(`Set battle background: ${backgroundKey} for floor ${floor}`);
             console.log(`Set battle background: ${backgroundKey} for floor ${floor}`);
         };
         
@@ -4642,8 +4918,8 @@
                 
                 // Handle coloring for enemies vs players
                 if (isEnemy) {
-                    // Tint enemies red
-                    sprite.setTint(0xff8888);
+                    // Don't tint enemies, keep original colors
+                    sprite.setTint(0xffffff);
                 } else {
                     // During combat, we don't show ownership circles
                     // Player ownership will be indicated by health bar colors instead
@@ -5053,8 +5329,15 @@
                                 }
                             }
                             
-                            // Play attack animation
-                            const attackAnimKey = `${unitName}_attack`;
+                            // Play attack animation (with special handling for red dragon)
+                            let attackAnimKey = `${unitName}_attack`;
+                            
+                            // Special handling for red dragon special attacks
+                            if (unitName === 'red dragon' && unit.specialAttackState && unit.specialAttackState.isInSpecialMode) {
+                                attackAnimKey = `${unitName}_special`;
+                                console.log(`🐉 Red Dragon ${unit.id} using Special animation for special attack`);
+                            }
+                            
                             if (this.anims.exists(attackAnimKey)) {
                                 if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== attackAnimKey) {
                                     console.log(`Playing attack animation: ${attackAnimKey} for unit ${unit.id}`);
@@ -5084,21 +5367,74 @@
                                     }
                                 }
                             }
+                        } else if (unit.status === 'rise') {
+                            // Special status for red dragon rise animation
+                            unitData.sprite.setTint(0xffffff);
+                            console.log(`🐉 CLIENT: Dragon ${unit.id} in rise status`);
+                            
+                            const riseAnimKey = `${unitName}_rise`;
+                            if (this.anims.exists(riseAnimKey)) {
+                                if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== riseAnimKey) {
+                                    console.log(`🎬 Playing rise animation: ${riseAnimKey} for dragon ${unit.id}`);
+                                    unitData.sprite.play(riseAnimKey);
+                                }
+                            } else {
+                                console.log(`❌ Rise animation ${riseAnimKey} does not exist, falling back to idle`);
+                                const idleAnimKey = `${unitName}_idle`;
+                                if (this.anims.exists(idleAnimKey)) {
+                                    unitData.sprite.play(idleAnimKey, true);
+                                }
+                            }
+                        } else if (unit.status === 'landing') {
+                            // Special status for red dragon landing animation
+                            unitData.sprite.setTint(0xffffff);
+                            console.log(`🛬 CLIENT: Dragon ${unit.id} in landing status`);
+                            
+                            const landingAnimKey = `${unitName}_landing`;
+                            if (this.anims.exists(landingAnimKey)) {
+                                if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== landingAnimKey) {
+                                    console.log(`🎬 Playing landing animation: ${landingAnimKey} for dragon ${unit.id}`);
+                                    unitData.sprite.play(landingAnimKey);
+                                }
+                            } else {
+                                console.log(`❌ Landing animation ${landingAnimKey} does not exist, falling back to idle`);
+                                const idleAnimKey = `${unitName}_idle`;
+                                if (this.anims.exists(idleAnimKey)) {
+                                    unitData.sprite.play(idleAnimKey, true);
+                                }
+                            }
                         } else if (unit.status === 'moving') {
                             unitData.sprite.setTint(0xffffff); // Remove red tint from enemies
                             
-                            // Play walk animation
-                            const walkAnimKey = `${unitName}_walk`;
-                            if (this.anims.exists(walkAnimKey)) {
-                                if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== walkAnimKey) {
-                                    unitData.sprite.play(walkAnimKey, true);
+                            // Special handling for red dragon flying movement
+                            if (unitName === 'red dragon' && unit.isFlying) {
+                                const flightAnimKey = `${unitName}_flight`;
+                                if (this.anims.exists(flightAnimKey)) {
+                                    if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== flightAnimKey) {
+                                        console.log(`🐉 Playing flight animation: ${flightAnimKey} for flying dragon ${unit.id}`);
+                                        unitData.sprite.play(flightAnimKey, true);
+                                    }
+                                } else {
+                                    console.log(`❌ Flight animation ${flightAnimKey} does not exist, using walk`);
+                                    const walkAnimKey = `${unitName}_walk`;
+                                    if (this.anims.exists(walkAnimKey)) {
+                                        unitData.sprite.play(walkAnimKey, true);
+                                    }
                                 }
                             } else {
-                                // Fallback to idle if no walk animation
-                                const idleAnimKey = `${unitName}_idle`;
-                                if (this.anims.exists(idleAnimKey)) {
-                                    if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== idleAnimKey) {
-                                        unitData.sprite.play(idleAnimKey, true);
+                                // Normal walk animation
+                                const walkAnimKey = `${unitName}_walk`;
+                                if (this.anims.exists(walkAnimKey)) {
+                                    if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== walkAnimKey) {
+                                        unitData.sprite.play(walkAnimKey, true);
+                                    }
+                                } else {
+                                    // Fallback to idle if no walk animation
+                                    const idleAnimKey = `${unitName}_idle`;
+                                    if (this.anims.exists(idleAnimKey)) {
+                                        if (!unitData.sprite.anims.isPlaying || unitData.sprite.anims.currentAnim.key !== idleAnimKey) {
+                                            unitData.sprite.play(idleAnimKey, true);
+                                        }
                                     }
                                 }
                             }
@@ -5118,6 +5454,98 @@
                     }
                 }
             });
+        };
+        
+        // Dragon handler functions
+        Phaser.Scene.prototype.handleDragonRise = function(dragonId) {
+            console.log(`🐉 CLIENT: handleDragonRise called for dragon ${dragonId}`);
+            
+            if (!this.combatUnits || !this.combatUnits[dragonId]) {
+                console.log(`❌ Dragon ${dragonId} not found in combatUnits`);
+                return;
+            }
+            
+            const unitData = this.combatUnits[dragonId];
+            console.log(`🐉 Playing rise animation for dragon ${dragonId}`);
+            
+            // Play rise animation
+            const riseAnimKey = `red dragon_rise`;
+            if (this.anims.exists(riseAnimKey)) {
+                unitData.sprite.play(riseAnimKey);
+                console.log(`🎬 Playing rise animation: ${riseAnimKey}`);
+                
+                // Add elevation effect
+                this.tweens.add({
+                    targets: unitData.sprite,
+                    y: unitData.sprite.y - 5,
+                    duration: 2000,
+                    ease: 'Power2.easeOut'
+                });
+            } else {
+                console.log(`❌ Rise animation ${riseAnimKey} does not exist`);
+            }
+        };
+        
+        Phaser.Scene.prototype.handleDragonSpecialAttack = function(dragonId, targetPosition, affectedUnits) {
+            console.log(`🔥 CLIENT: handleDragonSpecialAttack called for dragon ${dragonId}`);
+            
+            if (!this.combatUnits || !this.combatUnits[dragonId]) {
+                console.log(`❌ Dragon ${dragonId} not found in combatUnits`);
+                return;
+            }
+            
+            // Show red circle damage indicator at target position
+            const worldPos = this.getBattlePosition(targetPosition);
+            const damageIndicator = this.add.graphics();
+            damageIndicator.lineStyle(3, 0xff0000, 0.8);
+            damageIndicator.fillStyle(0xff0000, 0.2);
+            damageIndicator.fillCircle(worldPos.x, worldPos.y, 40);
+            damageIndicator.strokeCircle(worldPos.x, worldPos.y, 40);
+            damageIndicator.setDepth(1000);
+            
+            // Animate the indicator
+            this.tweens.add({
+                targets: damageIndicator,
+                scaleX: 1.2,
+                scaleY: 1.2,
+                alpha: 0,
+                duration: 1000,
+                ease: 'Power2.easeOut',
+                onComplete: () => {
+                    damageIndicator.destroy();
+                }
+            });
+            
+            console.log(`🔥 Created damage indicator at position (${worldPos.x}, ${worldPos.y}) affecting ${affectedUnits.length} units`);
+        };
+        
+        Phaser.Scene.prototype.handleDragonLanding = function(dragonId) {
+            console.log(`🛬 CLIENT: handleDragonLanding called for dragon ${dragonId}`);
+            
+            if (!this.combatUnits || !this.combatUnits[dragonId]) {
+                console.log(`❌ Dragon ${dragonId} not found in combatUnits`);
+                return;
+            }
+            
+            const unitData = this.combatUnits[dragonId];
+            console.log(`🛬 Playing landing animation for dragon ${dragonId}`);
+            
+            // Play landing animation
+            const landingAnimKey = `red dragon_landing`;
+            if (this.anims.exists(landingAnimKey)) {
+                unitData.sprite.play(landingAnimKey);
+                console.log(`🎬 Playing landing animation: ${landingAnimKey}`);
+                
+                // Add descent effect
+                this.tweens.add({
+                    targets: unitData.sprite,
+                    y: unitData.sprite.y + 5,
+                    duration: 2000,
+                    ease: 'Power2.easeIn'
+                });
+            } else {
+                console.log(`❌ Landing animation ${landingAnimKey} does not exist`);
+            }
         };
         
         
@@ -5184,81 +5612,110 @@
             tooltip.classList.remove('show');
         }
         
+        // Variables for simple upgrade selection
+        let selectedUpgrade = null;
+        
         function showUpgradeSelection(upgradeCards, currentFloor, playerGold) {
             console.log('Showing upgrade selection:', upgradeCards);
+            console.log('Upgrade cards type:', typeof upgradeCards);
+            console.log('Upgrade cards length:', upgradeCards ? upgradeCards.length : 'undefined');
+            console.log('First upgrade card:', upgradeCards && upgradeCards[0] ? upgradeCards[0] : 'none');
             
-            // Check viewport size and adjust modal if needed for extreme cases only
-            const modal = document.getElementById('upgrade-modal');
-            const modalContent = modal.querySelector('.unit-selection-content');
-            
-            // Reset any previously set inline styles to let CSS handle scaling
-            modalContent.style.height = '';
-            modalContent.style.maxHeight = '';
-            
-            // Only force sizing for extremely small screens where CSS can't handle it
-            if (window.innerHeight < 400) {
-                modalContent.style.height = `${Math.max(window.innerHeight - 100, 150)}px`;
-                modalContent.style.maxHeight = `${Math.max(window.innerHeight - 100, 150)}px`;
-            }
-            
-            // Clear upgrade selections when showing new upgrades
-            upgradeSelections.clear();
+            // Clear any previous state
             selectedUpgrade = null;
-            
-            // Hide the global select button initially
-            const selectBtn = document.getElementById('select-upgrade-btn');
-            selectBtn.classList.add('hidden');
-            selectBtn.disabled = true;
             
             // Update floor display
             document.getElementById('upgrade-floor').textContent = currentFloor;
             
-            // Clear previous selections
-            selectedUpgrades.clear();
+            // Check if upgradeCards is valid
+            if (!upgradeCards || !Array.isArray(upgradeCards) || upgradeCards.length === 0) {
+                console.warn('No upgrade cards available or invalid data:', upgradeCards);
+                
+                // Show a message in the containers
+                const highPotencyContainer = document.getElementById('high-potency-upgrade');
+                const normalContainer = document.getElementById('normal-upgrades');
+                
+                highPotencyContainer.innerHTML = '<div style="color: #ccc; text-align: center; padding: 20px;">No high-potency upgrades available</div>';
+                normalContainer.innerHTML = '<div style="color: #ccc; text-align: center; padding: 20px;">No normal upgrades available</div>';
+                
+                return;
+            }
             
             // Separate high-potency and normal upgrades
             const highPotencyUpgrades = upgradeCards.filter(u => u.isHighPotency);
             const normalUpgrades = upgradeCards.filter(u => !u.isHighPotency);
+            
+            console.log('High potency upgrades:', highPotencyUpgrades.length, highPotencyUpgrades);
+            console.log('Normal upgrades:', normalUpgrades.length, normalUpgrades);
             
             // Display high-potency upgrade
             const highPotencyContainer = document.getElementById('high-potency-upgrade');
             highPotencyContainer.innerHTML = '';
             
             if (highPotencyUpgrades.length > 0) {
+                console.log('Creating high potency upgrade card...');
                 const upgrade = highPotencyUpgrades[0];
-                const upgradeCard = createUpgradeCard(upgrade, true);
-                highPotencyContainer.appendChild(upgradeCard);
+                try {
+                    const upgradeCard = createSimpleUpgradeCard(upgrade, true);
+                    highPotencyContainer.appendChild(upgradeCard);
+                    console.log('High potency upgrade card created successfully');
+                } catch (error) {
+                    console.error('Error creating high potency upgrade card:', error);
+                    highPotencyContainer.innerHTML = '<div style="color: red;">Error creating upgrade card</div>';
+                }
+            } else {
+                highPotencyContainer.innerHTML = '<div style="color: #ccc; text-align: center; padding: 20px;">No high-potency upgrades available</div>';
             }
             
             // Display normal upgrades
             const normalContainer = document.getElementById('normal-upgrades');
             normalContainer.innerHTML = '';
             
-            normalUpgrades.forEach(upgrade => {
-                const upgradeCard = createUpgradeCard(upgrade, false);
-                normalContainer.appendChild(upgradeCard);
-            });
-            
-            // Initialize unit sprites for all upgrade cards
-            setTimeout(() => {
-                initializeUpgradeSprites();
-            }, 100);
+            if (normalUpgrades.length > 0) {
+                console.log('Creating normal upgrade cards...');
+                normalUpgrades.forEach((upgrade, index) => {
+                    try {
+                        const upgradeCard = createSimpleUpgradeCard(upgrade, false);
+                        normalContainer.appendChild(upgradeCard);
+                        console.log(`Normal upgrade card ${index + 1} created successfully`);
+                    } catch (error) {
+                        console.error(`Error creating normal upgrade card ${index + 1}:`, error);
+                        const errorDiv = document.createElement('div');
+                        errorDiv.style.color = 'red';
+                        errorDiv.textContent = 'Error creating upgrade card';
+                        normalContainer.appendChild(errorDiv);
+                    }
+                });
+            } else {
+                normalContainer.innerHTML = '<div style="color: #ccc; text-align: center; padding: 20px;">No normal upgrades available</div>';
+            }
             
             // Update reroll button
             const rerollBtn = document.getElementById('reroll-btn');
             rerollBtn.disabled = playerGold < 10;
             rerollBtn.textContent = `Reroll Upgrades (💰 10)${playerGold < 10 ? ' - Not enough gold' : ''}`;
+            
+            // Hide select button initially
+            const selectBtn = document.getElementById('select-upgrade-btn');
+            selectBtn.classList.add('hidden');
         }
         
-        function createUpgradeCard(upgrade, isHighPotency) {
+        function createSimpleUpgradeCard(upgrade, isHighPotency) {
+            console.log('Creating upgrade card:', upgrade, 'isHighPotency:', isHighPotency);
+            
+            if (!upgrade) {
+                console.error('Upgrade is null or undefined');
+                throw new Error('Upgrade data is missing');
+            }
+            
+            if (!upgrade.id || !upgrade.name || !upgrade.description) {
+                console.error('Upgrade missing required properties:', upgrade);
+                throw new Error('Upgrade missing required properties');
+            }
+            
             const card = document.createElement('div');
             card.className = `upgrade-card ${isHighPotency ? 'high-potency' : ''}`;
             card.setAttribute('data-upgrade-id', upgrade.id);
-            
-            const effectValue = isHighPotency ? (upgrade.value * 3) : upgrade.value;
-            const displayValue = upgrade.effect === 'priority' ? 
-                (effectValue > 0 ? `+${effectValue}` : effectValue.toString()) :
-                `${Math.round(effectValue * 100)}%`;
             
             let description = upgrade.description;
             if (isHighPotency) {
@@ -5274,31 +5731,6 @@
             const iconName = upgrade.name.toLowerCase().replace(/\s+/g, '_');
             const iconPath = `assets/upgradeicons/${iconName}.png`;
             
-            card.innerHTML = `
-                <div class="upgrade-icon">
-                    <img src="${iconPath}" alt="${upgrade.name}" onerror="this.style.display='none'">
-                </div>
-                <div class="upgrade-name">${upgrade.name}</div>
-                <div class="upgrade-description">${description}</div>
-                ${isHighPotency ? 
-                    `<div class="upgrade-target">Applied to: ${upgrade.targetUnitType}</div>` :
-                    '<div class="upgrade-target">Select units to upgrade:</div>'
-                }
-                ${createUnitTypeSelector(upgrade.id, isHighPotency, upgrade.targetUnitType)}
-                <div class="upgrade-actions">
-                    <!-- Individual card buttons removed - using global fixed position button -->
-                </div>
-            `;
-            
-            // Add click handler to select this upgrade card
-            card.addEventListener('click', () => {
-                selectUpgradeCard(upgrade, isHighPotency);
-            });
-            
-            return card;
-        }
-        
-        function createUnitTypeSelector(upgradeId, isHighPotency, targetUnitType = null) {
             // Get owned unit types from current game state
             const ownedUnitTypes = new Set();
             if (gameState && gameState.players) {
@@ -5312,151 +5744,84 @@
                 }
             }
             
-            // Fallback to common unit types if no game state
+            // Fallback unit types if none found
             if (ownedUnitTypes.size === 0) {
+                console.warn('No owned unit types found, using fallback');
                 ['Knight', 'Priest', 'Fighter', 'Wizard', 'Goblin'].forEach(type => ownedUnitTypes.add(type));
             }
             
-            const unitTypes = Array.from(ownedUnitTypes);
-            
-            if (isHighPotency && targetUnitType) {
-                // For high potency upgrades, show the target unit sprite
-                const unitKey = targetUnitType.toLowerCase();
-                return `
-                    <div class="unit-type-selector high-potency-target">
-                        <div class="unit-selection-sprite selected" 
-                             data-unit-type="${targetUnitType}"
-                             onmouseenter="showUpgradeUnitTooltip(this, '${targetUnitType}')"
-                             onmouseleave="hideUpgradeUnitTooltip()">
-                            <div class="unit-sprite-container" id="sprite-${upgradeId}-${unitKey}">
-                                <!-- Target unit sprite will be added here -->
-                            </div>
-                            <div class="unit-selection-name">${targetUnitType}</div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                // For normal upgrades, show all available unit types as animated sprites
-                const unitSprites = unitTypes.map(unitType => {
-                    const unitKey = unitType.toLowerCase();
-                    return `
-                        <div class="unit-selection-sprite" 
-                             data-unit-type="${unitType}" 
-                             data-upgrade-id="${upgradeId}"
-                             onclick="selectUnitForUpgrade('${upgradeId}', '${unitType}')"
-                             onmouseenter="showUpgradeUnitTooltip(this, '${unitType}')"
-                             onmouseleave="hideUpgradeUnitTooltip()">
-                            <div class="unit-sprite-container" id="sprite-${upgradeId}-${unitKey}">
-                                <!-- Sprite will be added here by JavaScript -->
-                            </div>
-                            <div class="unit-selection-name">${unitType}</div>
-                        </div>
-                    `;
-                }).join('');
-                
-                return `<div class="unit-type-selector unit-sprite-selector">${unitSprites}</div>`;
-            }
-        }
-        
-        // Track selected units for each upgrade
-        let upgradeSelections = new Map(); // upgradeId -> selectedUnitType
-        
-        // Track currently selected upgrade for global button
-        let selectedUpgrade = null;
-        
-        function selectUpgradeCard(upgrade, isHighPotency) {
-            // Clear previous selection
-            document.querySelectorAll('.upgrade-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            // Mark this card as selected
-            const card = document.querySelector(`[data-upgrade-id="${upgrade.id}"]`);
-            if (card) {
-                card.classList.add('selected');
-            }
-            
-            // Store the selected upgrade
-            selectedUpgrade = { upgrade, isHighPotency };
-            
-            // Show the global select button only during preparation phase
-            const selectBtn = document.getElementById('select-upgrade-btn');
-            if (gameState && gameState.phase === 'preparation') {
-                selectBtn.classList.remove('hidden');
-                
-                // For normal upgrades, check if a unit type is selected
-                if (!isHighPotency) {
-                    const hasUnitSelection = upgradeSelections.has(upgrade.id);
-                    selectBtn.disabled = !hasUnitSelection;
-                } else {
-                    selectBtn.disabled = false;
-                }
-            } else {
-                selectBtn.classList.add('hidden');
-            }
-        }
-        
-        function confirmSelectedUpgrade() {
-            console.log('confirmSelectedUpgrade called, selectedUpgrade:', selectedUpgrade);
-            if (!selectedUpgrade) {
-                console.error('No upgrade selected');
-                return;
-            }
-            
-            const { upgrade, isHighPotency } = selectedUpgrade;
-            console.log('Processing upgrade:', upgrade.id, 'isHighPotency:', isHighPotency);
+            console.log('Owned unit types:', Array.from(ownedUnitTypes));
             
             if (isHighPotency) {
-                confirmUpgrade(upgrade.id, upgrade.targetUnitType);
+                console.log('Creating high potency card for:', upgrade.name, 'targeting:', upgrade.targetUnitType);
+                // High potency upgrades - auto-select when clicked
+                card.innerHTML = `
+                    <div class="upgrade-icon">
+                        <img src="${iconPath}" alt="${upgrade.name}" onerror="this.style.display='none'">
+                    </div>
+                    <div class="upgrade-name">${upgrade.name} (×3 POWER)</div>
+                    <div class="upgrade-description">${description}</div>
+                    <div class="upgrade-target">Applied to: ${upgrade.targetUnitType || 'Unknown'}</div>
+                    <button class="simple-select-btn" onclick="selectHighPotencyUpgrade('${upgrade.id}', '${upgrade.targetUnitType || ''}')">
+                        ✅ Select This Upgrade
+                    </button>
+                `;
             } else {
-                confirmUpgradeWithSelection(upgrade.id);
+                console.log('Creating normal card for:', upgrade.name, 'with unit types:', Array.from(ownedUnitTypes));
+                // Normal upgrades - show unit selection
+                const unitButtons = Array.from(ownedUnitTypes).map(unitType => 
+                    `<button class="unit-select-btn" onclick="selectNormalUpgrade('${upgrade.id}', '${unitType}')">
+                        ${unitType}
+                    </button>`
+                ).join('');
+                
+                card.innerHTML = `
+                    <div class="upgrade-icon">
+                        <img src="${iconPath}" alt="${upgrade.name}" onerror="this.style.display='none'">
+                    </div>
+                    <div class="upgrade-name">${upgrade.name}</div>
+                    <div class="upgrade-description">${description}</div>
+                    <div class="upgrade-target">Select unit type to upgrade:</div>
+                    <div class="unit-select-buttons">${unitButtons}</div>
+                `;
+            }
+            
+            console.log('Upgrade card created successfully');
+            return card;
+        }
+        
+        // Simple selection functions - direct upgrade selection
+        function selectHighPotencyUpgrade(upgradeId, targetUnitType) {
+            console.log('Selecting high potency upgrade:', upgradeId, 'for', targetUnitType);
+            
+            // Apply upgrade immediately
+            if (socket && socket.connected) {
+                socket.emit('selectUpgrade', upgradeId, targetUnitType);
+                console.log('Emitted selectUpgrade for high potency:', upgradeId, targetUnitType);
+                
+                // Close modal after a short delay to let the server process
+                setTimeout(() => {
+                    closeUpgradeModal();
+                }, 500);
+            } else {
+                console.error('Socket not connected');
             }
         }
         
-        function selectUnitForUpgrade(upgradeId, unitType) {
-            // Clear selections on all other upgrade cards
-            upgradeSelections.forEach((selectedUnit, otherUpgradeId) => {
-                if (otherUpgradeId !== upgradeId) {
-                    // Clear visual selection
-                    document.querySelectorAll(`[data-upgrade-id="${otherUpgradeId}"] .unit-selection-sprite`).forEach(sprite => {
-                        sprite.classList.remove('selected');
-                    });
-                    // Disable confirm button
-                    const otherConfirmBtn = document.querySelector(`[data-upgrade-id="${otherUpgradeId}"] .confirm-upgrade-btn`);
-                    if (otherConfirmBtn) {
-                        otherConfirmBtn.disabled = true;
-                    }
-                }
-            });
+        function selectNormalUpgrade(upgradeId, unitType) {
+            console.log('Selecting normal upgrade:', upgradeId, 'for', unitType);
             
-            // Clear all selections except this one
-            upgradeSelections.clear();
-            upgradeSelections.set(upgradeId, unitType);
-            
-            // Update visual selection for this upgrade
-            document.querySelectorAll(`[data-upgrade-id="${upgradeId}"] .unit-selection-sprite`).forEach(sprite => {
-                sprite.classList.remove('selected');
-            });
-            
-            const selectedSprite = document.querySelector(`[data-upgrade-id="${upgradeId}"][data-unit-type="${unitType}"]`);
-            if (selectedSprite) {
-                selectedSprite.classList.add('selected');
-            }
-            
-            // Update the global select button if this upgrade is currently selected
-            if (selectedUpgrade && selectedUpgrade.upgrade.id === upgradeId) {
-                const selectBtn = document.getElementById('select-upgrade-btn');
-                selectBtn.disabled = false;
-            }
-        }
-        
-        function updateUpgradeSelection(upgradeId) {
-            // Legacy function - still needed for radio button compatibility
-            const selectedRadio = document.querySelector(`input[name="unit-${upgradeId}"]:checked`);
-            const confirmBtn = document.querySelector(`[data-upgrade-id="${upgradeId}"] .confirm-upgrade-btn`);
-            
-            if (confirmBtn) {
-                confirmBtn.disabled = !selectedRadio;
+            // Apply upgrade immediately
+            if (socket && socket.connected) {
+                socket.emit('selectUpgrade', upgradeId, unitType);
+                console.log('Emitted selectUpgrade for normal upgrade:', upgradeId, unitType);
+                
+                // Close modal after a short delay to let the server process
+                setTimeout(() => {
+                    closeUpgradeModal();
+                }, 500);
+            } else {
+                console.error('Socket not connected');
             }
         }
         
@@ -5464,13 +5829,17 @@
             console.log(`Confirming high potency upgrade ${upgradeId} for ${targetUnitType}`);
             
             if (socket && socket.connected) {
-                console.log('Sending selectUpgrade to server:', { upgradeId, targetUnitType });
+                console.log('Socket is connected, sending selectUpgrade to server:', { upgradeId, targetUnitType });
                 socket.emit('selectUpgrade', upgradeId, targetUnitType);
+                console.log('selectUpgrade event emitted successfully');
                 // Close the modal after confirming
                 console.log('Closing upgrade modal after high potency upgrade');
                 closeUpgradeModal();
             } else {
-                console.error('Socket not connected, cannot send upgrade selection');
+                console.error('Socket not connected, cannot send upgrade selection. Socket state:', {
+                    socket: !!socket,
+                    connected: socket ? socket.connected : 'N/A'
+                });
                 // Still close modal to prevent stuck interface
                 closeUpgradeModal();
             }
@@ -5491,13 +5860,17 @@
             
             // Apply upgrade to the selected unit type
             if (socket && socket.connected) {
-                console.log('Sending selectUpgrade to server:', { upgradeId, selectedType });
+                console.log('Socket is connected, sending selectUpgrade to server:', { upgradeId, selectedType });
                 socket.emit('selectUpgrade', upgradeId, selectedType);
+                console.log('selectUpgrade event emitted successfully');
                 // Close the modal after confirming
                 console.log('Closing upgrade modal after normal upgrade');
                 closeUpgradeModal();
             } else {
-                console.error('Socket not connected, cannot send upgrade selection');
+                console.error('Socket not connected, cannot send upgrade selection. Socket state:', {
+                    socket: !!socket,
+                    connected: socket ? socket.connected : 'N/A'
+                });
                 // Still close modal to prevent stuck interface
                 closeUpgradeModal();
             }
@@ -5690,7 +6063,10 @@
         function rerollUpgrades() {
             console.log('Rerolling upgrades');
             if (socket && socket.connected) {
+                console.log('Emitting rerollUpgrades to server');
                 socket.emit('rerollUpgrades');
+            } else {
+                console.error('Socket not connected for reroll');
             }
         }
         
@@ -5752,13 +6128,41 @@
                 if (game) {
                     game.scale.resize(window.innerWidth, window.innerHeight);
                     
-                    // Redraw grid after resize
-                    if (window.gameScene && window.gameScene.drawGrid) {
-                        window.gameScene.drawGrid();
+                    // Update background on resize
+                    if (window.gameScene) {
+                        // Recreate backgrounds on resize for proper scaling
+                        if (gameState) {
+                            // For preparation phase background
+                            if (window.gameScene.preparationBackground && gameState.phase === 'preparation') {
+                                // Trigger background recreation
+                                const floor = gameState.currentFloor || 1;
+                                window.gameScene.showPreparationBackground(floor);
+                            }
+                            
+                            // For battle background
+                            if (window.gameScene.battleBackground && gameState.phase === 'combat') {
+                                // Trigger background recreation
+                                const floor = gameState.currentFloor || 1;
+                                window.gameScene.setBattleBackground(floor);
+                            }
+                        }
                         
-                        // Update unit positions if in preparation phase
-                        if (gameState && (gameState.phase === 'preparation' || gameState.phase === 'post-combat')) {
-                            window.gameScene.updateGameState(gameState);
+                        // Update preparation overlay if it exists
+                        if (window.gameScene.preparationOverlay) {
+                            window.gameScene.preparationOverlay.setSize(
+                                window.innerWidth,
+                                window.innerHeight
+                            );
+                        }
+                        
+                        // Redraw grid after resize
+                        if (window.gameScene.drawGrid) {
+                            window.gameScene.drawGrid();
+                            
+                            // Update unit positions if in preparation phase
+                            if (gameState && (gameState.phase === 'preparation' || gameState.phase === 'post-combat')) {
+                                window.gameScene.updateGameState(gameState);
+                            }
                         }
                     }
                 }
@@ -5813,6 +6217,8 @@
         if (window.electron && window.electron.ipcRenderer) {
             window.electron.ipcRenderer.on('window-resize', handleResize);
         }
+        
+        // Test functions removed
         
     </script>
 </body>

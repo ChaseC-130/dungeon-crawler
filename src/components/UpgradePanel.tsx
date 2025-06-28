@@ -37,71 +37,61 @@ interface UpgradePanelProps {
 const UpgradePanel: React.FC<UpgradePanelProps> = ({ onClose }) => {
   const { gameState, player, selectUpgrade, rerollShop } = useGame();
   
-  // Use refs to persist state across re-renders
-  const selectedCardRef = React.useRef<string | null>(null);
-  const selectedUnitTypeRef = React.useRef<string | null>(null);
-  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+  // State for the current view mode
+  const [viewMode, setViewMode] = useState<'cards' | 'unitSelection'>('cards');
+  const [selectedCard, setSelectedCard] = useState<UpgradeCard | null>(null);
   const [hoveredUnitType, setHoveredUnitType] = useState<string | null>(null);
-  
-  console.log(`UpgradePanel render - selectedCard: ${selectedCardRef.current}, upgradeCards count: ${player?.upgradeCards?.length || 0}`);
-  
-  // Log component lifecycle
-  React.useEffect(() => {
-    console.log('UpgradePanel mounted');
-    return () => {
-      console.log('UpgradePanel unmounted - clearing selection state');
-      selectedCardRef.current = null;
-      selectedUnitTypeRef.current = null;
-    };
-  }, []);
-  
-  // Helper functions to update ref state and trigger re-render
-  const setSelectedCard = (value: string | null) => {
-    selectedCardRef.current = value;
-    forceUpdate();
-  };
-  
-  const setSelectedUnitType = (value: string | null) => {
-    selectedUnitTypeRef.current = value;
-    forceUpdate();
-  };
   
   // Get player's upgrade cards - limit to 1 high-potency and up to 3 normal upgrades
   const allUpgradeCards = player?.upgradeCards || [];
+  
+  // Reset state when upgrade cards change (indicating an upgrade was applied)
+  const prevUpgradeCardIds = React.useRef<string>('');
+  React.useEffect(() => {
+    const currentCardIds = allUpgradeCards.map(c => c.id).sort().join(',');
+    if (prevUpgradeCardIds.current && prevUpgradeCardIds.current !== currentCardIds) {
+      console.log('UpgradePanel: Upgrade cards changed, resetting state');
+      setViewMode('cards');
+      setSelectedCard(null);
+      setHoveredUnitType(null);
+    }
+    prevUpgradeCardIds.current = currentCardIds;
+  }, [allUpgradeCards]);
+  
+  // Clear selection if the selected card is no longer available
+  React.useEffect(() => {
+    if (selectedCard && !allUpgradeCards.find(c => c.id === selectedCard.id)) {
+      console.log('UpgradePanel: Selected card no longer available, clearing selection');
+      setSelectedCard(null);
+      setViewMode('cards');
+    }
+  }, [selectedCard, allUpgradeCards]);
+  console.log('UpgradePanel: All upgrade cards:', allUpgradeCards.length, allUpgradeCards.map(c => ({ id: c.id, name: c.name, isHighPotency: c.isHighPotency })));
+  
   const highPotencyCards = allUpgradeCards.filter(card => card.isHighPotency).slice(0, 1);
   const normalCards = allUpgradeCards.filter(card => !card.isHighPotency).slice(0, 3);
   const upgradeCards = [...highPotencyCards, ...normalCards];
   
-  // Create a stable identifier for the upgrade cards to prevent unnecessary clears
-  const upgradeCardIds = upgradeCards.map(card => card.id).sort().join(',');
-  
-  // Clear selection only when the selected card is no longer available
-  React.useEffect(() => {
-    if (selectedCardRef.current && !upgradeCards.find(c => c.id === selectedCardRef.current)) {
-      console.log(`Clearing selection - card ${selectedCardRef.current} no longer available`);
-      setSelectedCard(null);
-      setSelectedUnitType(null);
-    }
-  }, [upgradeCardIds]); // Use card IDs instead of the array reference
+  console.log('UpgradePanel: Displayed upgrade cards:', upgradeCards.length, upgradeCards.map(c => ({ id: c.id, name: c.name })));
   
   // Calculate responsive card dimensions based on screen size
-  const numberOfCards = upgradeCards.length || 3;
-  const cardMargin = isSmallScreen ? 4 : 8;
-  const containerPadding = isSmallScreen ? 10 : 20;
+  const numberOfCards = upgradeCards.length || 4;
+  const cardMargin = isSmallScreen ? 6 : 10;
+  const containerPadding = isSmallScreen ? 15 : 25;
   const availableWidth = width - containerPadding * 2;
   
   // Adjust card sizes based on screen size
-  const maxCardWidth = isSmallScreen ? 150 : isMediumScreen ? 180 : 200;
-  const minCardWidth = isSmallScreen ? 100 : isMediumScreen ? 120 : 140;
+  const maxCardWidth = isSmallScreen ? 180 : isMediumScreen ? 220 : 260;
+  const minCardWidth = isSmallScreen ? 140 : isMediumScreen ? 160 : 180;
   
   const calculatedWidth = (availableWidth - (cardMargin * (numberOfCards - 1))) / numberOfCards;
   const cardWidth = Math.min(maxCardWidth, Math.max(minCardWidth, calculatedWidth));
   
   // Calculate responsive font sizes
-  const titleFontSize = isSmallScreen ? 18 : 24;
-  const cardNameFontSize = isSmallScreen ? 13 : 15;
-  const cardDescFontSize = isSmallScreen ? 11 : 13;
-  const iconSize = isSmallScreen ? 45 : 60;
+  const titleFontSize = isSmallScreen ? 20 : 26;
+  const cardNameFontSize = isSmallScreen ? 14 : 16;
+  const cardDescFontSize = isSmallScreen ? 12 : 14;
+  const iconSize = isSmallScreen ? 50 : 65;
 
   if (!gameState || !player) {
     return null;
@@ -121,54 +111,55 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ onClose }) => {
       cardName: card.name,
       isHighPotency: card.isHighPotency,
       targetUnitType: card.targetUnitType,
-      upgradeCardsCount: player?.upgradeCards?.length 
     });
     
     if (card.isHighPotency) {
       // High potency upgrades are auto-assigned
       console.log('UpgradePanel: Selecting high-potency upgrade directly');
-      selectUpgrade(card.id);
-      // Force close the panel after selecting high-potency upgrade
-      // Add a small delay to ensure the upgrade is processed
-      setTimeout(() => {
-        if (onClose) {
-          console.log('UpgradePanel: Calling onClose for high-potency upgrade');
-          onClose();
-        }
-      }, 100);
+      console.log('UpgradePanel: About to call selectUpgrade with:', card.id);
+      try {
+        selectUpgrade(card.id);
+        console.log('UpgradePanel: selectUpgrade called successfully');
+      } catch (error) {
+        console.error('UpgradePanel: Error calling selectUpgrade:', error);
+      }
+      // Don't close or change view - let the user continue selecting if they have more cards
     } else {
       // Normal upgrades need unit type selection
-      console.log('UpgradePanel: Setting card for unit type selection');
-      setSelectedCard(card.id);
+      console.log('UpgradePanel: Switching to unit type selection');
+      setSelectedCard(card);
+      setViewMode('unitSelection');
     }
   };
 
   const handleUnitTypeSelect = (unitType: string) => {
     console.log('UpgradePanel: handleUnitTypeSelect called', { 
-      selectedCard: selectedCardRef.current, 
+      selectedCard: selectedCard?.id, 
       unitType,
-      upgradeCardsCount: player?.upgradeCards?.length 
     });
     
-    if (selectedCardRef.current) {
-      console.log('UpgradePanel: Calling selectUpgrade', { upgradeId: selectedCardRef.current, unitType });
-      selectUpgrade(selectedCardRef.current, unitType);
-      // Clear selection immediately to prevent re-renders
+    if (selectedCard) {
+      console.log('UpgradePanel: About to call selectUpgrade with:', { upgradeId: selectedCard.id, unitType });
+      try {
+        selectUpgrade(selectedCard.id, unitType);
+        console.log('UpgradePanel: selectUpgrade called successfully for normal upgrade');
+      } catch (error) {
+        console.error('UpgradePanel: Error calling selectUpgrade:', error);
+      }
+      // Reset to card view for next selection
       setSelectedCard(null);
-      setSelectedUnitType(null);
-      // Force close the panel after selecting unit type
-      // Add a small delay to ensure the upgrade is processed
-      setTimeout(() => {
-        if (onClose) {
-          console.log('UpgradePanel: Calling onClose to close panel');
-          onClose();
-        }
-      }, 100);
+      setViewMode('cards');
     }
   };
 
+  const handleCancel = () => {
+    console.log('UpgradePanel: Cancelling unit type selection');
+    setSelectedCard(null);
+    setViewMode('cards');
+  };
+
   const renderUpgradeCard = (card: UpgradeCard) => {
-    const isSelected = selectedCardRef.current === card.id;
+    const isSelected = selectedCard?.id === card.id;
     
     return (
       <TouchableOpacity
@@ -208,90 +199,85 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ onClose }) => {
     );
   };
 
-  if (selectedCardRef.current && !upgradeCards.find(c => c.id === selectedCardRef.current)?.isHighPotency) {
+  // Unit selection view
+  if (viewMode === 'unitSelection' && selectedCard) {
     return (
-      <ScrollView 
-        style={styles.scrollContainer} 
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}>
-        <Text style={styles.title}>SELECT UNIT TYPE</Text>
-        <Text style={styles.subtitle}>Choose which unit type to upgrade</Text>
-        
-        <View style={styles.unitTypeContainer}>
-          {ownedUnitTypes.map(unitType => {
-            const unitTypeWidth = Math.max(110, Math.min(180, (availableWidth - (8 * (ownedUnitTypes.length - 1))) / ownedUnitTypes.length));
-            const sampleUnit = player.units.find(u => u.name === unitType);
-            return (
-              <TouchableOpacity
-                key={unitType}
-                style={[styles.unitTypeButton, { width: unitTypeWidth }, hoveredUnitType === unitType && styles.unitTypeButtonHover]}
-                onPress={() => handleUnitTypeSelect(unitType)}
-                onPressIn={() => setHoveredUnitType(unitType)}
-                onPressOut={() => setHoveredUnitType(null)}
-              >
-                <Text style={styles.unitTypeText}>{unitType}</Text>
-                <Text style={styles.unitCount}>
-                  {player.units.filter(u => u.name === unitType).length} owned
-                </Text>
-                {sampleUnit && hoveredUnitType === unitType && (
-                  <View style={styles.unitTooltip}>
-                    <Text style={styles.tooltipText}>HP: {sampleUnit.health}/{sampleUnit.maxHealth}</Text>
-                    <Text style={styles.tooltipText}>Damage: {sampleUnit.damage}</Text>
-                    <Text style={styles.tooltipText}>Attack Speed: {sampleUnit.attackSpeed.toFixed(1)}</Text>
-                    <Text style={styles.tooltipText}>Range: {sampleUnit.range}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+      <View style={styles.scrollContainer}>
+        <View style={styles.container}>
+          <Text style={styles.title}>SELECT UNIT TYPE</Text>
+          <Text style={styles.subtitle}>Choose which unit type to upgrade with {selectedCard.name}</Text>
+          
+          <View style={styles.unitTypeContainer}>
+            {ownedUnitTypes.map(unitType => {
+              const unitTypeWidth = Math.max(120, Math.min(200, (availableWidth - (12 * (ownedUnitTypes.length - 1))) / ownedUnitTypes.length));
+              const sampleUnit = player.units.find(u => u.name === unitType);
+              return (
+                <TouchableOpacity
+                  key={unitType}
+                  style={[styles.unitTypeButton, { width: unitTypeWidth }, hoveredUnitType === unitType && styles.unitTypeButtonHover]}
+                  onPress={() => handleUnitTypeSelect(unitType)}
+                  onPressIn={() => setHoveredUnitType(unitType)}
+                  onPressOut={() => setHoveredUnitType(null)}
+                >
+                  <Text style={styles.unitTypeText}>{unitType}</Text>
+                  <Text style={styles.unitCount}>
+                    {player.units.filter(u => u.name === unitType).length} owned
+                  </Text>
+                  {sampleUnit && hoveredUnitType === unitType && (
+                    <View style={styles.unitTooltip}>
+                      <Text style={styles.tooltipText}>HP: {sampleUnit.health}/{sampleUnit.maxHealth}</Text>
+                      <Text style={styles.tooltipText}>Damage: {sampleUnit.damage}</Text>
+                      <Text style={styles.tooltipText}>Attack Speed: {sampleUnit.attackSpeed.toFixed(1)}</Text>
+                      <Text style={styles.tooltipText}>Range: {sampleUnit.range}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleCancel}
+          >
+            <Text style={styles.cancelText}>CANCEL</Text>
+          </TouchableOpacity>
         </View>
-        
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => {
-            setSelectedCard(null);
-            setSelectedUnitType(null);
-          }}
-        >
-          <Text style={styles.cancelText}>CANCEL</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      </View>
     );
   }
 
+  // Main card selection view
   return (
-    <ScrollView 
-      style={styles.scrollContainer} 
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-      showsHorizontalScrollIndicator={false}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { fontSize: titleFontSize }]}>Choose Your Upgrades</Text>
-        <TouchableOpacity
-          style={[styles.rerollButton, !canAffordReroll && styles.rerollButtonDisabled]}
-          onPress={rerollShop}
-          disabled={!canAffordReroll}
-        >
-          <Text style={styles.rerollIcon}>🎲</Text>
-          <Text style={styles.rerollText}>Reroll Upgrades (10)</Text>
-        </TouchableOpacity>
+    <View style={styles.scrollContainer}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { fontSize: titleFontSize }]}>Choose Your Upgrades</Text>
+          <TouchableOpacity
+            style={[styles.rerollButton, !canAffordReroll && styles.rerollButtonDisabled]}
+            onPress={rerollShop}
+            disabled={!canAffordReroll}
+          >
+            <Text style={styles.rerollIcon}>🎲</Text>
+            <Text style={styles.rerollText}>Reroll Upgrades (10)</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.upgradeContainer}>
+          {upgradeCards.map(renderUpgradeCard)}
+        </View>
       </View>
-      
-      <View style={styles.upgradeContainer}>
-        {upgradeCards.map(renderUpgradeCard)}
-      </View>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    maxHeight: Math.min(height * 0.45, 350),
+    maxHeight: Math.min(height * 0.8, 600),
   },
   container: {
-    padding: 10,
-    paddingBottom: 20,
+    padding: 15,
+    paddingBottom: 25,
   },
   header: {
     flexDirection: 'row',
@@ -339,16 +325,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    paddingHorizontal: 5,
   },
   upgradeCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 10,
-    padding: 10,
-    marginRight: 8,
-    marginBottom: 8,
+    borderRadius: 12,
+    padding: 15,
+    marginRight: 10,
+    marginBottom: 10,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
+    minHeight: 180,
   },
   unitTypeContainer: {
     flexDirection: 'row',

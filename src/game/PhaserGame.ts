@@ -38,7 +38,11 @@ export default class PhaserGame {
         mode: Phaser.Scale.RESIZE,
         width: width,
         height: height,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+        min: {
+          width: 400,  // Minimum width for basic functionality  
+          height: 600  // Minimum height: 8*8px grid + HUD space (64px + ~200px HUD + margins)
+        },
+        autoCenter: Phaser.Scale.NO_CENTER, // Remove centering to ensure canvas fills container
       },
       input: {
         mouse: {
@@ -79,7 +83,8 @@ export default class PhaserGame {
       if (this.mainScene) {
         (window as any).testWizardProjectile = () => this.mainScene!.testWizardProjectile();
         (window as any).addTestWizard = () => this.mainScene!.addTestWizard();
-        console.log('🧙 Global functions available: testWizardProjectile(), addTestWizard()');
+        (window as any).testResponsive = () => this.mainScene!.testResponsiveBehavior();
+        console.log('🧙 Global functions available: testWizardProjectile(), addTestWizard(), testResponsive()');
       }
     });
   }

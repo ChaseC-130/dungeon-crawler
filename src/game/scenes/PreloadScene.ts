@@ -72,11 +72,13 @@ export default class PreloadScene extends Phaser.Scene {
     ];
 
     units.forEach(unit => {
-      const unitPath = unit.includes(' ') ? unit : unit;
+      // Special handling for red dragon - files are named without space
+      const unitPath = unit === 'red dragon' ? 'red dragon' : unit;
+      const fileName = unit === 'red dragon' ? 'reddragon' : unitPath;
       
       // Custom loader for TexturePacker format
-      this.load.json(`${unit}_json`, `/assets/units/${unitPath}/${unitPath}.json`);
-      this.load.image(`${unit}_image`, `/assets/units/${unitPath}/${unitPath}.png`);
+      this.load.json(`${unit}_json`, `/assets/units/${unitPath}/${fileName}.json`);
+      this.load.image(`${unit}_image`, `/assets/units/${unitPath}/${fileName}.png`);
     });
 
     // Load audio

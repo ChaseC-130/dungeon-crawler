@@ -33,6 +33,7 @@ function getUnitColor(unitName: string): string {
     druidess: '#4CAF50',
     vampire: '#9C27B0',
     werewolf: '#795548',
+    'red dragon': '#FF0000',
   };
   return colors[unitName.toLowerCase()] || '#666666';
 }
@@ -54,13 +55,22 @@ const UnitSpriteSimple: React.FC<UnitSpriteSimpleProps> = React.memo(({ unitName
     const loadSprite = async () => {
       try {
         // Load both the image and JSON data
+        const unitPath = unitName.toLowerCase();
+        const fileName = unitPath === 'red dragon' ? 'reddragon' : unitPath;
+        const imgUrl = `/assets/units/${unitPath}/${fileName}.png`;
+        const jsonUrl = `/assets/units/${unitPath}/${fileName}.json`;
+        
+        console.log(`Loading sprite for ${unitName}: img=${imgUrl}, json=${jsonUrl}`);
+        
         const [imgResponse, jsonResponse] = await Promise.all([
-          fetch(`/assets/units/${unitName.toLowerCase()}/${unitName.toLowerCase()}.png`),
-          fetch(`/assets/units/${unitName.toLowerCase()}/${unitName.toLowerCase()}.json`)
+          fetch(imgUrl),
+          fetch(jsonUrl)
         ]);
 
         if (!imgResponse.ok || !jsonResponse.ok) {
-          console.error('Failed to load sprite assets for:', unitName);
+          console.error(`Failed to load sprite assets for: ${unitName}`);
+          console.error(`Image response: ${imgResponse.status} ${imgResponse.statusText}`);
+          console.error(`JSON response: ${jsonResponse.status} ${jsonResponse.statusText}`);
           setError(true);
           setIsLoading(false);
           return;

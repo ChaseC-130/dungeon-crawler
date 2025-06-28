@@ -82,12 +82,14 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
       }
     }
     
-    this.sprite.setScale(0.8);
-    
-    // Tint enemy units
-    if (!this.isPlayerUnit) {
-      this.sprite.setTint(0xff6666);
+    // Special scale for Red Dragon - 50% smaller than normal
+    if (unit.name.toLowerCase() === 'red dragon' || unit.name.toLowerCase().includes('dragon')) {
+      this.sprite.setScale(0.4);
+    } else {
+      this.sprite.setScale(0.8);
     }
+    
+    // Remove tinting - units should use their original colors
     
     // Create health bar background
     this.healthBarBg = scene.add.rectangle(0, -40, 50, 6, 0x000000);
@@ -100,7 +102,7 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     // Create name text
     this.nameText = scene.add.text(0, 25, unit.name, {
       fontSize: '12px',
-      color: this.isPlayerUnit ? '#ffffff' : '#ff6666',
+      color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 2
     });
@@ -131,16 +133,38 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     scene.add.existing(this);
 
     this.sprite.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (animation: Phaser.Animations.Animation) => {
-      // Check if sprite and unit still exist and animation is death animation
-      if (this.active && !this.getData('destroying') && this.unit && animation.key === `${this.unit.name.toLowerCase()}_death`) {
-        // Hide health bar and name for dead units
-        this.healthBarBg.setVisible(false);
-        this.healthBar.setVisible(false);
-        this.nameText.setVisible(false);
+      // Check if sprite and unit still exist
+      if (this.active && !this.getData('destroying') && this.unit) {
+        const unitNameLower = this.unit.name.toLowerCase();
         
-        // Emit event immediately when death animation completes
-        if (this.active && !this.getData('destroying')) {
-          this.emit('death_animation_complete', this.unitId);
+        // Handle death animation completion
+        if (animation.key === `${unitNameLower}_death`) {
+          // Hide health bar and name for dead units
+          this.healthBarBg.setVisible(false);
+          this.healthBar.setVisible(false);
+          this.nameText.setVisible(false);
+          
+          // Emit event immediately when death animation completes
+          if (this.active && !this.getData('destroying')) {
+            this.emit('death_animation_complete', this.unitId);
+          }
+        }
+        // Handle attack animation completion - return to idle if still attacking
+        else if (animation.key === `${unitNameLower}_attack` && this.unit.status === 'attacking') {
+          this.playAnimation('idle');
+        }
+        // Handle special attack animation completion for red dragon
+        else if ((animation.key === `${unitNameLower}_special` || animation.key === `${unitNameLower}_Special`) && this.unit.status === 'attacking') {
+          this.playAnimation('idle');
+        }
+        // Handle rise animation completion
+        else if ((animation.key === `${unitNameLower}_rise` || animation.key === `${unitNameLower}_Rise`)) {
+          console.log(`🐉 Rise animation completed for dragon ${this.unit.id}`);
+          // Don't automatically play idle - let server control the status
+        }
+        // Handle landing animation completion
+        else if (animation.key === `${unitNameLower}_landing` && this.unit.status === 'landing') {
+          this.playAnimation('idle');
         }
       }
     }, this);
@@ -150,6 +174,11 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     // Safety check - don't update if sprite is being destroyed
     if (!this.active || this.getData('destroying')) {
       return;
+    }
+    
+    // Debug for red dragons
+    if (unit.name.toLowerCase().includes('dragon')) {
+      console.log(`🐉 CLIENT: Dragon ${unit.id} update - Status: ${unit.status}, Health: ${unit.health}, SpecialState:`, (unit as any).specialAttackState, 'Flying:', (unit as any).isFlying);
     }
     
     this.unit = unit;
@@ -177,12 +206,39 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
         this.playAnimation('idle');
         break;
       case 'moving':
-        this.playAnimation('walk');
+        // Special handling for red dragon movement - use flight when untargetable, walk when targetable
+        if (this.unit.name.toLowerCase().includes('dragon')) {
+          const isFlying = (this.unit as any).untargetable;
+          console.log(`🐉 Dragon ${this.unit.id} moving - untargetable: ${isFlying}`);
+          if (isFlying) {
+            console.log(`🐉 Dragon ${this.unit.id} using flight animation for movement`);
+            this.playAnimation('flight');
+          } else {
+            console.log(`🐉 Dragon ${this.unit.id} using walk animation for movement (landed)`);
+            this.playAnimation('walk');
+          }
+        } else {
+          this.playAnimation('walk');
+        }
         break;
       case 'attacking':
         console.log(`🎬 UnitSprite: ${this.unit.name} (${this.unit.id}) entering attacking state. Status changed: ${statusChanged}`);
-        this.playAnimation('attack');
+        // Only play attack animation when status changes to prevent looping
         if (statusChanged) {
+          // Special handling for red dragons - use special animation when untargetable, normal when targetable
+          if (this.unit.name.toLowerCase().includes('dragon')) {
+            const isFlying = (this.unit as any).untargetable;
+            console.log(`🐉 Dragon ${this.unit.id} attacking - untargetable: ${isFlying}`);
+            if (isFlying) {
+              this.playAnimation('special');
+              console.log(`🐉 Dragon ${this.unit.id} using special attack animation`);
+            } else {
+              this.playAnimation('attack');
+              console.log(`🐉 Dragon ${this.unit.id} using normal attack animation (landed)`);
+            }
+          } else {
+            this.playAnimation('attack');
+          }
           this.playAttackSound();
           
           // Emit event for ranged units starting attack (for projectile creation)
@@ -193,6 +249,22 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
           } else {
             console.log(`🗡️ Melee unit ${this.unit.name} attacking - no projectile needed`);
           }
+        }
+        break;
+      case 'rise':
+        // Special status for red dragon rise animation
+        console.log(`🐉 UnitSprite: ${this.unit.name} (${this.unit.id}) entering rise state`);
+        if (statusChanged) {
+          this.playAnimation('rise');
+          console.log(`🎬 Playing rise animation for dragon ${this.unit.id}`);
+        }
+        break;
+      case 'landing':
+        // Special status for red dragon landing animation
+        console.log(`🐉 UnitSprite: ${this.unit.name} (${this.unit.id}) entering landing state`);
+        if (statusChanged) {
+          this.playAnimation('landing');
+          console.log(`🎬 Playing landing animation for dragon ${this.unit.id}`);
         }
         break;
       case 'dead':
@@ -258,6 +330,25 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     }
     const frameNames = this.scene.textures.get(textureKey).getFrameNames();
     
+    // Special handling for red dragon animations
+    if (textureKey === 'red dragon') {
+      console.log(`🐉 Red Dragon animation request: ${animKey}`);
+      
+      if (animKey === 'special') {
+        // Use Special animation for all dragon attacks
+        animKey = 'Special';
+        console.log(`🐉 Red Dragon using Special animation for attack`);
+      } else if (animKey === 'rise') {
+        // Use Rise animation
+        animKey = 'Rise';
+        console.log(`🐉 Red Dragon using Rise animation`);
+      } else if (animKey === 'flight') {
+        // Use Flight animation for flying movement
+        animKey = 'Flight';
+        console.log(`🐉 Red Dragon using Flight animation for movement`);
+      }
+    }
+    
     // Create animation if it doesn't exist
     const animationKey = `${this.unit.name.toLowerCase()}_${animKey}`;
     
@@ -273,6 +364,14 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
           return frameLower.includes('attack');
         } else if (animKey === 'dead' || animKey === 'death') {
           return frameLower.includes('dead_');
+        } else if (animKey === 'special' || animKey === 'Special') {
+          return frameLower.includes('special');
+        } else if (animKey === 'flying' || animKey === 'flight' || animKey === 'Flight') {
+          return frameLower.includes('flight');
+        } else if (animKey === 'rise' || animKey === 'Rise') {
+          return frameLower.includes('rise');
+        } else if (animKey === 'landing') {
+          return frameLower.includes('landing');
         }
         return false;
       });
@@ -306,13 +405,27 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
           return infoA.mainFrame - infoB.mainFrame;
         });
         
+        // Slow red dragon animations by 200% (3x slower)
+        let frameRate = (animKey === 'dead' || animKey === 'death') ? 6 : 10;
+        if (textureKey === 'red dragon') {
+          frameRate = Math.round(frameRate / 3);
+        }
+        
+        // Attack animations should play once, everything else repeats except death
+        let repeat = -1;
+        if (animKey === 'dead' || animKey === 'death') {
+          repeat = 0;
+        } else if (animKey === 'attack' || animKey === 'special' || animKey === 'Special' || animKey === 'rise' || animKey === 'Rise') {
+          repeat = 0;
+        }
+        
         this.scene.anims.create({
           key: animationKey,
           frames: this.scene.anims.generateFrameNames(textureKey, {
             frames: animFrames
           }),
-          frameRate: (animKey === 'dead' || animKey === 'death') ? 6 : 10,
-          repeat: (animKey === 'dead' || animKey === 'death') ? 0 : -1
+          frameRate: frameRate,
+          repeat: repeat
         });
       } else if (animKey === 'idle' && frameNames.length > 0) {
         // If no idle frames found, use all frames as idle animation
@@ -359,7 +472,11 @@ export default class UnitSprite extends Phaser.GameObjects.Container {
     const currentTime = this.scene.time.now;
     if (currentTime - this.lastSoundTime < 500) return; // Debounce 500ms
     
-    const soundKey = `${this.unit.name.toLowerCase()}Sound`;
+    // Special handling for red dragon sound
+    const soundKey = this.unit.name.toLowerCase() === 'red dragon' 
+      ? 'redDragonSound' 
+      : `${this.unit.name.toLowerCase()}Sound`;
+      
     if (this.scene.sound.get(soundKey)) {
       this.scene.sound.play(soundKey, { volume: 0.3 });
       this.lastSoundTime = currentTime;

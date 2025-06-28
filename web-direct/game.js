@@ -330,13 +330,15 @@ function preload() {
     this.load.image('battle4', 'backgrounds/battle4.png');
     
     // Load unit spritesheets
-    const units = ['knight', 'priest', 'bishop', 'fighter', 'goblin', 'wizard', 'gladiator'];
+    const units = ['knight', 'priest', 'bishop', 'fighter', 'goblin', 'wizard', 'gladiator', 'red dragon'];
     units.forEach(unit => {
-        this.load.atlas(unit, `units/${unit}/${unit}.png`, `units/${unit}/${unit}.json`);
+        // Special handling for red dragon - files are named without space
+        const fileName = unit === 'red dragon' ? 'reddragon' : unit;
+        this.load.atlas(unit, `units/${unit}/${fileName}.png`, `units/${unit}/${fileName}.json`);
         
         // Also load for sprite previews
         const img = new Image();
-        img.src = `/assets/units/${unit}/${unit}.png`;
+        img.src = `/assets/units/${unit}/${fileName}.png`;
         unitSpritesheets[unit] = img;
     });
     
@@ -487,7 +489,7 @@ function create() {
 }
 
 function createAnimations() {
-    const units = ['knight', 'priest', 'bishop', 'fighter', 'goblin', 'wizard', 'gladiator'];
+    const units = ['knight', 'priest', 'bishop', 'fighter', 'goblin', 'wizard', 'gladiator', 'red dragon'];
     
     units.forEach(unit => {
         if (this.textures.exists(unit)) {
@@ -598,11 +600,8 @@ Phaser.Scene.prototype.updateGameState = function(state) {
             const unitType = unit.name.toLowerCase();
             sprite = this.add.sprite(0, 0, unitType);
             
-            // Set scale and tint
+            // Set scale
             sprite.setScale(this.cellSize / 100);
-            if (unit.id.startsWith('enemy-')) {
-                sprite.setTint(0xff6666);
-            }
             
             // Add health bar
             const healthBarBg = this.add.rectangle(0, -40, 50, 6, 0x000000);

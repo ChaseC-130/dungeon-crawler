@@ -144,6 +144,22 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
     });
 
+    socketInstance.on('dragons-battle-start', (data: { dragonIds: string[] }) => {
+      console.log(`🌟 CLIENT RECEIVED dragons-battle-start event for ${data.dragonIds.length} dragons!`);
+      if ((window as any).gameInstance) {
+        const scene = (window as any).gameInstance.scene.getScene('MainScene');
+        if (scene && scene.handleDragonsBattleStart) {
+          console.log(`🎬 Calling handleDragonsBattleStart`);
+          scene.handleDragonsBattleStart(data.dragonIds);
+        } else {
+          console.log(`❌ Scene or handleDragonsBattleStart method not found`);
+        }
+      } else {
+        console.log(`❌ Game instance not found`);
+      }
+    });
+
+
     setSocket(socketInstance);
 
     // Store context reference for game instance
@@ -213,8 +229,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const selectUpgrade = (upgradeId: string, targetUnitType?: string) => {
+    console.log('GameContext: selectUpgrade called with:', { upgradeId, targetUnitType, isConnected, hasSocket: !!socket });
     if (socket && isConnected) {
+      console.log('GameContext: Emitting select-upgrade event to server');
       socket.emit('select-upgrade', upgradeId, targetUnitType);
+      console.log('GameContext: select-upgrade event emitted successfully');
+    } else {
+      console.error('GameContext: Cannot emit select-upgrade - socket or connection issue', { hasSocket: !!socket, isConnected });
     }
   };
 

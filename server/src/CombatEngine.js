@@ -93,6 +93,55 @@ class CombatEngine {
       unit.stuckTimer = 0;
     }
 
+    // Special handling for red dragons
+    if (unit.name && (unit.name.toLowerCase() === 'red dragon' || unit.name.toLowerCase().includes('dragon'))) {
+      // Initialize dragon state if missing
+      if (!unit.dragonState) {
+        unit.dragonState = {
+          specialAttacksRemaining: 3,
+          isFlying: true,
+          hasLanded: false,
+          riseCompleted: false
+        };
+        unit.untargetable = true;
+        console.log(`🐉 Initialized dragon state for ${unit.id}:`, unit.dragonState);
+      }
+      
+      // Don't interrupt rise or landing animations, but allow combat after rise is complete
+      if (unit.status === 'rise' || unit.status === 'landing') {
+        console.log(`🐉 Dragon ${unit.id} is in ${unit.status} animation - skipping combat logic`);
+        return;
+      }
+      
+      // Debug dragon state
+      console.log(`🐉 Dragon ${unit.id} combat check - Status: ${unit.status}, Flying: ${unit.dragonState.isFlying}, Rise completed: ${unit.dragonState.riseCompleted}, Attacks remaining: ${unit.dragonState.specialAttacksRemaining}`);
+      
+      // Dragons must complete rise animation before engaging in combat
+      if (unit.dragonState.isFlying && !unit.dragonState.riseCompleted) {
+        console.log(`🐉 Dragon ${unit.id} waiting for rise animation to complete`);
+        return;
+      }
+      
+      // Check if dragon should land after using all special attacks
+      if (unit.dragonState.isFlying && unit.dragonState.specialAttacksRemaining <= 0 && !unit.dragonState.hasLanded) {
+        console.log(`🐉 Dragon ${unit.id} has used all special attacks - initiating landing sequence`);
+        unit.status = 'landing';
+        unit.dragonState.hasLanded = true;
+        
+        // After landing animation, become targetable and use normal animations
+        setTimeout(() => {
+          if (unit.dragonState) {
+            unit.dragonState.isFlying = false;
+            unit.untargetable = false;
+            unit.status = 'idle';
+            console.log(`🐉 Dragon ${unit.id} has landed - now targetable and using normal animations`);
+          }
+        }, 2000); // 2 seconds for landing animation
+        
+        return;
+      }
+    }
+
     // Special handling for priests - they heal instead of attack
     if (unit.name && unit.name.toLowerCase() === 'priest') {
       // Find injured friendly unit to heal
@@ -129,6 +178,7 @@ class CombatEngine {
         }
       }
     } else {
+
       // Normal combat units - find enemies to attack
       let target = null;
       if (unit.targetId && !unit.isBlocked) {
@@ -143,6 +193,30 @@ class CombatEngine {
         const distance = this.getDistance(unit.position, target.position);
 
         if (distance <= unit.range) {
+          // Special check for red dragons
+          if (unit.name && unit.name.toLowerCase().includes('dragon')) {
+            // Flying dragons have different positioning requirements than landed dragons
+            if (unit.dragonState && unit.dragonState.isFlying) {
+              const isPlayerDragon = !unit.id.startsWith('enemy-');
+              const yDiff = target.position.y - unit.position.y;
+              
+              // Flying dragons prefer to be above their target but can attack at same level
+              const correctPosition = isPlayerDragon ? 
+                yDiff >= 0 : // Player dragon: target is at same level or below
+                yDiff <= 0;  // Enemy dragon: target is at same level or above
+                
+              if (!correctPosition) {
+                console.log(`🐉 Flying Dragon ${unit.id} repositioning: current Y=${unit.position.y}, target Y=${target.position.y}, yDiff=${yDiff}, isPlayer=${isPlayerDragon}`);
+                unit.status = 'moving';
+                unit.targetId = target.id;
+                this.moveTowards(unit, target.position);
+                return;
+              }
+              console.log(`🐉 Flying Dragon ${unit.id} can attack: current Y=${unit.position.y}, target Y=${target.position.y}, attacks remaining=${unit.dragonState.specialAttacksRemaining}`);
+            }
+            // Landed dragons can attack from any position like normal units
+          }
+          
           // In range - attack
           unit.status = 'attacking';
           unit.targetId = target.id;
@@ -181,9 +255,13 @@ class CombatEngine {
   findTarget(unit, hostileUnits) {
     if (hostileUnits.length === 0) return null;
 
+    // Filter out untargetable units (like flying dragons)
+    const targetableUnits = hostileUnits.filter(u => !u.untargetable);
+    if (targetableUnits.length === 0) return null;
+
     // Find all units with lowest priority
-    const lowestPriority = Math.min(...hostileUnits.map(u => u.priority));
-    const priorityTargets = hostileUnits.filter(u => u.priority === lowestPriority);
+    const lowestPriority = Math.min(...targetableUnits.map(u => u.priority));
+    const priorityTargets = targetableUnits.filter(u => u.priority === lowestPriority);
 
     // Among priority targets, find closest
     let closestTarget = null;
@@ -407,15 +485,29 @@ class CombatEngine {
   }
 
   performAttack(attacker, target) {
+    // Check if target is invulnerable
+    if (target.invulnerable) {
+      console.log(`${target.name} (${target.id}) is invulnerable - attack blocked!`);
+      return;
+    }
+    
+    // Handle dragon special attack counter
+    if (attacker.name && attacker.name.toLowerCase().includes('dragon') && attacker.dragonState) {
+      if (attacker.dragonState.isFlying && attacker.dragonState.specialAttacksRemaining > 0) {
+        attacker.dragonState.specialAttacksRemaining--;
+        console.log(`🐉 Dragon ${attacker.id} used special attack! Remaining: ${attacker.dragonState.specialAttacksRemaining}`);
+        console.log(`🐉 Dragon ${attacker.id} state after attack:`, attacker.dragonState);
+        
+        // If this was the last special attack, the landing will be handled in the next update cycle
+        if (attacker.dragonState.specialAttacksRemaining === 0) {
+          console.log(`🐉 Dragon ${attacker.id} has no more special attacks - will land next update`);
+        }
+      }
+    }
+
     // Calculate damage
     const armorMod = ARMOR_DAMAGE_MODIFIERS[target.armorType][attacker.attackType];
     let damage = attacker.damage * armorMod;
-
-    // Special handling for wizard area attack
-    if (attacker.name && attacker.name.toLowerCase() === 'wizard') {
-      this.performWizardAreaAttack(attacker, target);
-      return;
-    }
 
     // Apply damage
     const oldHealth = target.health;
@@ -477,6 +569,12 @@ class CombatEngine {
 
     // Apply damage to all enemies in range
     enemiesInRange.forEach(enemy => {
+      // Check if enemy is invulnerable (like flying red dragons)
+      if (enemy.isFlying || enemy.invulnerable) {
+        console.log(`${enemy.name} (${enemy.id}) is invulnerable - area attack blocked!`);
+        return;
+      }
+
       const enemyArmorMod = ARMOR_DAMAGE_MODIFIERS[enemy.armorType][attacker.attackType];
       const damage = baseDamage * enemyArmorMod;
       
@@ -579,6 +677,10 @@ class CombatEngine {
     unit.debuffs = unit.debuffs.filter(debuff => {
       switch (debuff.type) {
         case 'poison':
+          // Check if unit is invulnerable (like flying red dragons)
+          if (unit.isFlying || unit.invulnerable) {
+            break; // Skip poison damage
+          }
           unit.health -= debuff.value * (this.tickRate / 1000);
           if (unit.health <= 0) {
             unit.health = 0;
@@ -629,6 +731,7 @@ class CombatEngine {
       }
     }
   }
+
 }
 
 module.exports = CombatEngine;

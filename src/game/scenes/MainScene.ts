@@ -19,7 +19,8 @@ export default class MainScene extends Phaser.Scene {
   private lastAttackTime: Map<string, number> = new Map();
   private tooltip: UnitTooltip | null = null;
   private currentPlayerId: string | null = null;
-  private dragPreview: Phaser.GameObjects.Container | null = null;
+  private dragPreview: Phaser.GameObjects.Container | null = null; // For placement mode (purchase panel)
+  private unitDragPreview: Phaser.GameObjects.Container | null = null; // For unit repositioning (cell-to-cell)
   private sellZone: Phaser.GameObjects.Container | null = null;
   private isOverSellZone: boolean = false;
   private draggedUnit: Unit | null = null;
@@ -34,6 +35,7 @@ export default class MainScene extends Phaser.Scene {
 
   create() {
     console.log('=== MAINSCENE CREATE CALLED ===');
+    console.log('🚀 DRAG FIX VERSION 2.0 LOADED!');
     console.log('Scene object:', this);
     console.log('Scene cameras:', this.cameras);
     console.log('Scene add:', this.add);
@@ -106,9 +108,23 @@ export default class MainScene extends Phaser.Scene {
     // Expose test functions for debugging  
     (window as any).testWizardAttack = () => this.testWizardAttack();
     (window as any).addTestWizard = () => this.addTestWizard();
+    (window as any).testResponsive = () => this.testResponsiveBehavior();
+    
+    // Log that functions are available
+    console.log('🎮 MainScene debug functions available:');
+    console.log('  - window.testResponsive() : Test responsive grid behavior');
+    console.log('  - window.testWizardAttack() : Test wizard attack');
+    console.log('  - window.addTestWizard() : Add test wizard');
 
     // Listen for ranged unit attacks from UnitSprites
     this.events.on('rangedUnitAttack', this.handleRangedUnitAttack.bind(this));
+    
+    // Log initial responsive state
+    console.log('🎮 Initial screen state:', {
+      screenSize: { width: this.cameras.main.width, height: this.cameras.main.height },
+      gridCellSize: this.cellSize,
+      gridPosition: { x: this.grid.x, y: this.grid.y }
+    });
 
     // Setup input
     this.setupInput();
@@ -148,17 +164,40 @@ export default class MainScene extends Phaser.Scene {
     console.log('Canvas computed style:', this.game.canvas ? window.getComputedStyle(this.game.canvas) : 'No canvas');
     
     // Calculate cell size to fit the grid nicely within the camera
-    // Reserve bottom 25% for HUD panels
-    const hudHeight = this.cameras.main.height * 0.25;
-    const availableHeight = this.cameras.main.height - hudHeight;
+    // Be more aggressive with space usage on small screens
+    const screenWidth = this.cameras.main.width;
+    const screenHeight = this.cameras.main.height;
     
-    const maxGridWidth = this.cameras.main.width * 0.95; // Use 95% of screen width
-    const maxGridHeight = availableHeight * 0.8; // Use 80% of available height (excluding HUD)
+    // Use a much more aggressive approach to utilize screen space
+    // The HUD is responsive and doesn't need as much reserved space
+    const topHUDHeight = 60; // Reduced - HUD is compact
+    const bottomHUDHeight = 120; // Reduced - shop panel is responsive
     
-    const cellSizeByWidth = maxGridWidth / gridWidth;
-    const cellSizeByHeight = maxGridHeight / gridHeight;
-    const cellSize = Math.min(cellSizeByWidth, cellSizeByHeight);
+    // Minimal safety margins
+    const horizontalMargin = 10; // Very small side margins
+    const verticalMargin = 10; // Small top/bottom margins
+    
+    // Calculate available space - use as much as possible
+    const availableWidth = screenWidth - (horizontalMargin * 2);
+    const availableHeight = screenHeight - topHUDHeight - bottomHUDHeight - (verticalMargin * 2);
+    
+    // Calculate cell size based on available space
+    const cellSizeByWidth = availableWidth / gridWidth;
+    const cellSizeByHeight = availableHeight / gridHeight;
+    let cellSize = Math.min(cellSizeByWidth, cellSizeByHeight);
+    
+    // Adjust min/max for better screen utilization
+    const minCellSize = 20; // Slightly larger minimum for better visibility
+    const maxCellSize = 80; // Increased max for large screens
+    cellSize = Math.max(minCellSize, Math.min(maxCellSize, cellSize));
+    
     this.cellSize = cellSize; // Store cell size for resize handling
+    
+    console.log('Cell size constraints applied:', {
+      calculated: Math.min(cellSizeByWidth, cellSizeByHeight),
+      final: cellSize,
+      screenSize: { width: this.cameras.main.width, height: this.cameras.main.height }
+    });
     
     console.log('Grid sizing calculation:');
     console.log('Cell size:', cellSize);
@@ -167,22 +206,36 @@ export default class MainScene extends Phaser.Scene {
       pixelHeight: cellSize * gridHeight
     });
     
-    // Position grid to align bottom with HUD top
+    // Position grid optimally for the available space
     const gridPixelHeight = cellSize * gridHeight;
-    const gridY = (availableHeight - gridPixelHeight) / 2 + (gridPixelHeight / 2);
+    
+    // Calculate proper grid center position
+    // Center the grid in the available space between HUDs
+    const gridCenterY = topHUDHeight + verticalMargin + (availableHeight / 2);
+    
+    console.log('Grid positioning calculation:', {
+      screenHeight,
+      totalUIHeight,
+      availableHeight,
+      gridPixelHeight,
+      gridCenterY
+    });
     
     this.grid = new Grid(
       this,
       this.cameras.main.centerX,
-      gridY,
+      gridCenterY,
       gridWidth,
       gridHeight,
       cellSize
     );
     
+    // Set grid depth to ensure it renders above background but below UI
+    this.grid.setDepth(1);
+    
     console.log('Grid created at position:', {
       x: this.cameras.main.centerX,
-      y: gridY
+      y: gridCenterY
     });
   }
 
@@ -192,7 +245,7 @@ export default class MainScene extends Phaser.Scene {
 
     this.cameras.resize(width, height);
     
-    // Update background to fill new dimensions
+    // Immediately update background to prevent any visual gaps
     this.updateBackground();
     
     // Update grid background size instead of recreating
@@ -202,13 +255,24 @@ export default class MainScene extends Phaser.Scene {
       // Optionally recreate grid if cells need resizing
       const gridWidth = 20;
       const gridHeight = 8;
-      const hudHeight = height * 0.25;
-      const availableHeight = height - hudHeight;
-      const maxGridWidth = width * 0.95;
-      const maxGridHeight = availableHeight * 0.8;
-      const cellSizeByWidth = maxGridWidth / gridWidth;
-      const cellSizeByHeight = maxGridHeight / gridHeight;
-      const newCellSize = Math.min(cellSizeByWidth, cellSizeByHeight);
+      
+      // Apply same responsive logic as createGrid
+      const topHUDHeight = 60;
+      const bottomHUDHeight = 120;
+      const horizontalMargin = 10;
+      const verticalMargin = 10;
+      
+      const availableWidth = width - (horizontalMargin * 2);
+      const availableHeight = height - topHUDHeight - bottomHUDHeight - (verticalMargin * 2);
+      
+      const cellSizeByWidth = availableWidth / gridWidth;
+      const cellSizeByHeight = availableHeight / gridHeight;
+      let newCellSize = Math.min(cellSizeByWidth, cellSizeByHeight);
+      
+      // Apply same constraints as in createGrid
+      const minCellSize = 20;
+      const maxCellSize = 80;
+      newCellSize = Math.max(minCellSize, Math.min(maxCellSize, newCellSize));
       
       // Get current cell size (approximation based on grid dimensions)
       const currentCellSize = this.cellSize;
@@ -337,9 +401,13 @@ export default class MainScene extends Phaser.Scene {
       if (this.gameState.phase === 'preparation' && 
           clickedUnit.playerId === this.currentPlayerId &&
           clickedSprite) {
+        console.log('🎯 STARTING UNIT DRAG - NEW VERSION!');
         this.selectedUnit = clickedSprite;
         this.isDragging = true;
         this.draggedUnit = clickedUnit;
+        
+        // Expose drag state to window for React components
+        (window as any).isDragging = true;
         
         // Store original position for potential snap-back
         this.originalDragPosition = clickedSprite.position.clone();
@@ -357,21 +425,13 @@ export default class MainScene extends Phaser.Scene {
           ease: 'Back.easeOut'
         });
         
-        // Add a pulsing glow effect around the unit
-        const glowEffect = this.add.circle(clickedSprite.x, clickedSprite.y, 40, 0xffffff, 0.3);
-        glowEffect.setDepth(1999); // Just below the unit
-        clickedSprite.setData('glowEffect', glowEffect);
+        // Create a drag preview container similar to the purchase panel one
+        console.log('🖼️ CALLING createUnitDragPreview!');
+        this.createUnitDragPreview(clickedUnit, clickedSprite.x, clickedSprite.y);
+        console.log('🖼️ unitDragPreview after creation:', !!this.unitDragPreview);
         
-        this.tweens.add({
-          targets: glowEffect,
-          scaleX: 1.3,
-          scaleY: 1.3,
-          alpha: 0.1,
-          duration: 800,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
+        // Make the original unit semi-transparent
+        clickedSprite.setAlpha(0.5);
         
         // Add a shadow beneath the unit
         this.createDragShadow(clickedSprite);
@@ -403,33 +463,29 @@ export default class MainScene extends Phaser.Scene {
     }
 
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
     
-    // Don't send hover position to other players - highlighting is local only
+    // CENTRALIZED HIGHLIGHTING SYSTEM - only one highlight call per frame
+    let highlightGridPos: { x: number, y: number } | null = null;
     
     // Handle placement mode - only during preparation phase
     if (this.placementMode && this.dragPreview && this.gameState.phase === 'preparation') {
       // Update drag preview position to follow cursor
       this.dragPreview.setPosition(worldPoint.x, worldPoint.y);
       
+      // Calculate highlight position for placement mode (raw cursor position)
+      highlightGridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
+      
       // Add visual feedback for valid/invalid drop zones
-      const isValid = this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
+      const isValid = this.grid.isValidPlacement(highlightGridPos.x, highlightGridPos.y, this.currentPlayerId || undefined);
       this.updateDragPreviewValidation(isValid);
-      
-      // Grid highlighting is now disabled at the Grid level to remove green debug boxes
-      this.grid.highlightCell(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
-      return;
     }
-    
     // Handle unit dragging - only during preparation phase
-    if (this.isDragging && this.selectedUnit && this.gameState.phase === 'preparation') {
-      // Update unit sprite position to follow cursor with enhanced offset
-      this.selectedUnit.setPosition(worldPoint.x, worldPoint.y - 25); // Higher lift for better visibility
-      
-      // Update glow effect position if it exists
-      const glowEffect = this.selectedUnit.getData('glowEffect');
-      if (glowEffect) {
-        glowEffect.setPosition(worldPoint.x, worldPoint.y - 25);
+    else if (this.isDragging && this.selectedUnit && this.gameState.phase === 'preparation') {
+      // Only update unit drag preview position, keep original unit in place but semi-transparent
+      if (this.unitDragPreview) {
+        this.unitDragPreview.setPosition(worldPoint.x, worldPoint.y - 25);
+      } else {
+        console.warn('🚨 NO UNIT DRAG PREVIEW DURING MOVE!');
       }
       
       // Update shadow position if it exists
@@ -440,42 +496,35 @@ export default class MainScene extends Phaser.Scene {
       // Check if over sell zone
       this.checkSellZoneHover(pointer.x, pointer.y);
       
-      // Grid highlighting is now disabled at the Grid level to remove green debug boxes
-      this.grid.highlightCell(gridPos.x, gridPos.y, this.currentPlayerId || undefined);
+      // Calculate highlight position for drag mode (offset cursor position to match visual unit position)
+      highlightGridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y - 25);
       
-      // Add visual feedback for valid/invalid drop zones
-      const isValid = this.grid.isValidPlacement(gridPos.x, gridPos.y, this.currentPlayerId || undefined) && !this.isOverSellZone;
+      // Add visual feedback for valid/invalid drop zones - use same position as highlighting
+      const isValid = this.grid.isValidPlacement(highlightGridPos.x, highlightGridPos.y, this.currentPlayerId || undefined) && !this.isOverSellZone;
       
-      // Change tint based on validity with enhanced visual feedback
+      // Update drag preview validation
       if (this.isOverSellZone) {
-        this.selectedUnit.setTint(0xff4444); // Red tint for sell zone
-        // Make glow effect red too
-        if (glowEffect) {
-          glowEffect.setTint(0xff4444);
-        }
+        this.updateUnitDragPreviewValidation('sell');
       } else if (isValid) {
-        this.selectedUnit.clearTint(); // Clear tint for valid placement
-        // Make glow effect green for valid placement
-        if (glowEffect) {
-          glowEffect.clearTint();
-          glowEffect.setTint(0x44ff44);
-        }
+        this.updateUnitDragPreviewValidation('valid');
       } else {
-        this.selectedUnit.setTint(0xffaa00); // Orange tint for invalid placement
-        // Make glow effect orange too
-        if (glowEffect) {
-          glowEffect.setTint(0xffaa00);
-        }
+        this.updateUnitDragPreviewValidation('invalid');
       }
       
-      console.log(`Dragging to grid (${gridPos.x}, ${gridPos.y}), valid: ${isValid}, over sell zone: ${this.isOverSellZone}`);
-      
-      return;
+      console.log(`Dragging to grid (${highlightGridPos.x}, ${highlightGridPos.y}), valid: ${isValid}, over sell zone: ${this.isOverSellZone}`);
+    }
+    // Handle normal hover highlighting and tooltip (only when not dragging or placing)
+    else if (!this.isDragging && !this.placementMode) {
+      // Calculate highlight position for hover mode (raw cursor position)
+      highlightGridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
+      this.handleTooltipHover(worldPoint);
     }
     
-    // Handle tooltip on hover (only when not dragging)
-    if (!this.isDragging) {
-      this.handleTooltipHover(worldPoint);
+    // SINGLE POINT OF HIGHLIGHTING CONTROL
+    if (highlightGridPos) {
+      this.grid.highlightCell(highlightGridPos.x, highlightGridPos.y, this.currentPlayerId || undefined);
+    } else {
+      this.grid.clearHighlight();
     }
   }
 
@@ -525,7 +574,8 @@ export default class MainScene extends Phaser.Scene {
     }
 
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y);
+    // Calculate drop position based on where the unit sprite visually appears (accounting for the 25px lift)
+    const gridPos = this.grid.worldToGrid(worldPoint.x, worldPoint.y - 25);
     
     // Get the unit data
     const unit = this.gameState.players
@@ -613,6 +663,9 @@ export default class MainScene extends Phaser.Scene {
     // Restore original depth based on y position
     this.selectedUnit.setDepth(this.selectedUnit.y);
     
+    // Destroy drag preview
+    this.destroyUnitDragPreview();
+    
     // Destroy drag shadow
     this.destroyDragShadow();
     
@@ -627,6 +680,9 @@ export default class MainScene extends Phaser.Scene {
     this.draggedUnit = null;
     this.originalDragPosition = null;
     this.grid.clearHighlight();
+    
+    // Clear drag state from window for React components
+    (window as any).isDragging = false;
   }
 
   private createDragPreview(unit: Unit, x: number, y: number) {
@@ -722,6 +778,15 @@ export default class MainScene extends Phaser.Scene {
     }
   }
 
+  private destroyUnitDragPreview() {
+    if (this.unitDragPreview) {
+      // Stop any tweens on the unit drag preview
+      this.tweens.killTweensOf(this.unitDragPreview);
+      this.unitDragPreview.destroy();
+      this.unitDragPreview = null;
+    }
+  }
+
   private updateDragPreviewValidation(isValid: boolean) {
     if (!this.dragPreview) return;
     
@@ -759,6 +824,146 @@ export default class MainScene extends Phaser.Scene {
     }
   }
 
+  private createUnitDragPreview(unit: Unit, x: number, y: number) {
+    // Destroy existing unit drag preview if it exists
+    if (this.unitDragPreview) {
+      this.unitDragPreview.destroy();
+      this.unitDragPreview = null;
+    }
+    
+    // Create drag preview container for unit repositioning
+    this.unitDragPreview = this.add.container(x, y);
+    this.unitDragPreview.setDepth(2000); // Very high depth to appear above everything
+    this.unitDragPreview.setAlpha(1); // Ensure it's fully visible
+    this.unitDragPreview.setVisible(true); // Ensure it's visible
+    
+    // Create a nice shaded box background
+    const boxWidth = 90;
+    const boxHeight = 90;
+    const cornerRadius = 8;
+    
+    // Create box graphics
+    const box = this.add.graphics();
+    
+    // Box shadow (multiple layers for depth)
+    box.fillStyle(0x000000, 0.4);
+    box.fillRoundedRect(-boxWidth/2 + 4, -boxHeight/2 + 4, boxWidth, boxHeight, cornerRadius);
+    box.fillStyle(0x000000, 0.2);
+    box.fillRoundedRect(-boxWidth/2 + 2, -boxHeight/2 + 2, boxWidth, boxHeight, cornerRadius);
+    
+    // Main box background with gradient effect
+    box.fillStyle(0x1a1a1a, 0.9);
+    box.fillRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+    
+    // Subtle inner shadow
+    box.lineStyle(2, 0x000000, 0.3);
+    box.strokeRoundedRect(-boxWidth/2 + 1, -boxHeight/2 + 1, boxWidth - 2, boxHeight - 2, cornerRadius - 1);
+    
+    // Outer border - will be updated based on validity
+    box.lineStyle(3, 0x666666, 0.8);
+    box.strokeRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+    
+    this.unitDragPreview.add(box);
+    
+    // Create unit sprite inside the box
+    const textureKey = unit.name.toLowerCase();
+    let unitSprite: Phaser.GameObjects.Sprite;
+    
+    if (this.textures.exists(textureKey)) {
+      const texture = this.textures.get(textureKey);
+      const frameNames = texture.getFrameNames();
+      
+      // Find idle frame or use first frame
+      const idleFrame = frameNames.find(frame => 
+        frame.toLowerCase().includes('idle')
+      ) || frameNames[0];
+      
+      unitSprite = this.add.sprite(0, -8, textureKey, idleFrame);
+    } else {
+      // Fallback sprite
+      unitSprite = this.add.sprite(0, -8, '__DEFAULT');
+    }
+    
+    unitSprite.setScale(0.7); // Scaled to fit nicely in the box
+    
+    // Add unit name below the sprite
+    const nameText = this.add.text(0, 28, unit.name, {
+      fontSize: '11px',
+      color: '#CCCCCC',
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    nameText.setOrigin(0.5);
+    
+    this.unitDragPreview.add([unitSprite, nameText]);
+    
+    // Add subtle floating animation
+    this.tweens.add({
+      targets: this.unitDragPreview,
+      y: this.unitDragPreview.y - 2,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private updateUnitDragPreviewValidation(state: 'valid' | 'invalid' | 'sell') {
+    if (!this.unitDragPreview) return;
+    
+    // Get the graphics object (first child)
+    const box = this.unitDragPreview.getAt(0) as Phaser.GameObjects.Graphics;
+    if (!box) return;
+    
+    box.clear();
+    
+    const boxWidth = 90;
+    const boxHeight = 90;
+    const cornerRadius = 8;
+    
+    // Box shadow (multiple layers for depth)
+    box.fillStyle(0x000000, 0.4);
+    box.fillRoundedRect(-boxWidth/2 + 4, -boxHeight/2 + 4, boxWidth, boxHeight, cornerRadius);
+    box.fillStyle(0x000000, 0.2);
+    box.fillRoundedRect(-boxWidth/2 + 2, -boxHeight/2 + 2, boxWidth, boxHeight, cornerRadius);
+    
+    // Main box background
+    box.fillStyle(0x1a1a1a, 0.9);
+    box.fillRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+    
+    // Subtle inner shadow
+    box.lineStyle(2, 0x000000, 0.3);
+    box.strokeRoundedRect(-boxWidth/2 + 1, -boxHeight/2 + 1, boxWidth - 2, boxHeight - 2, cornerRadius - 1);
+    
+    // Change border color based on state
+    if (state === 'valid') {
+      // Valid placement - subtle green border
+      box.lineStyle(3, 0x4CAF50, 0.8);
+      box.strokeRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+      // Inner highlight
+      box.lineStyle(1, 0x81C784, 0.4);
+      box.strokeRoundedRect(-boxWidth/2 + 3, -boxHeight/2 + 3, boxWidth - 6, boxHeight - 6, cornerRadius - 2);
+    } else if (state === 'invalid') {
+      // Invalid placement - orange border
+      box.lineStyle(3, 0xFF9800, 0.8);
+      box.strokeRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+      // Inner highlight
+      box.lineStyle(1, 0xFFB74D, 0.4);
+      box.strokeRoundedRect(-boxWidth/2 + 3, -boxHeight/2 + 3, boxWidth - 6, boxHeight - 6, cornerRadius - 2);
+    } else if (state === 'sell') {
+      // Sell zone - red border
+      box.lineStyle(3, 0xF44336, 0.8);
+      box.strokeRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+      // Inner highlight
+      box.lineStyle(1, 0xEF5350, 0.4);
+      box.strokeRoundedRect(-boxWidth/2 + 3, -boxHeight/2 + 3, boxWidth - 6, boxHeight - 6, cornerRadius - 2);
+    } else {
+      // Default state - neutral border
+      box.lineStyle(3, 0x666666, 0.8);
+      box.strokeRoundedRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, cornerRadius);
+    }
+  }
+
   private cancelDrag() {
     if (!this.isDragging || !this.selectedUnit || !this.gameState) {
       return;
@@ -778,14 +983,6 @@ export default class MainScene extends Phaser.Scene {
     this.selectedUnit.setAlpha(1);
     this.selectedUnit.clearTint();
     
-    // Clean up glow effect
-    const glowEffect = this.selectedUnit.getData('glowEffect');
-    if (glowEffect) {
-      this.tweens.killTweensOf(glowEffect);
-      glowEffect.destroy();
-      this.selectedUnit.setData('glowEffect', null);
-    }
-    
     // Restore original scale and position
     this.tweens.add({
       targets: this.selectedUnit,
@@ -797,7 +994,7 @@ export default class MainScene extends Phaser.Scene {
     });
     
     // Destroy drag preview
-    this.destroyDragPreview();
+    this.destroyUnitDragPreview();
     
     // Destroy drag shadow
     this.destroyDragShadow();
@@ -807,6 +1004,9 @@ export default class MainScene extends Phaser.Scene {
     this.isDragging = false;
     this.draggedUnit = null;
     this.grid.clearHighlight();
+    
+    // Clear drag state from window for React components
+    (window as any).isDragging = false;
     
     // Hide sell zone
     this.hideSellZone();
@@ -874,24 +1074,55 @@ export default class MainScene extends Phaser.Scene {
     const existingOverlay = this.children.getByName('phase-overlay');
     if (existingOverlay) existingOverlay.destroy();
     
-    // Add new background
+    // Add new background - ensure it covers the entire screen
     const bg = this.add.image(0, 0, backgroundKey);
-    bg.setOrigin(0, 0);
+    bg.setOrigin(0, 0); // Top-left origin
     bg.setName('background');
-    bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+    
+    // Get the actual canvas/camera dimensions
+    const screenWidth = this.scale.gameSize.width;
+    const screenHeight = this.scale.gameSize.height;
+    
+    // Scale background to exactly match the full screen (100% coverage)
+    const scaleX = screenWidth / bg.width;
+    const scaleY = screenHeight / bg.height;
+    
+    // Use exact scaling to fill entire screen
+    bg.setDisplaySize(screenWidth, screenHeight);
     bg.setDepth(-100);
+    
+    console.log('Background scaling:', {
+      imageSize: { width: bg.width, height: bg.height },
+      screenSize: { width: screenWidth, height: screenHeight },
+      scale: { x: scaleX, y: scaleY },
+      displaySize: { width: bg.displayWidth, height: bg.displayHeight }
+    });
+    
+    console.log('Background scaling debug:', {
+      screenSize: { width: this.cameras.main.width, height: this.cameras.main.height },
+      imageSize: { width: bg.width, height: bg.height },
+      scales: { scaleX, scaleY, finalScale: scale },
+      finalSize: { 
+        width: bg.width * scale, 
+        height: bg.height * scale 
+      }
+    });
     
     // Add phase-specific overlay
     if (this.gameState.phase === 'preparation' || this.gameState.phase === 'post-combat') {
       // Add a blue-tinted overlay for preparation phase
+      const screenWidth = this.scale.gameSize.width;
+      const screenHeight = this.scale.gameSize.height;
+      
       const overlay = this.add.rectangle(
-        0, 0,
-        this.cameras.main.width,
-        this.cameras.main.height,
+        0,
+        0,
+        screenWidth,
+        screenHeight,
         0x1a1a2e,
         0.6
       );
-      overlay.setOrigin(0, 0);
+      overlay.setOrigin(0, 0); // Top-left origin
       overlay.setName('phase-overlay');
       overlay.setDepth(-90);
     }
@@ -1162,6 +1393,9 @@ export default class MainScene extends Phaser.Scene {
     this.placementMode = true;
     this.placementUnit = unit;
     
+    // Expose placement mode as drag state to window for React components
+    (window as any).isDragging = true;
+    
     // Create drag preview for placement (start off-screen until first mouse move)
     const placementUnit = {
       id: 'placement-preview',
@@ -1189,6 +1423,9 @@ export default class MainScene extends Phaser.Scene {
     this.placementUnit = null;
     this.placedUnit = null;
     
+    // Clear drag state from window for React components
+    (window as any).isDragging = false;
+    
     // Destroy drag preview
     this.destroyDragPreview();
 
@@ -1201,6 +1438,9 @@ export default class MainScene extends Phaser.Scene {
     this.placementMode = true;
     this.placementUnit = null; // We're placing an already purchased unit
     this.placedUnit = unit; // Store the unit to place
+    
+    // Expose placement mode as drag state to window for React components
+    (window as any).isDragging = true;
     
     // Create drag preview for placement (start off-screen until first mouse move)
     this.createDragPreview(unit, -100, -100);
@@ -1808,24 +2048,20 @@ export default class MainScene extends Phaser.Scene {
   private createWizardImpactEffect(x: number, y: number) {
     console.log(`💥 Creating wizard impact at (${x}, ${y})`);
     
-    // Create multiple expanding rings for a magical effect
-    const colors = [0xffffff, 0xaaccff, 0x88ccff, 0x3388ff];
+    // Create a single-target magical impact effect
+    const impactCircle = this.add.circle(x, y, 15, 0x3388ff, 0.8);
+    impactCircle.setDepth(y + 100);
     
-    colors.forEach((color, index) => {
-      const circle = this.add.circle(x, y, 10, color, 0.8 - index * 0.1);
-      circle.setDepth(y + 100 - index);
-      
-      this.tweens.add({
-        targets: circle,
-        radius: 60 + index * 20,
-        alpha: 0,
-        duration: 600 + index * 100,
-        ease: 'Power2.Out',
-        delay: index * 50,
-        onComplete: () => {
-          circle.destroy();
-        }
-      });
+    // Single impact flash
+    this.tweens.add({
+      targets: impactCircle,
+      radius: 25,
+      alpha: 0,
+      duration: 400,
+      ease: 'Power2.Out',
+      onComplete: () => {
+        impactCircle.destroy();
+      }
     });
     
     // Add magical particles using wizard texture if available
@@ -2637,6 +2873,167 @@ export default class MainScene extends Phaser.Scene {
       console.log(`Created test sprites for frame: ${frame}`);
     });
   }
+  
+  private testResponsiveBehavior() {
+    console.log('🧑‍💻 === RESPONSIVE BEHAVIOR TEST ===');
+    
+    const testSizes = [
+      { width: 320, height: 568, name: 'Mobile Portrait (iPhone SE)' },
+      { width: 375, height: 667, name: 'Mobile Portrait (iPhone 8)' },
+      { width: 414, height: 896, name: 'Mobile Portrait (iPhone 11)' },
+      { width: 768, height: 1024, name: 'Tablet Portrait (iPad)' },
+      { width: 1024, height: 768, name: 'Tablet Landscape' },
+      { width: 1366, height: 768, name: 'Laptop' },
+      { width: 1920, height: 1080, name: 'Desktop HD' }
+    ];
+    
+    const currentSize = {
+      width: this.cameras.main.width,
+      height: this.cameras.main.height
+    };
+    
+    console.log('💻 Current screen:', currentSize);
+    console.log('🎮 Current grid state:', {
+      cellSize: this.cellSize,
+      gridPosition: { x: this.grid.x, y: this.grid.y },
+      gridBounds: this.grid.getBounds()
+    });
+    
+    // Check if grid is visible and not overlapping with UI
+    const gridBounds = this.grid.getBounds();
+    const topHUDHeight = 80;
+    const bottomHUDHeight = 140;
+    
+    const isGridFullyVisible = 
+      gridBounds.top >= topHUDHeight &&
+      gridBounds.bottom <= (currentSize.height - bottomHUDHeight);
+    
+    console.log('✅ Grid visibility check:', {
+      fullyVisible: isGridFullyVisible,
+      topClearance: gridBounds.top - topHUDHeight,
+      bottomClearance: (currentSize.height - bottomHUDHeight) - gridBounds.bottom
+    });
+    
+    // Check background coverage
+    const bg = this.children.getByName('background') as Phaser.GameObjects.Image;
+    if (bg) {
+      console.log('🌆 Background coverage:', {
+        displaySize: { width: bg.displayWidth, height: bg.displayHeight },
+        screenSize: { width: this.scale.gameSize.width, height: this.scale.gameSize.height },
+        coveragePercent: {
+          width: (bg.displayWidth / this.scale.gameSize.width * 100).toFixed(1) + '%',
+          height: (bg.displayHeight / this.scale.gameSize.height * 100).toFixed(1) + '%'
+        },
+        fullCoverage: bg.displayWidth >= this.scale.gameSize.width && bg.displayHeight >= this.scale.gameSize.height
+      });
+    }
+    
+    // Calculate what cell size would be for each test size
+    console.log('\n📱 Cell size calculations for different screens:');
+    testSizes.forEach(size => {
+      const topHUD = 80;
+      const bottomHUD = 140;
+      const totalUI = topHUD + bottomHUD;
+      const buffer = 20;
+      
+      const availableHeight = size.height - totalUI - buffer;
+      const availableWidth = size.width - (buffer * 2);
+      
+      const cellByWidth = availableWidth / 20;
+      const cellByHeight = availableHeight / 8;
+      let cellSize = Math.min(cellByWidth, cellByHeight);
+      cellSize = Math.max(15, Math.min(60, cellSize));
+      
+      const gridWidth = cellSize * 20;
+      const gridHeight = cellSize * 8;
+      
+      console.log(`📱 ${size.name}:`, {
+        screenSize: `${size.width}x${size.height}`,
+        cellSize: Math.round(cellSize),
+        gridSize: `${Math.round(gridWidth)}x${Math.round(gridHeight)}`,
+        fitsScreen: gridWidth <= availableWidth && gridHeight <= availableHeight
+      });
+    });
+    
+    console.log('\nℹ️ To test different sizes, resize your browser window or use device emulation mode (F12 > Toggle device toolbar)');
+    return true;
+  }
+
+  // Dragon special attack handlers
+  public handleDragonRise(dragonId: string) {
+    console.log(`🐉 Client handling dragon ${dragonId} rising for special attacks`);
+    const dragonSprite = this.unitSprites.get(dragonId);
+    if (dragonSprite) {
+      // Play rise animation
+      dragonSprite.playAnimation('rise');
+      // Add slight elevation effect
+      this.tweens.add({
+        targets: dragonSprite,
+        y: dragonSprite.y - 3,
+        duration: 2000,
+        ease: 'Power2.easeOut'
+      });
+    }
+  }
+
+  public handleDragonSpecialAttack(dragonId: string, targetPosition: any, affectedUnits: string[]) {
+    console.log(`🔥 Client handling dragon ${dragonId} special attack at position`, targetPosition);
+    
+    // Get world position for the damage area
+    const worldPos = this.grid.gridToWorld(targetPosition.x, targetPosition.y);
+    
+    // Create red circle damage indicator
+    const damageIndicator = this.add.graphics();
+    damageIndicator.setDepth(1000); // High depth to appear above everything
+    
+    // Draw red circle with fade in/out effect
+    const radius = 40; // Same as server-side area radius
+    damageIndicator.lineStyle(3, 0xFF0000, 0.8);
+    damageIndicator.fillStyle(0xFF0000, 0.2);
+    damageIndicator.fillCircle(worldPos.x, worldPos.y, radius);
+    damageIndicator.strokeCircle(worldPos.x, worldPos.y, radius);
+    
+    // Add pulsing effect
+    this.tweens.add({
+      targets: damageIndicator,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      alpha: 0.3,
+      duration: 500,
+      yoyo: true,
+      repeat: 1,
+      ease: 'Power2.easeInOut',
+      onComplete: () => {
+        damageIndicator.destroy();
+      }
+    });
+    
+    // Flash affected units
+    affectedUnits.forEach(unitId => {
+      const unitSprite = this.unitSprites.get(unitId);
+      if (unitSprite) {
+        this.tweens.add({
+          targets: unitSprite,
+          alpha: 0.3,
+          duration: 200,
+          yoyo: true,
+          repeat: 2,
+          ease: 'Power2.easeInOut'
+        });
+      }
+    });
+  }
+
+  handleDragonsBattleStart(dragonIds: string[]) {
+    console.log(`🎬 MainScene: Handling battle start for ${dragonIds.length} dragons`);
+    dragonIds.forEach(dragonId => {
+      const dragonSprite = this.unitSprites.get(dragonId);
+      if (dragonSprite) {
+        // The rise animation and Y movement are already handled in UnitSprite
+        console.log(`🌟 Dragon ${dragonId} rise animation triggered at battle start`);
+      }
+    });
+  }
 }
 
 // Make test functions globally accessible
@@ -2645,5 +3042,6 @@ declare global {
     testWizardChargeFrame: () => void;
     addTestWizard: () => any;
     testWizardAttack: () => void;
+    testResponsive: () => void;
   }
 }

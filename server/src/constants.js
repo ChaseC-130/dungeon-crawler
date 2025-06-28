@@ -104,6 +104,19 @@ const UNIT_STATS = {
     movementSpeed: 38, // Increased by 25% from 30
     armorType: 'Heavy',
     innatePassive: 'Units damaged by this Unit grant +10% extra gold (stacks once per Gladiator)'
+  },
+  'red dragon': {
+    name: 'Red Dragon',
+    cost: 25,
+    damage: 4,
+    attackSpeed: 0.25, // Slowed by 200% (3x slower) from 0.75
+    attackType: 'Physical', // Changed to Physical for melee
+    health: 45,
+    range: 9, // Reduced by 75% from 35
+    priority: 1,
+    movementSpeed: 42,
+    armorType: 'Heavy',
+    innatePassive: 'Starts flying and untargetable. Uses 3 special attacks, then lands and becomes targetable with normal abilities'
   }
 };
 

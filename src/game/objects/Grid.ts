@@ -42,24 +42,7 @@ export default class Grid extends Phaser.GameObjects.Container {
       position: { x: this.x, y: this.y }
     });
     
-    // Create full-screen background for grid area
-    // The background needs to be positioned relative to the grid container's position
-    const sceneWidth = this.scene.cameras.main.width;
-    const sceneHeight = this.scene.cameras.main.height;
-    
-    // Since the grid container is centered, we need to offset the background
-    // to cover the entire screen from the container's perspective
-    this.gridBackground = this.scene.add.rectangle(
-      0,
-      0,
-      sceneWidth * 2, // Make it extra wide to ensure full coverage
-      sceneHeight * 2, // Make it extra tall to ensure full coverage
-      0x0a0a0f,
-      0.8
-    );
-    this.gridBackground.setOrigin(0.5, 0.5); // Center origin
-    this.add(this.gridBackground);
-    this.sendToBack(this.gridBackground); // Ensure it's behind the grid cells
+    // No grid background overlay - let the main scene background show through
     
     // Create grid cells
     for (let y = 0; y < this.gridHeight; y++) {
@@ -93,16 +76,16 @@ export default class Grid extends Phaser.GameObjects.Container {
       }
     }
     
-    // Create highlight rectangle
+    // Create highlight rectangle with subtle styling
     this.highlightRect = this.scene.add.rectangle(
       0,
       0,
       this.cellSize - 2,
       this.cellSize - 2,
-      0x4CAF50,
-      0
+      0xFFFFFF,
+      0.1
     );
-    this.highlightRect.setStrokeStyle(3, 0x4CAF50, 1);
+    this.highlightRect.setStrokeStyle(2, 0xFFFFFF, 0.6);
     this.highlightRect.setVisible(false);
     this.add(this.highlightRect);
     
@@ -120,7 +103,8 @@ export default class Grid extends Phaser.GameObjects.Container {
         const state = gridState[y]?.[x];
         
         if (state?.occupied) {
-          cell.setFillStyle(0x2E7D32, 0.2);
+          // Use a different color for occupied cells, not green (green is for highlighting)
+          cell.setFillStyle(0x1a1a2e, 0.5); // Slightly more opaque to show occupation
         } else {
           cell.setFillStyle(0x1a1a2e, 0.3);
         }
@@ -137,6 +121,7 @@ export default class Grid extends Phaser.GameObjects.Container {
     
     const gridX = Math.floor((localX - offsetX) / this.cellSize);
     const gridY = Math.floor((localY - offsetY) / this.cellSize);
+    
     
     return {
       x: Phaser.Math.Clamp(gridX, 0, this.gridWidth - 1),
@@ -176,14 +161,8 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   highlightCell(gridX: number, gridY: number, currentPlayerId?: string) {
-    // Disable all grid highlighting to remove green debug boxes during purchasing
     if (!this.highlightRect) return;
     
-    // Always keep highlight hidden to remove green debug visualization
-    this.highlightRect.setVisible(false);
-    return;
-    
-    /* Original highlighting logic disabled:
     if (gridX < 0 || gridX >= this.gridWidth || gridY < 0 || gridY >= this.gridHeight) {
       this.highlightRect.setVisible(false);
       return;
@@ -196,9 +175,16 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.highlightRect.setPosition(localX, localY);
     this.highlightRect.setVisible(true);
     
-    // Always use green highlighting for all players
-    this.highlightRect.setStrokeStyle(3, 0x4CAF50, 1);
-    */
+    // Use subtle white highlighting that adapts to validity (NEW VERSION!)
+    console.log('🔧 NEW GRID HIGHLIGHTING ACTIVE!');
+    const isValid = this.isValidPlacement(gridX, gridY, currentPlayerId);
+    if (isValid) {
+      this.highlightRect.setStrokeStyle(2, 0x81C784, 0.8); // Subtle green for valid
+      this.highlightRect.setFillStyle(0x81C784, 0.1);
+    } else {
+      this.highlightRect.setStrokeStyle(2, 0xFF8A65, 0.8); // Subtle orange for invalid
+      this.highlightRect.setFillStyle(0xFF8A65, 0.1);
+    }
   }
 
   clearHighlight() {
@@ -210,9 +196,6 @@ export default class Grid extends Phaser.GameObjects.Container {
   setGridVisible(visible: boolean) {
     this.isGridVisible = visible;
     this.setVisible(visible);
-    if (this.gridBackground) {
-      this.gridBackground.setVisible(visible);
-    }
   }
 
   toggleGridVisibility() {
@@ -236,12 +219,6 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   updateBackgroundSize() {
-    if (this.gridBackground) {
-      const sceneWidth = this.scene.cameras.main.width;
-      const sceneHeight = this.scene.cameras.main.height;
-      // Make background extra large to ensure full coverage
-      this.gridBackground.setSize(sceneWidth * 2, sceneHeight * 2);
-      this.gridBackground.setPosition(0, 0); // Keep centered at container origin
-    }
+    // Grid background removed - no longer needed
   }
 }

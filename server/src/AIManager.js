@@ -51,10 +51,12 @@ class AIManager {
     let unitId = 0;
 
     while (currentBudget < spawnBudget) {
-      // For now, spawn only goblins to avoid sprite issues
-      const unitStats = UNIT_STATS.goblin;
+      // Spawn knights and priests instead of goblins
+      const availableUnits = ['knight', 'priest'];
+      const randomUnit = availableUnits[Math.floor(Math.random() * availableUnits.length)];
+      const unitStats = UNIT_STATS[randomUnit];
       
-      // Check if we can afford another goblin
+      // Check if we can afford this unit
       if (currentBudget + unitStats.cost > spawnBudget) {
         break;
       }

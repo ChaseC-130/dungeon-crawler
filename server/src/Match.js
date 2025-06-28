@@ -405,22 +405,45 @@ class Match {
       return;
     }
 
-    // Players can now use multiple upgrades, no restriction on selection
+    // Debug logging for upgrade details
+    console.log(`Upgrade details:`, {
+      name: upgrade.name,
+      isHighPotency: upgrade.isHighPotency,
+      targetUnitType: upgrade.targetUnitType,
+      effect: upgrade.effect,
+      value: upgrade.value
+    });
+
+    // Debug logging for player units
+    console.log(`Player units:`, player.units.map(u => ({ id: u.id, name: u.name, health: u.health, position: u.position })));
 
     // Apply upgrade to units
     const unitsToUpgrade = player.units.filter(u => {
       if (upgrade.isHighPotency && upgrade.targetUnitType) {
-        return u.name === upgrade.targetUnitType;
+        const matches = u.name === upgrade.targetUnitType;
+        console.log(`High-potency unit filter: ${u.name} === ${upgrade.targetUnitType} = ${matches}`);
+        return matches;
       } else if (targetUnitType) {
-        return u.name === targetUnitType;
+        const matches = u.name === targetUnitType;
+        console.log(`Normal upgrade unit filter: ${u.name} === ${targetUnitType} = ${matches}`);
+        return matches;
       }
+      console.log(`No valid target unit type specified for upgrade`);
       return false;
     });
 
-    console.log(`Applying upgrade ${upgrade.name} to ${unitsToUpgrade.length} units of type ${targetUnitType || upgrade.targetUnitType}`);
-    unitsToUpgrade.forEach(unit => {
-      this.applyUpgrade(unit, upgrade);
-    });
+    console.log(`Found ${unitsToUpgrade.length} units to upgrade. Units:`, unitsToUpgrade.map(u => ({ id: u.id, name: u.name })));
+
+    if (unitsToUpgrade.length === 0) {
+      console.warn(`No units found to apply upgrade ${upgrade.name} to. Target: ${targetUnitType || upgrade.targetUnitType}`);
+      // Still remove the cards to prevent the UI from getting stuck
+    } else {
+      console.log(`Applying upgrade ${upgrade.name} to ${unitsToUpgrade.length} units of type ${targetUnitType || upgrade.targetUnitType}`);
+      unitsToUpgrade.forEach(unit => {
+        console.log(`Applying upgrade to unit ${unit.id} (${unit.name})`);
+        this.applyUpgrade(unit, upgrade);
+      });
+    }
 
     // Remove all 4 cards from this upgrade opportunity (high-potency + 3 normal)
     const upgradeIndex = player.upgradeCards.findIndex(u => u.id === upgradeId);
@@ -434,6 +457,7 @@ class Match {
         selectedUpgradeId: upgradeId,
         selectedUpgradeName: upgrade.name,
         targetUnitType: targetUnitType || upgrade.targetUnitType,
+        unitsUpgraded: unitsToUpgrade.length,
         cardsBeforeRemoval,
         cardsAfterRemoval: player.upgradeCards.length,
         opportunitiesRemaining: Math.ceil(player.upgradeCards.length / 4)
@@ -453,34 +477,65 @@ class Match {
       unit.buffs = [];
     }
 
-    console.log(`Applying upgrade effect ${upgrade.effect} to unit ${unit.name} with multiplier ${multiplier}`);
+    console.log(`Applying upgrade effect ${upgrade.effect} to unit ${unit.name} (${unit.id}) with multiplier ${multiplier}`);
+    
+    // Log current stats before upgrade
+    const statsBefore = {
+      health: unit.health,
+      maxHealth: unit.maxHealth,
+      damage: unit.damage,
+      attackSpeed: unit.attackSpeed,
+      movementSpeed: unit.movementSpeed,
+      priority: unit.priority,
+      buffs: unit.buffs.length
+    };
 
     switch (upgrade.effect) {
       case 'health':
         const healthIncrease = Math.ceil(unit.maxHealth * upgrade.value * multiplier);
         unit.maxHealth += healthIncrease;
         unit.health += healthIncrease;
+        console.log(`Health upgrade: +${healthIncrease} HP (${statsBefore.maxHealth} → ${unit.maxHealth})`);
         break;
       case 'damage':
-        unit.damage += Math.ceil(unit.damage * upgrade.value * multiplier);
+        const damageIncrease = Math.ceil(unit.damage * upgrade.value * multiplier);
+        unit.damage += damageIncrease;
+        console.log(`Damage upgrade: +${damageIncrease} damage (${statsBefore.damage} → ${unit.damage})`);
         break;
       case 'attackSpeed':
+        const oldAttackSpeed = unit.attackSpeed;
         unit.attackSpeed *= (1 + upgrade.value * multiplier);
+        console.log(`Attack Speed upgrade: ${(upgrade.value * multiplier * 100).toFixed(1)}% increase (${oldAttackSpeed.toFixed(2)} → ${unit.attackSpeed.toFixed(2)})`);
         break;
       case 'movementSpeed':
+        const oldMovementSpeed = unit.movementSpeed;
         unit.movementSpeed *= (1 + upgrade.value * multiplier);
+        console.log(`Movement Speed upgrade: ${(upgrade.value * multiplier * 100).toFixed(1)}% increase (${oldMovementSpeed.toFixed(2)} → ${unit.movementSpeed.toFixed(2)})`);
         break;
       case 'priority':
-        unit.priority += upgrade.value * multiplier;
+        const priorityChange = upgrade.value * multiplier;
+        unit.priority += priorityChange;
+        console.log(`Priority upgrade: ${priorityChange > 0 ? '+' : ''}${priorityChange} priority (${statsBefore.priority} → ${unit.priority})`);
         break;
       default:
         // Special passives are handled in combat
+        const buffValue = upgrade.value * multiplier;
         unit.buffs.push({
           id: `buff-${Date.now()}`,
           type: upgrade.effect,
-          value: upgrade.value * multiplier
+          value: buffValue
         });
+        console.log(`Passive upgrade: Added ${upgrade.effect} buff with value ${buffValue} (${statsBefore.buffs} → ${unit.buffs.length} buffs total)`);
     }
+    
+    console.log(`Unit ${unit.name} upgrade complete. Final stats:`, {
+      health: `${unit.health}/${unit.maxHealth}`,
+      damage: unit.damage,
+      attackSpeed: unit.attackSpeed.toFixed(2),
+      movementSpeed: unit.movementSpeed.toFixed(2),
+      priority: unit.priority,
+      buffs: unit.buffs.length
+    });
   }
 
   // TODO: Handle this in startCombat instead, to ensure final positions are captured
@@ -579,6 +634,44 @@ class Match {
     
     this.broadcastGameState();
     
+    // Trigger rise animation for all Red Dragons at battle start
+    const allDragons = [
+      ...this.getAllPlayerUnits(),
+      ...this.enemyUnits
+    ].filter(unit => unit.name && unit.name.toLowerCase().includes('dragon'));
+    
+    allDragons.forEach(dragon => {
+      console.log(`🐉 Found dragon: ${dragon.name} (${dragon.id}) - current status: ${dragon.status}`);
+      // Initialize dragon special attack state
+      dragon.dragonState = {
+        specialAttacksRemaining: 3,
+        isFlying: true,
+        hasLanded: false,
+        riseCompleted: false
+      };
+      dragon.status = 'rise';
+      dragon.untargetable = true; // Make untargetable while flying
+      console.log(`🐉 Setting dragon ${dragon.id} to rise animation at battle start - attacks remaining: ${dragon.dragonState.specialAttacksRemaining}`);
+    });
+    
+    // Emit dragon rise events for client-side animations
+    if (allDragons.length > 0) {
+      this.io.to(this.matchId).emit('dragons-battle-start', {
+        dragonIds: allDragons.map(d => d.id)
+      });
+    }
+    
+    // After rise animation (2 seconds), dragons return to normal combat
+    setTimeout(() => {
+      allDragons.forEach(dragon => {
+        if (dragon.status === 'rise' && dragon.dragonState) {
+          dragon.status = 'idle';
+          dragon.dragonState.riseCompleted = true;
+          console.log(`🐉 Dragon ${dragon.id} rise animation complete - ready for flying combat, attacks remaining: ${dragon.dragonState.specialAttacksRemaining}`);
+        }
+      });
+    }, 2000);
+    
     // Start combat simulation
     this.combatEngine.startCombat();
   }
@@ -586,10 +679,6 @@ class Match {
   endCombat(winner) {
     console.log(`🏁 COMBAT ENDED - Winner: ${winner}, Floor: ${this.currentFloor}`);
     if (winner === 'players') {
-      // IMMEDIATELY start preparation phase with timer instead of post-combat
-      this.phase = 'preparation'; 
-      console.log(`📋 Phase changed to: ${this.phase} (immediate timer start)`);
-      
       // Reset unit positions to initial positions immediately for next round
       this.resetUnitsToInitialPositions();
       
@@ -608,10 +697,8 @@ class Match {
         console.log(`👤 Player ${player.name}: upgradeCards=${player.upgradeCards?.length || 0}, hasSelected=${player.hasSelectedUpgrade}`);
       });
       
-      // Start timer immediately for preparation phase
-      this.preparationTimeLeft = GAME_CONFIG.PREPARATION_TIME;
-      console.log(`⏰ Starting preparation timer immediately: ${this.preparationTimeLeft} seconds`);
-      this.startPreparationTimer();
+      // Start the next floor (this will increment the floor and set up preparation phase)
+      this.startNewFloor();
       
       console.log(`📡 Broadcasting preparation state to all clients`);
       console.log(`🔌 Active players with sockets: ${this.players.size}`);
@@ -873,13 +960,23 @@ class Match {
         id: p.id,
         name: p.name,
         gold: p.gold,
-        units: p.units,
+        units: p.units.map(unit => ({
+          ...unit,
+          // Include dragon special state for client sync
+          specialAttackState: unit.specialAttackState,
+          isFlying: unit.isFlying
+        })),
         isReady: p.isReady,
         upgradeCards: p.upgradeCards,
         hasSelectedUpgrade: p.hasSelectedUpgrade,
         color: p.color
       })),
-      enemyUnits: this.enemyUnits,
+      enemyUnits: this.enemyUnits.map(unit => ({
+        ...unit,
+        // Include dragon special state for client sync
+        specialAttackState: unit.specialAttackState,
+        isFlying: unit.isFlying
+      })),
       grid: this.grid,
       // Keep legacy upgradeCards for backward compatibility
       upgradeCards: this.upgradeCards || [],

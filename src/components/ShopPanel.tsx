@@ -39,21 +39,18 @@ const ShopPanel: React.FC = () => {
       event.dataTransfer.setData('unitType', unit.name);
       event.dataTransfer.setData('action', 'purchase');
       
-      // Create custom drag image
+      // Create custom drag image - make it invisible since we handle visuals in Phaser (NEW VERSION!)
+      console.log('🛍️ NEW SHOP PANEL DRAG - INVISIBLE IMAGE!');
       const dragImage = document.createElement('div');
       dragImage.style.position = 'absolute';
       dragImage.style.pointerEvents = 'none';
       dragImage.style.left = '-9999px';
-      dragImage.style.width = '64px';
-      dragImage.style.height = '64px';
-      dragImage.style.background = 'rgba(255,215,0,0.3)';
-      dragImage.style.borderRadius = '8px';
-      dragImage.style.display = 'flex';
-      dragImage.style.alignItems = 'center';
-      dragImage.style.justifyContent = 'center';
-      dragImage.innerHTML = `<img src="/assets/units/${unit.name.toLowerCase()}/${unit.name.toLowerCase()}.png" style="width: 48px; height: 48px;">`;
+      dragImage.style.width = '1px';
+      dragImage.style.height = '1px';
+      dragImage.style.background = 'transparent';
+      dragImage.style.opacity = '0';
       document.body.appendChild(dragImage);
-      event.dataTransfer.setDragImage(dragImage, 32, 32);
+      event.dataTransfer.setDragImage(dragImage, 0, 0);
       setTimeout(() => document.body.removeChild(dragImage), 0);
     }
     

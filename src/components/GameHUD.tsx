@@ -18,6 +18,7 @@ const GameHUD: React.FC = () => {
   const [showPlayerTooltip, setShowPlayerTooltip] = useState(false);
   const [showUpgradePanel, setShowUpgradePanel] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Fullscreen toggle handler
@@ -57,6 +58,22 @@ const GameHUD: React.FC = () => {
     }
   }, []);
 
+  // Monitor drag state from game instance
+  React.useEffect(() => {
+    const checkDragState = () => {
+      const currentDragState = typeof window !== 'undefined' && (window as any).isDragging;
+      setIsDragging(!!currentDragState);
+    };
+
+    // Check initial state
+    checkDragState();
+
+    // Set up polling to monitor drag state changes
+    const interval = setInterval(checkDragState, 100);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Reset upgrade panel visibility when phase changes
   React.useEffect(() => {
     // Always reset panel when phase changes
@@ -76,13 +93,7 @@ const GameHUD: React.FC = () => {
       cardCountDecreased: currentCount < prevUpgradeCardCount.current
     });
     
-    if (showUpgradePanel && currentCount < prevUpgradeCardCount.current) {
-      // An upgrade was applied, close the panel
-      console.log('GameHUD: Closing upgrade panel due to card count decrease');
-      setShowUpgradePanel(false);
-    }
-    
-    // Also close if there are no more upgrade cards
+    // Only close if there are no more upgrade cards at all
     if (showUpgradePanel && currentCount === 0) {
       console.log('GameHUD: Closing upgrade panel - no more upgrade cards');
       setShowUpgradePanel(false);
@@ -260,7 +271,7 @@ const GameHUD: React.FC = () => {
       </View>
 
       {/* Unplaced Units */}
-      {unplacedUnits.length > 0 && gameState.phase === 'preparation' && (
+      {unplacedUnits.length > 0 && gameState.phase === 'preparation' && !isDragging && (
         <View style={styles.unplacedUnitsContainer}>
           <Text style={styles.unplacedUnitsTitle}>Unplaced Units (Click to place):</Text>
           <ScrollView horizontal style={styles.unplacedUnitsScroll}>
@@ -615,8 +626,9 @@ const styles = StyleSheet.create({
   },
   compactUpgradeContainer: {
     position: 'relative',
-    maxHeight: '60%', // Limit height to 60% of screen
-    maxWidth: '80%', // Limit width to 80% of screen
+    maxHeight: '85%', // Increased from 60% to 85%
+    maxWidth: '95%', // Increased from 80% to 95%
+    minWidth: '90%', // Added minimum width
     alignSelf: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     borderRadius: 15,

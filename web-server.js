@@ -7,11 +7,17 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // Serve the specific game file for root
 app.get('/', (req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.sendFile(path.join(__dirname, 'web-standalone/game.html'));
 });
 
 // Also serve game.html directly
 app.get('/game.html', (req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.sendFile(path.join(__dirname, 'web-standalone/game.html'));
 });
 
